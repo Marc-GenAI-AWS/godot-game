@@ -16,6 +16,7 @@ var camera: Camera3D
 var dust: GPUParticles3D
 var hud: Label
 var noise := FastNoiseLite.new()
+var grass_mat: ShaderMaterial
 var rest_timer := 0.0
 var pending_reset := false
 
@@ -27,6 +28,7 @@ func _ready() -> void:
 	_build_environment()
 	_build_terrain()
 	_build_scenery()
+	_build_grass()
 	_build_boulder()
 	_build_camera()
 	_build_hud()
@@ -97,6 +99,17 @@ func _build_terrain() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
 	mat.roughness = 0.95
+	# Fine mottling so the ground is not flat-shaded between vertices.
+	var dn := FastNoiseLite.new()
+	dn.seed = 21
+	dn.frequency = 0.03
+	dn.fractal_octaves = 4
+	var dimg := dn.get_seamless_image(256, 256)
+	for y in 256:
+		for x in 256:
+			var v := 0.78 + 0.44 * dimg.get_pixel(x, y).r
+			dimg.set_pixel(x, y, Color(v, v, v))
+	mat.albedo_texture = ImageTexture.create_from_image(dimg)
 	mesh.surface_set_material(0, mat)
 
 	var mi := MeshInstance3D.new()
@@ -196,6 +209,88 @@ func _build_scenery() -> void:
 		r.scale = Vector3(rng.randf_range(0.6, 2.0), rng.randf_range(0.5, 1.2), rng.randf_range(0.6, 2.0))
 		r.rotation.y = rng.randf() * TAU
 		add_child(r)
+
+
+# ---------------------------------------------------------------- grass
+
+func _blade_mesh() -> ArrayMesh:
+	# A tapered blade with two segments so the shader can curve it.
+	var verts := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var idx := PackedInt32Array()
+	var rows := [[0.0, 0.07], [0.45, 0.05], [0.8, 0.028], [1.0, 0.0]]
+	for r in rows:
+		var y: float = r[0]
+		var w: float = r[1]
+		verts.push_back(Vector3(-w, y, 0)); uvs.push_back(Vector2(0, y))
+		verts.push_back(Vector3(w, y, 0)); uvs.push_back(Vector2(1, y))
+	for i in rows.size() - 1:
+		var a := i * 2
+		idx.append_array([a, a + 2, a + 1, a + 1, a + 2, a + 3])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return m
+
+
+func _build_grass() -> void:
+	grass_mat = ShaderMaterial.new()
+	grass_mat.shader = load("res://grass.gdshader")
+	var wn := FastNoiseLite.new()
+	wn.seed = 5
+	wn.frequency = 0.04
+	wn.fractal_octaves = 3
+	grass_mat.set_shader_parameter("wind_noise", ImageTexture.create_from_image(wn.get_seamless_image(256, 256)))
+	grass_mat.set_shader_parameter("boulder_radius", BOULDER_RADIUS)
+
+	var blade := _blade_mesh()
+	blade.surface_set_material(0, grass_mat)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 99
+
+	# Dense band along the run, sparser and taller out on the flanks.
+	_grass_patch(blade, rng, -42.0, 42.0, 3.2, 0.7, 1.3)
+	_grass_patch(blade, rng, -TERRAIN_HALF_X + 2, -42.0, 0.9, 0.9, 1.7)
+	_grass_patch(blade, rng, 42.0, TERRAIN_HALF_X - 2, 0.9, 0.9, 1.7)
+
+
+func _grass_patch(blade: Mesh, rng: RandomNumberGenerator, x0: float, x1: float, density: float, h_min: float, h_max: float) -> void:
+	var z0 := float(-TERRAIN_HALF_Z + 2)
+	var z1 := float(TERRAIN_HALF_Z - 2)
+	var count := int((x1 - x0) * (z1 - z0) * density)
+	var buf := PackedFloat32Array()
+	buf.resize(count * 12)
+	var n := 0
+	for i in count:
+		var x := rng.randf_range(x0, x1)
+		var z := rng.randf_range(z0, z1)
+		if absf(x) < 3.5 and z < 60.0 and rng.randf() < 0.75:
+			continue  # bare dirt track down the middle
+		var y := terrain_height(x, z) - 0.05
+		var s := rng.randf_range(h_min, h_max)
+		var yaw := rng.randf() * TAU
+		var b := Basis(Vector3.UP, yaw).scaled(Vector3(s * rng.randf_range(0.8, 1.3), s, s))
+		var o := Vector3(x, y, z)
+		var k := n * 12
+		buf[k] = b.x.x; buf[k + 1] = b.y.x; buf[k + 2] = b.z.x; buf[k + 3] = o.x
+		buf[k + 4] = b.x.y; buf[k + 5] = b.y.y; buf[k + 6] = b.z.y; buf[k + 7] = o.y
+		buf[k + 8] = b.x.z; buf[k + 9] = b.y.z; buf[k + 10] = b.z.z; buf[k + 11] = o.z
+		n += 1
+	buf.resize(n * 12)
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = blade
+	mm.instance_count = n
+	mm.buffer = buf
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mmi.custom_aabb = AABB(Vector3(x0, -10, z0), Vector3(x1 - x0, HILL_HEIGHT + 60, z1 - z0))
+	add_child(mmi)
 
 
 # ---------------------------------------------------------------- boulder
@@ -427,9 +522,14 @@ func _process(delta: float) -> void:
 
 	# Chase camera: sit up-slope and above, look slightly ahead of the rock.
 	var target := bp + Vector3(9.0, 6.5, -15.0)
+	# Never let the camera sink into the slope (or the grass) behind the rock.
+	target.y = maxf(target.y, terrain_height(target.x, target.z) + 4.5)
 	var k := 1.0 - exp(-delta * 3.0)
 	camera.global_position = camera.global_position.lerp(target, k)
 	camera.look_at(bp + boulder.linear_velocity * 0.15 + Vector3(0, 1, 0), Vector3.UP)
+
+	if grass_mat:
+		grass_mat.set_shader_parameter("boulder_pos", bp)
 
 	# Dust follows the contact point and only emits while moving on the ground.
 	var ground_y := terrain_height(bp.x, bp.z)
@@ -437,7 +537,7 @@ func _process(delta: float) -> void:
 	dust.emitting = speed > 4.0 and bp.y - ground_y < BOULDER_RADIUS + 0.8
 	dust.amount_ratio = clampf(speed / 25.0, 0.2, 1.0)
 
-	hud.text = "Boulder Hill   speed %.0f m/s\nClick, tap, R or Space to roll again" % speed
+	hud.text = "Boulder Hill   speed %.0f m/s   %d fps\nClick, tap, R or Space to roll again" % [speed, Engine.get_frames_per_second()]
 
 	# Auto-restart once it has come to rest in the valley.
 	if speed < 0.6 and bp.z > 20.0:
