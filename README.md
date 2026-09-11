@@ -6,7 +6,9 @@ into the valley. The grass is ~70k shader-animated blades in a MultiMesh,
 swaying in a scrolling wind field. Click, tap, or press
 R / Space to roll it again. It restarts on its own once the rock comes to rest.
 
-**Play it in the browser:** the web build in `docs/` is served by GitHub Pages.
+**Play it in the browser:** https://mlobree.github.io/boulder-hill/
+
+The web build in `docs/` is served by GitHub Pages.
 
 ## Layout
 
