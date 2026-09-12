@@ -76,6 +76,7 @@ func _palm(parent: Node3D, pos: Vector3, rng: RandomNumberGenerator, tall := fal
 	palm.position = pos
 	palm.rotation.y = rng.randf() * TAU
 	parent.add_child(palm)
+	ctx.add_obstacle(palm.global_position, 0.45)
 	var height := rng.randf_range(13.0, 18.0) if tall else rng.randf_range(7.0, 11.0)
 	var segs := 7
 	var lean := Vector2(rng.randf_range(-0.04, 0.04), rng.randf_range(-0.04, 0.04)) if tall else Vector2(rng.randf_range(-0.12, 0.12), rng.randf_range(-0.12, 0.12))

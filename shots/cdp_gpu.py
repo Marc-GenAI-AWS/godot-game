@@ -59,12 +59,15 @@ async def main():
             await send("Input.dispatchMouseEvent", type="mouseReleased", x=x + dx, y=y + dy, button="left", clickCount=1)
             print("dragged", dx, dy)
         async def press(name):
+            hold = 0.12
+            if "~" in name:
+                name, h = name.split("~"); hold = float(h)
             if name.startswith("Drag"):
                 _, dx, dy = name.split("_")
                 await drag(float(dx), float(dy)); return
             key, code, vk = KEYMAP[name]
             await send("Input.dispatchKeyEvent", type="keyDown", key=key, code=code, windowsVirtualKeyCode=vk, nativeVirtualKeyCode=vk)
-            await asyncio.sleep(0.12)
+            await asyncio.sleep(hold)
             await send("Input.dispatchKeyEvent", type="keyUp", key=key, code=code, windowsVirtualKeyCode=vk, nativeVirtualKeyCode=vk)
             print("pressed", name)
         for i, t in enumerate(TIMES):

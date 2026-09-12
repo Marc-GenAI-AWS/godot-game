@@ -115,11 +115,22 @@ func _boardwalk(parent: Node3D, rng: RandomNumberGenerator) -> void:
 	sm.height = 0.7
 	sm.radial_segments = 10
 	sm.rings = 5
+	# Railing along the sand edge with an opening every 8th bay (ramps onto the deck).
 	var z := -L + 2.0
 	var i := 0
 	while z < 0.0:
+		var opening := (i % 8) == 4
+		if not opening:
+			batch.add_box_at(Vector3(0.06, 0.08, 3.5), Color(0.3, 0.3, 0.32), Vector3(bx + 0.6, y + 1.55, z + 1.75))
+			var rz := z
+			while rz < z + 3.5:
+				ctx.add_obstacle(parent.global_transform * Vector3(bx + 0.6, 0, rz), 0.5)
+				rz += 0.8
 		batch.add_box_at(Vector3(0.1, 1.1, 0.1), Color(0.3, 0.3, 0.32), Vector3(bx + 0.6, y + 1.05, z))
 		if i % 4 == 0:
+			ctx.add_obstacle(parent.global_transform * Vector3(bx - 7.5, 0, z), 0.35)
+			ctx.add_obstacle(parent.global_transform * Vector3(bx - 5.6, 0, z + 4.0), 1.1)
+			ctx.add_obstacle(parent.global_transform * Vector3(bx - 1.0, 0, z - 2.0), 0.5)
 			batch.add_cylinder(0.07, 0.1, 5.0, Color(0.25, 0.27, 0.3), Transform3D(Basis.IDENTITY, Vector3(bx - 7.5, y + 3.0, z)))
 			batch.add(sm, Transform3D(Basis.IDENTITY, Vector3(bx - 7.5, y + 5.7, z)), Color(0.98, 0.98, 0.9))
 			batch.add_box_at(Vector3(0.5, 0.08, 1.8), Color(0.55, 0.4, 0.25), Vector3(bx - 5.8, y + 0.95, z + 4.0))
@@ -127,7 +138,6 @@ func _boardwalk(parent: Node3D, rng: RandomNumberGenerator) -> void:
 			batch.add_cylinder(0.3, 0.28, 0.9, Color(0.2, 0.4, 0.3), Transform3D(Basis.IDENTITY, Vector3(bx - 1.0, y + 0.95, z - 2.0)))
 		z += 3.5
 		i += 1
-	batch.add_box_at(Vector3(0.06, 0.08, L), Color(0.3, 0.3, 0.32), Vector3(bx + 0.6, y + 1.55, -L * 0.5))
 	batch.instance(parent, "Boardwalk", 0.9)
 
 
@@ -136,6 +146,7 @@ func _lifeguard_tower(parent: Node3D, pos: Vector3, hut: Color, roof: Color) -> 
 	var t := Node3D.new()
 	t.position = Vector3(pos.x, ctx.sand_height(pos.x, pos.z), pos.z)
 	parent.add_child(t)
+	ctx.add_obstacle(t.global_position, 2.7)
 	var white := Color(0.94, 0.94, 0.92)
 	var wood := Color(0.6, 0.45, 0.3)
 	var batch := MeshBatch.new()

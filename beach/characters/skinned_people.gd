@@ -25,8 +25,8 @@ const BODY_TYPES := {
 	"tall":    {"root": Vector3(1.0, 1.07, 1.0), "bones": {}},
 	"short":   {"root": Vector3(1.0, 0.92, 1.0), "bones": {}},
 	"stocky":  {"root": Vector3(1.1, 0.98, 1.1), "bones": {"Spine": Vector3(1.1, 1.0, 1.15), "Chest": Vector3(0.95, 1.0, 0.9)}},
-	"heavy":   {"root": Vector3(1.14, 0.98, 1.14), "bones": {"Spine": Vector3(1.22, 1.0, 1.32), "Chest": Vector3(0.88, 1.0, 0.82),
-		"LeftUpperLeg": Vector3(1.15, 1.0, 1.15), "RightUpperLeg": Vector3(1.15, 1.0, 1.15), "LeftLowerLeg": Vector3(0.92, 1.0, 0.92), "RightLowerLeg": Vector3(0.92, 1.0, 0.92)}},
+	"heavy":   {"root": Vector3(1.12, 0.98, 1.12), "bones": {"Spine": Vector3(1.16, 1.0, 1.24), "Chest": Vector3(0.9, 1.0, 0.86),
+		"LeftUpperLeg": Vector3(1.07, 1.0, 1.07), "RightUpperLeg": Vector3(1.07, 1.0, 1.07), "LeftLowerLeg": Vector3(0.96, 1.0, 0.96), "RightLowerLeg": Vector3(0.96, 1.0, 0.96)}},
 	"athletic": {"root": Vector3(1.04, 1.03, 1.0), "bones": {"Chest": Vector3(1.08, 1.0, 1.05), "Spine": Vector3(0.96, 1.0, 0.96)}},
 }
 const BODY_TYPE_WEIGHTS := {"slim": 0.15, "average": 0.35, "tall": 0.1, "short": 0.1, "stocky": 0.12, "heavy": 0.08, "athletic": 0.1}

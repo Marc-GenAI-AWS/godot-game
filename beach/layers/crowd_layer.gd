@@ -84,6 +84,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 		var yaw := rng.randf_range(-0.6, 0.6) + PI * 0.5
 		var clip := "Idle_Talking" if rng.randf() < 0.5 else "Idle"
 		_add_baked(p, clip, _pick(idle_ts, rng), Transform3D(Basis(Vector3.UP, yaw), Vector3(wx, ctx.sand_height(wx, wz), wz)))
+		ctx.add_obstacle(chunk.global_transform * Vector3(wx, 0, wz), 0.45)
 	# Swimmers bobbing further out (posed, moved as a node)
 	for i in 6:
 		var p := _person(rng)
@@ -167,8 +168,10 @@ func _pick_gait(rng: RandomNumberGenerator) -> Dictionary:
 
 
 func tick(delta: float) -> void:
+	ctx.dynamic_obstacles.clear()
 	for w in walkers:
 		var root: Node3D = w["root"]
+		ctx.dynamic_obstacles.append([root.global_position, 0.42])
 		var z: float = wrap_local_z(root.position.z + w["dir"] * w["speed"] * delta)
 		# gentle wander across the beach so paths aren't ruler-straight
 		var wx: float = w["x0"] + w["wander"] * sin(z * w["wfreq"] * TAU + w["phase"])

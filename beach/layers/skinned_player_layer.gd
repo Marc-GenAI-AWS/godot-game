@@ -175,23 +175,20 @@ func tick(delta: float) -> void:
 		steer += 1.0
 	if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
 		steer -= 1.0
-	yaw += steer * delta * 1.4
-	if steer == 0.0:
-		yaw = lerpf(yaw, 0.0, 1.0 - exp(-delta * 0.8))
-	yaw = clampf(yaw, -0.9, 0.9)
+	# Free 360° turning (faster when standing still, like turning in place).
+	yaw += steer * delta * (2.2 if pace == 0 else 1.7)
+	yaw = wrapf(yaw, -PI, PI)
 	body.rotation.y = yaw
 
 	walking = pace > 0
 	var speed := 0.0 if pace == 0 else (WALK_SPEED if pace == 1 else jog_speed)
-	var ground := ctx.sand_height(body.position.x, body.position.z)
 	if airborne:
 		# ballistic arc; keep forward momentum
 		jump_t += delta
 		vy -= 9.8 * delta
-		var p := body.position + forward() * (0.0 if ctx.inspect else speed) * delta
-		p.x = clampf(p.x, -50.0, 1.2)
-		p.y += vy * delta
-		var g := ctx.sand_height(p.x, p.z)
+		var p := _constrain(body.position + forward() * (0.0 if ctx.inspect else speed) * delta)
+		p.y = body.position.y + vy * delta
+		var g := _ground(p)
 		if jump_t > 0.35 and anim.current_animation != "Jump":
 			anim.play("Jump", 0.15)
 			anim.speed_scale = 1.0
@@ -211,12 +208,11 @@ func tick(delta: float) -> void:
 				anim.play(want, 0.3)
 			anim.speed_scale = 1.0 if pace == 0 else (WALK_SPEED / ANIM_WALK_SPEED if pace == 1 else jog_speed / JOG_CLIP_SPEED)
 		if speed > 0.0 and not ctx.inspect:
-			var p := body.position + forward() * speed * (0.5 if landing_t > 0.0 else 1.0) * delta
-			p.x = clampf(p.x, -50.0, 1.2)
-			p.y = ctx.sand_height(p.x, p.z)
+			var p := _constrain(body.position + forward() * speed * (0.5 if landing_t > 0.0 else 1.0) * delta)
+			p.y = _ground(p)
 			body.position = p
 		else:
-			body.position.y = ground
+			body.position.y = _ground(body.position)
 	if walking and not airborne:
 		_emit_steps_from_clip()
 		ctx.player_phase = anim.current_animation_position / maxf(anim.current_animation_length, 0.01) * TAU
@@ -227,9 +223,26 @@ func tick(delta: float) -> void:
 		hair_pivot2.rotation.x = 0.06 * cos(2.0 * p - 1.7)
 		hair_pivot2.rotation.z = 0.11 * sin(p - 1.5)
 
+	# Endless in both directions: keep her inside the middle chunk copy.
 	if body.position.z < -WorldContext.CHUNK:
 		body.position.z += WorldContext.CHUNK
 		ctx.world_wrapped.emit(WorldContext.CHUNK)
+	elif body.position.z >= 0.0:
+		body.position.z -= WorldContext.CHUNK
+		ctx.world_wrapped.emit(-WorldContext.CHUNK)
+
+
+# Walkable area: from the promenade deck to ankle-deep water, minus obstacles.
+func _constrain(p: Vector3) -> Vector3:
+	p.x = clampf(p.x, WorldContext.BOARDWALK_X - 6.2, 4.0)   # deck edge (hedges start beyond)
+	return ctx.resolve_obstacles(p, 0.3)
+
+
+func _ground(p: Vector3) -> float:
+	var g := ctx.sand_height(p.x, p.z)
+	if p.x < WorldContext.BOARDWALK_X + 1.2:
+		g = ctx.sand_height(WorldContext.BOARDWALK_X, 0.0) + 0.5   # boardwalk deck
+	return g
 
 
 func _emit_steps_from_clip() -> void:

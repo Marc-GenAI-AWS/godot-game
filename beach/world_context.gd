@@ -30,6 +30,40 @@ var sun_dir := Vector3(-0.35, -0.8, -0.35)
 var sun_color := Color(1.0, 0.96, 0.88)
 var fog_color := Color(0.72, 0.82, 0.94)
 
+# Soft collisions: static obstacle circles in a z-bucket hash, plus a
+# per-frame list of moving ones (strollers). resolve() pushes a point out.
+var _obstacles := {}          # bucket (int) -> Array of [Vector3, radius]
+var dynamic_obstacles: Array = []   # [Vector3, radius], rebuilt each frame
+const OB_BUCKET := 8.0
+
+
+func add_obstacle(pos: Vector3, radius: float) -> void:
+	var b := int(floor(pos.z / OB_BUCKET))
+	if not _obstacles.has(b):
+		_obstacles[b] = []
+	_obstacles[b].append([pos, radius])
+
+
+func resolve_obstacles(pos: Vector3, radius: float) -> Vector3:
+	var b0 := int(floor(pos.z / OB_BUCKET))
+	for b in [b0 - 1, b0, b0 + 1]:
+		if _obstacles.has(b):
+			for ob in _obstacles[b]:
+				pos = _push_out(pos, ob[0], ob[1] + radius)
+	for ob in dynamic_obstacles:
+		pos = _push_out(pos, ob[0], ob[1] + radius)
+	return pos
+
+
+static func _push_out(pos: Vector3, centre: Vector3, r: float) -> Vector3:
+	var d := Vector2(pos.x - centre.x, pos.z - centre.z)
+	var len := d.length()
+	if len < r and len > 0.0001:
+		d = d / len * r
+		return Vector3(centre.x + d.x, pos.y, centre.z + d.y)
+	return pos
+
+
 var noise_tex: ImageTexture
 var sand_normal_tex: ImageTexture
 var cloud_tex: ImageTexture

@@ -63,6 +63,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 				var spot := Node3D.new()
 				spot.transform = Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3.ZERO)
 				g.add_child(spot)
+				ctx.add_obstacle(g.global_position, 1.05)
 				if rng.randf() < 0.8:
 					_lounger(flat, base, fabric[rng.randi() % fabric.size()])
 					chunk_spots.append({"node": spot, "kind": "lounger"})
