@@ -12,9 +12,39 @@ hotels, a lifeguard tower, drifting clouds and a passing seagull. Steer with
 the arrow keys or A/D; Space or tap stops and starts walking. The scenery
 repeats every 200 m so the walk loops seamlessly.
 
-Source is in `beach/`: `main.gd` builds the world, `humanoid.gd` is a
-primitive-based person with a procedural walk cycle, and `sand.gdshader` /
-`water.gdshader` do the wet-sand line, swells and foam.
+The scene is built as a stack of independent **layers** so any one element
+can be specialised without touching the rest:
+
+```
+beach/
+  main.gd                    composition root: instantiates layers, runs the tick loop
+  world_context.gd           shared state: time, tide line, sand_height(), textures, signals
+  characters/humanoid.gd     primitive-based person: walk cycle, sit/lie poses, bake_static()
+  shaders/sand.gdshader      dry/wet sand with a moving tide line
+  shaders/water.gdshader     swells, depth colour, edge foam, breaker lines
+  layers/
+    beach_layer.gd           base class: setup(ctx) -> build(), tick(delta), on_world_wrapped()
+    chunked_layer.gd         base for scenery repeated every 200 m (3 identical copies)
+    mesh_batch.gd            merges many primitives into one mesh (one draw call)
+    sky_layer.gd             environment, sun, fog, drifting cloud sprites
+    ocean_layer.gd           the sea mesh + water shader
+    sand_layer.gd            the beach mesh + sand shader, shell scatter
+    tracks_layer.gd          footprints stamped on player_step, fading over time
+    architecture_layer.gd    hotels with balconies, boardwalk, lamps, lifeguard tower
+    vegetation_layer.gd      palms (batched trunk, alpha-cut fronds that sway), hedges
+    furniture_layer.gd       loungers, umbrellas, towels, beach balls; exposes `spots`
+    crowd_layer.gd           sunbathers/sitters on furniture spots, strollers, waders, swimmers
+    fauna_layer.gd           circling gull flock; gulls on the sand that flush when approached
+    player_layer.gd          the walker, steering, footstep events, seamless chunk wrap
+    camera_layer.gd          over-the-shoulder chase cam with step-synced bob
+    hud_layer.gd             text overlay
+```
+
+Layers never reference each other directly; they read `WorldContext` or
+listen to its signals (`player_step`, `world_wrapped`). The two exceptions
+(crowd needs furniture spots, camera needs the player's heading) are wired
+explicitly in `main.gd`. To work on one element, edit its layer; to replace
+it, subclass `BeachLayer`/`ChunkedLayer` and swap it in the list in `main.gd`.
 
 ## Boulder Hill
 

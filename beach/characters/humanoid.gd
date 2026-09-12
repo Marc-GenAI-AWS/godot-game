@@ -179,6 +179,26 @@ func pose_idle() -> void:
 	r_elbow.rotation.x = -0.2
 
 
+func pose_sit() -> void:
+	# Sitting on the sand, knees up, leaning back on the hands.
+	hips.position.y = 0.32
+	rotation.x = 0.0
+	chest.rotation.x = -0.25
+	l_hip.rotation.x = 1.35
+	r_hip.rotation.x = 1.35
+	l_hip.rotation.z = 0.12
+	r_hip.rotation.z = -0.12
+	l_knee.rotation.x = -1.9
+	r_knee.rotation.x = -1.9
+	l_shoulder.rotation.x = 0.9
+	r_shoulder.rotation.x = 0.9
+	l_shoulder.rotation.z = 0.35
+	r_shoulder.rotation.z = -0.35
+	l_elbow.rotation.x = -0.15
+	r_elbow.rotation.x = -0.15
+	head_pivot.rotation.x = 0.15
+
+
 func pose_lying() -> void:
 	# Sunbathing on a lounger: rotate the whole body onto its back.
 	rotation.x = -PI * 0.5 + 0.28
@@ -197,3 +217,35 @@ func pose_lying() -> void:
 	r_hip.rotation.z = -0.06
 	if hair_pivot:
 		hair_pivot.rotation.x = -0.9
+
+
+func _rel_xform(node: Node3D) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var n: Node = node
+	while n != self and n != null:
+		t = (n as Node3D).transform * t
+		n = n.get_parent()
+	return t
+
+
+func bake_static() -> void:
+	# Collapse the posed rig into a single mesh (one draw call). Call after
+	# the final pose; the figure can no longer animate afterwards.
+	var batch := MeshBatch.new()
+	var parts: Array[MeshInstance3D] = []
+	_collect_meshes(self, parts)
+	for mi in parts:
+		var c := Color(1, 1, 1)
+		if mi.material_override is StandardMaterial3D:
+			c = (mi.material_override as StandardMaterial3D).albedo_color
+		batch.add(mi.mesh, _rel_xform(mi), c)
+	for child in get_children():
+		child.queue_free()
+	batch.instance(self, "Baked")
+
+
+func _collect_meshes(n: Node, out: Array[MeshInstance3D]) -> void:
+	for c in n.get_children():
+		if c is MeshInstance3D:
+			out.append(c)
+		_collect_meshes(c, out)
