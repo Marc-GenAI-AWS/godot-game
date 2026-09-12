@@ -37,6 +37,13 @@ sprint), their own cadence and a gentle wander; sunbathers, sitters, waders and 
 once on the CPU (`characters/skinned_people.gd`) and batched per material.
 `#inspect-crowd` orbits the lounger rows.
 
+Contact validator: every seated / lying person is rested on its support by
+measuring the lowest point of the posed mesh (`SkinnedPeople.rest_on`), and
+`CrowdLayer.validate_contacts()` reports max penetration / hover per support
+type. It runs automatically in headless mode:
+
+    godot --headless --path beach --quit-after 30 | grep contacts
+
 Add `#inspect` to the URL to orbit the character up close:
 https://mlobree.github.io/boulder-hill/beach/#inspect
 

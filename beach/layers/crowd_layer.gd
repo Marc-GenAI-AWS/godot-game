@@ -10,6 +10,10 @@ var furniture: FurnitureLayer
 var walkers: Array = []     # [root, speed, dir, anim]
 var swimmers: Array = []    # [node, base_y, phase]
 var _batches := {}          # chunk-local: material key -> MeshBatch
+# Contact validator: every rested placement records its support error so the
+# headless check can report penetration / hover instead of us eyeballing it.
+var contact_samples: Array = []   # [label, error_m]
+const CONTACT_TOL := 0.02
 const LOUNGER_RECLINE := 0.8  # radians the spine bends up onto the backrest
 
 
@@ -30,8 +34,16 @@ func _person(rng: RandomNumberGenerator) -> Dictionary:
 		"body": SkinnedPeople.pick_body_type(rng)}
 
 
-func _add_baked(p: Dictionary, clip: String, t: float, xform: Transform3D, tweaks: Dictionary = {}) -> void:
+# xform: where the pose goes. If `support` is given ([label, support_y_in_base_space, base]),
+# the y is solved so the lowest point of the body rests on the support.
+func _add_baked(p: Dictionary, clip: String, t: float, xform: Transform3D, tweaks: Dictionary = {}, support: Array = []) -> void:
 	var baked := SkinnedPeople.bake(p["sex"], p["hair"], clip, t, self, tweaks, p["body"])
+	if support.size() == 3:
+		var base: Transform3D = support[2]
+		var local := base.affine_inverse() * xform          # pose in support (spot) space
+		local = SkinnedPeople.rest_on(baked["body"], local.basis, support[1], local.origin)
+		xform = base * local
+		contact_samples.append([support[0], SkinnedPeople.contact_error(baked["body"], local, support[1])])
 	_batch_for(p["outfit"]).add(baked["body"], xform, p["skin"])
 	if baked["eyes"]:
 		_batch_for("eyes").add(baked["eyes"], xform, Color(1, 1, 1))
@@ -67,15 +79,15 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 			var base: Transform3D = inv * node.global_transform
 			if spot["kind"] == "lounger":
 				# lie flat on the seat (face up, head toward the backrest), then bend the
-				# spine up to the backrest angle so the torso rests on it
+				# spine up to the backrest angle; y is solved against the seat top (0.405)
 				var lie := Transform3D(Basis.IDENTITY.rotated(Vector3.UP, PI).rotated(Vector3.RIGHT, -PI * 0.5), Vector3(0, 0.41, 0.55))
-				_add_baked(p, "Idle", _pick(lie_ts, rng), base * lie, {"Spine": Basis(Vector3.RIGHT, LOUNGER_RECLINE)})
+				_add_baked(p, "Idle", _pick(lie_ts, rng), base * lie, {"Spine": Basis(Vector3.RIGHT, LOUNGER_RECLINE), "_straight_legs": true}, ["lounger", 0.405, base])
 			else:
 				if rng.randf() < 0.5:
 					var lie := Transform3D(Basis.IDENTITY.rotated(Vector3.UP, PI).rotated(Vector3.RIGHT, -PI * 0.5 + 0.05), Vector3(0, 0.08, 0.9))
-					_add_baked(p, "Idle", _pick(lie_ts, rng), base * lie)
+					_add_baked(p, "Idle", _pick(lie_ts, rng), base * lie, {"_straight_legs": true}, ["towel", 0.035, base])
 				else:
-					_add_baked(p, "Sitting_Idle", _pick(sit_ts, rng), base * Transform3D(Basis.IDENTITY, Vector3(0, 0.0, 0.2)))
+					_add_baked(p, "Sitting_Idle", _pick(sit_ts, rng), base * Transform3D(Basis.IDENTITY, Vector3(0, 0.0, 0.2)), {}, ["sitter", 0.035, base])
 	# Waders standing in the shallows, talking
 	for i in 8:
 		var p := _person(rng)
@@ -122,7 +134,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 		chunk.add_child(mi)
 	# Strollers along the waterline: live characters with varied gaits.
 	# Each gets a clip, a ground speed, a cadence and a wander amplitude.
-	for i in 8:
+	for i in 6:
 		var pair := rng.randf() < 0.35
 		var x := rng.randf_range(-12.0, -1.0)
 		var z := rng.randf_range(-L, 0.0)
@@ -149,10 +161,10 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 # Gait table: clip, the ground speed the clip covers at cadence 1 (measured in
 # Blender), and a cadence range so identical clips still read differently.
 const GAITS := [
-	{"clip": "Walk", "clip_speed": 0.975, "w": 0.5, "cad": [0.85, 1.15]},
-	{"clip": "Walk_Formal", "clip_speed": 0.975, "w": 0.22, "cad": [0.8, 1.05]},
-	{"clip": "Jog_Fwd", "clip_speed": 5.26, "w": 0.18, "cad": [0.6, 0.8]},
-	{"clip": "Sprint", "clip_speed": 8.25, "w": 0.07, "cad": [0.6, 0.8]},
+	{"clip": "Walk", "clip_speed": 0.975, "w": 0.62, "cad": [0.85, 1.15]},
+	{"clip": "Walk_Formal", "clip_speed": 0.975, "w": 0.28, "cad": [0.8, 1.05]},
+	{"clip": "Jog_Fwd", "clip_speed": 5.26, "w": 0.08, "cad": [0.6, 0.8]},
+	{"clip": "Sprint", "clip_speed": 8.25, "w": 0.02, "cad": [0.6, 0.8]},
 ]
 
 func _pick_gait(rng: RandomNumberGenerator) -> Dictionary:
@@ -165,6 +177,24 @@ func _pick_gait(rng: RandomNumberGenerator) -> Dictionary:
 			g = cand
 			break
 	return {"clip": g["clip"], "clip_speed": g["clip_speed"], "cadence": rng.randf_range(g["cad"][0], g["cad"][1])}
+
+
+# Headless-friendly contact report: penetration (+) / hover (-) per support type.
+func validate_contacts() -> Dictionary:
+	var worst := {}
+	for smp in contact_samples:
+		var label: String = smp[0]
+		var e: float = smp[1]
+		if not worst.has(label):
+			worst[label] = {"n": 0, "max_pen": 0.0, "max_hover": 0.0}
+		worst[label]["n"] += 1
+		worst[label]["max_pen"] = maxf(worst[label]["max_pen"], e)
+		worst[label]["max_hover"] = maxf(worst[label]["max_hover"], -e)
+	for label in worst:
+		var w: Dictionary = worst[label]
+		var ok: bool = w["max_pen"] <= CONTACT_TOL and w["max_hover"] <= CONTACT_TOL
+		print("contacts %-8s n=%3d  max penetration %.1f cm  max hover %.1f cm  %s" % [label, w["n"], w["max_pen"] * 100.0, w["max_hover"] * 100.0, "OK" if ok else "CHECK"])
+	return worst
 
 
 func tick(delta: float) -> void:

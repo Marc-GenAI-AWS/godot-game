@@ -47,6 +47,15 @@ func _ready() -> void:
 		add_child(layer)
 		layer.setup(ctx)
 		layers.append(layer)
+	if DisplayServer.get_name() == "headless" or OS.get_cmdline_user_args().has("--validate"):
+		_validate()
+
+
+func _validate() -> void:
+	# Contact validator (crowd on furniture); prints a per-support report.
+	for l in layers:
+		if l is CrowdLayer:
+			(l as CrowdLayer).validate_contacts()
 
 
 func _process(delta: float) -> void:

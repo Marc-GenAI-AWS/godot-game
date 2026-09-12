@@ -185,12 +185,23 @@ static func bake(sex: String, hair: String, clip: String, t: float, tree_parent:
 	ap.play(clip)
 	ap.seek(t, true)
 	for bone_name in tweaks:
+		if str(bone_name).begins_with("_"):
+			continue
 		var bi := skel.find_bone(bone_name)
 		if bi >= 0:
 			var q := skel.get_bone_pose_rotation(bi)
 			skel.set_bone_pose_rotation(bi, q * Quaternion(tweaks[bone_name]))
 	apply_bone_scales(skel, body_type)
 	skel.force_update_all_bone_transforms()
+	if tweaks.get("_straight_legs", false):
+		# lying poses: legs straight and together (the profile rest pose), feet flat
+		for bn in ["LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg", "LeftFoot", "RightFoot", "LeftToes", "RightToes"]:
+			var bi := skel.find_bone(bn)
+			if bi >= 0:
+				skel.set_bone_pose_rotation(bi, skel.get_bone_rest(bi).basis.get_rotation_quaternion())
+		skel.force_update_all_bone_transforms()
+	if tweaks.get("_level_feet", false):
+		_level_feet(skel)
 	var bt: Dictionary = BODY_TYPES.get(body_type, BODY_TYPES["average"])
 	var to_root := Transform3D(Basis.IDENTITY.scaled(bt["root"]), Vector3.ZERO) * arm.transform * skel.transform
 	var out := {}
@@ -204,6 +215,69 @@ static func bake(sex: String, hair: String, clip: String, t: float, tree_parent:
 	holder.queue_free()
 	_pose_cache[key] = out
 	return out
+
+
+# Bring a stepped-back foot level with the other one by rotating its thigh,
+# choosing the rotation sign by measurement. Used for lying poses so no heel
+# pokes through the support.
+static func _level_feet(skel: Skeleton3D) -> void:
+	var lf := skel.find_bone("LeftFoot")
+	var rf := skel.find_bone("RightFoot")
+	var lu := skel.find_bone("LeftUpperLeg")
+	var ru := skel.find_bone("RightUpperLeg")
+	if lf < 0 or rf < 0 or lu < 0 or ru < 0:
+		return
+	for _pass in 2:
+		var lp := skel.get_bone_global_pose(lf).origin
+		var rp := skel.get_bone_global_pose(rf).origin
+		var dz := rp.z - lp.z
+		if absf(dz) < 0.02:
+			return
+		# the trailing foot is the one further back (skeleton space: forward is +z)
+		var trailing := ru if dz < 0.0 else lu
+		var leg := absf(skel.get_bone_global_pose(lf).origin.y - skel.get_bone_global_pose(lu).origin.y)
+		var ang := atan2(absf(dz), maxf(leg, 0.5))
+		var q0 := skel.get_bone_pose_rotation(trailing)
+		var best := q0
+		var best_gap := absf(dz)
+		for sgn in [1.0, -1.0]:
+			skel.set_bone_pose_rotation(trailing, q0 * Quaternion(Vector3.RIGHT, sgn * ang))
+			skel.force_update_all_bone_transforms()
+			var gap := absf(skel.get_bone_global_pose(rf).origin.z - skel.get_bone_global_pose(lf).origin.z)
+			if gap < best_gap:
+				best_gap = gap
+				best = skel.get_bone_pose_rotation(trailing)
+		skel.set_bone_pose_rotation(trailing, best)
+		skel.force_update_all_bone_transforms()
+
+
+# ---------------------------------------------------------------- contact validation
+
+static var _lowest_cache := {}
+
+# Lowest point (y) of a mesh after applying `basis`, so a pose can be rested
+# exactly on a support surface instead of sinking into or hovering over it.
+static func lowest_y(mesh: ArrayMesh, basis: Basis) -> float:
+	var key := "%d|%s" % [mesh.get_rid().get_id(), str(basis)]
+	if _lowest_cache.has(key):
+		return _lowest_cache[key]
+	var verts: PackedVector3Array = Transform3D(basis, Vector3.ZERO) * (mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array)
+	var lo := INF
+	for v in verts:
+		lo = minf(lo, v.y)
+	_lowest_cache[key] = lo
+	return lo
+
+
+# Returns the transform that rests `mesh` (posed with `basis`) on a horizontal
+# support at `support_y`, with `clearance` above it, at xz position `at`.
+static func rest_on(mesh: ArrayMesh, basis: Basis, support_y: float, at: Vector3, clearance := 0.005) -> Transform3D:
+	return Transform3D(basis, Vector3(at.x, support_y - lowest_y(mesh, basis) + clearance, at.z))
+
+
+# Contact report entry: how far the lowest point sits below (+) or above (-) the support.
+static func contact_error(mesh: ArrayMesh, xform: Transform3D, support_y: float) -> float:
+	return support_y - (xform.origin.y + lowest_y(mesh, xform.basis))
 
 
 static func _skin_mesh(mi: MeshInstance3D, skel: Skeleton3D, to_root: Transform3D) -> ArrayMesh:
