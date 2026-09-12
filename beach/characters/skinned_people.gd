@@ -126,8 +126,9 @@ static func _apply_materials(skel: Skeleton3D, spec: Dictionary, hair: String, o
 
 # Returns {"body": ArrayMesh, "eyes": ArrayMesh, "brows": ArrayMesh, "hair": ArrayMesh or null}
 # posed from `clip` at time `t`, in root space (facing -Z, feet at y=0).
-static func bake(sex: String, hair: String, clip: String, t: float, tree_parent: Node = null) -> Dictionary:
-	var key := "%s|%s|%s|%.2f" % [sex, hair, clip, t]
+# tweaks: {bone_name: Basis} applied on top of the clip pose (e.g. bend the spine)
+static func bake(sex: String, hair: String, clip: String, t: float, tree_parent: Node = null, tweaks: Dictionary = {}) -> Dictionary:
+	var key := "%s|%s|%s|%.2f|%s" % [sex, hair, clip, t, str(tweaks)]
 	if _pose_cache.has(key):
 		return _pose_cache[key]
 	var spec: Dictionary = BODIES[sex]
@@ -148,6 +149,11 @@ static func bake(sex: String, hair: String, clip: String, t: float, tree_parent:
 		Engine.get_main_loop().root.add_child.call_deferred(holder)
 	ap.play(clip)
 	ap.seek(t, true)
+	for bone_name in tweaks:
+		var bi := skel.find_bone(bone_name)
+		if bi >= 0:
+			var q := skel.get_bone_pose_rotation(bi)
+			skel.set_bone_pose_rotation(bi, q * Quaternion(tweaks[bone_name]))
 	skel.force_update_all_bone_transforms()
 	var to_root := arm.transform * skel.transform
 	var out := {}

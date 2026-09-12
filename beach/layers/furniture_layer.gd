@@ -68,7 +68,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 					chunk_spots.append({"node": spot, "kind": "lounger"})
 				else:
 					var pi := rng.randi() % panels.size()
-					panels[pi].add_box(Vector3(1.9, 0.03, 0.9), Color(1, 1, 1), base * Transform3D(Basis.IDENTITY, Vector3(0, 0.02, 0)))
+					panels[pi].add_box(Vector3(0.9, 0.03, 1.9), Color(1, 1, 1), base * Transform3D(Basis.IDENTITY, Vector3(0, 0.02, 0)))
 					chunk_spots.append({"node": spot, "kind": "towel"})
 				if rng.randf() < 0.28:
 					_umbrella(flat, panels, g.transform, rng)

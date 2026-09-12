@@ -122,6 +122,8 @@ The web build in `docs/` is served by GitHub Pages.
   particles, lighting, grass placement) is generated in `main.gd`, so the
   scene file is tiny. `grass.gdshader` bends the blades with wind noise and
   pushes them away from the boulder.
+- `beach/web/shell.html` – custom HTML shell for the web export (branded loading page with
+  progress and controls; set in `export_presets.cfg` as `html/custom_html_shell`).
 - `docs/` – the exported Web build (HTML + JS + WASM + PCK). Regenerate with:
 
   ```bash

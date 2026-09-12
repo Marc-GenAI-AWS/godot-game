@@ -10,6 +10,7 @@ var furniture: FurnitureLayer
 var walkers: Array = []     # [root, speed, dir, anim]
 var swimmers: Array = []    # [node, base_y, phase]
 var _batches := {}          # chunk-local: material key -> MeshBatch
+const LOUNGER_RECLINE := 0.8  # radians the spine bends up onto the backrest
 
 
 func _init() -> void:
@@ -28,8 +29,8 @@ func _person(rng: RandomNumberGenerator) -> Dictionary:
 		"skin": _pick(SkinnedPeople.SKIN_TINTS, rng), "hair_tint": _pick(SkinnedPeople.HAIR_TINTS, rng)}
 
 
-func _add_baked(p: Dictionary, clip: String, t: float, xform: Transform3D) -> void:
-	var baked := SkinnedPeople.bake(p["sex"], p["hair"], clip, t, self)
+func _add_baked(p: Dictionary, clip: String, t: float, xform: Transform3D, tweaks: Dictionary = {}) -> void:
+	var baked := SkinnedPeople.bake(p["sex"], p["hair"], clip, t, self, tweaks)
 	_batch_for(p["outfit"]).add(baked["body"], xform, p["skin"])
 	if baked["eyes"]:
 		_batch_for("eyes").add(baked["eyes"], xform, Color(1, 1, 1))
@@ -52,7 +53,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 	_batches = {}
 	var inv := chunk.global_transform.affine_inverse()
 	# A small library of pose times so batched people don't all match.
-	var lie_ts := [0.3, 0.9, 1.6]
+	var lie_ts := [0.0, 0.08, 0.16]   # early idle frames keep the legs together
 	var sit_ts := [0.2, 1.1, 2.0]
 	var idle_ts := [0.0, 0.8, 1.7]
 	# Sunbathers / sitters on furniture spots
@@ -64,9 +65,10 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 			var node: Node3D = spot["node"]
 			var base: Transform3D = inv * node.global_transform
 			if spot["kind"] == "lounger":
-				# lie on the back, head at the backrest: face the body +Z first, then tip it over
-				var lie := Transform3D(Basis.IDENTITY.rotated(Vector3.UP, PI).rotated(Vector3.RIGHT, -PI * 0.5 + 0.34), Vector3(0, 0.44, 0.9))
-				_add_baked(p, "Idle", _pick(lie_ts, rng), base * lie)
+				# lie flat on the seat (face up, head toward the backrest), then bend the
+				# spine up to the backrest angle so the torso rests on it
+				var lie := Transform3D(Basis.IDENTITY.rotated(Vector3.UP, PI).rotated(Vector3.RIGHT, -PI * 0.5), Vector3(0, 0.41, 0.55))
+				_add_baked(p, "Idle", _pick(lie_ts, rng), base * lie, {"Spine": Basis(Vector3.RIGHT, LOUNGER_RECLINE)})
 			else:
 				if rng.randf() < 0.5:
 					var lie := Transform3D(Basis.IDENTITY.rotated(Vector3.UP, PI).rotated(Vector3.RIGHT, -PI * 0.5 + 0.05), Vector3(0, 0.08, 0.9))
