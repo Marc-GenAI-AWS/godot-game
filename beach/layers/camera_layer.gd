@@ -33,12 +33,12 @@ func tick(delta: float) -> void:
 		return
 	var fwd := player_layer.forward()
 	var right := player_layer.right()
-	var target := p + right * 0.45 + Vector3(0, 1.55, 0) - fwd * 2.9
+	var target := p + right * 0.5 + Vector3(0, 1.8, 0) - fwd * 3.9
 	target.y = maxf(target.y, ctx.sand_height(target.x, target.z) + 0.8)
 	# Stabilised: follow the root smoothly with no step bob, sway or roll.
-	var k := 1.0 - exp(-delta * 4.0)
+	var k := 1.0 - exp(-delta * 3.0)
 	camera.global_position = camera.global_position.lerp(target, k)
-	camera.look_at(p + Vector3(0, 1.05, 0) + fwd * 2.2 + right * 0.25, Vector3.UP)
+	camera.look_at(p + Vector3(0, 1.1, 0) + fwd * 2.6 + right * 0.3, Vector3.UP)
 
 
 func on_world_wrapped(dz: float) -> void:
