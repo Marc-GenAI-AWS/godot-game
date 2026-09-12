@@ -30,52 +30,63 @@ textures, five skin tones, seven body builds, four gaits).
 
 ## Layout
 
+Segment-first: each specialist owns one directory under `game/segments/`;
+a world is only its assembly, its terrain context and its brief.
+
 ```
-game/                          one Godot project, all worlds
+game/
   main.gd                      picks the world from #world=<name>, runs the tick loop
-  core/                        the framework every world uses
-    world_context.gd           shared state + the terrain/walkability interface
+  core/                        the contract, nothing else
+    world_context.gd           shared state + terrain/walkability interface
                                (ground_height, walk_height, constrain, wetness_at),
                                obstacle field, signals, palette, textures
     layers/scene_layer.gd      base class: setup(ctx) -> build(), tick(delta), on_world_wrapped()
     layers/chunked_layer.gd    scenery repeated every 200 m (3 identical copies)
     layers/mesh_batch.gd       merges primitives / posed meshes into one draw call
-    layers/sky_layer.gd        environment, sun, fog, clouds; publishes the palette
-    layers/camera_layer.gd     chase camera with drag-orbit and inspect modes
-    layers/player_layer.gd     procedural-rig player (kept for reference)
-    layers/skinned_player_layer.gd  player on a rigged body: pace, jump, footsteps
-    layers/mpfb_player_layer.gd     variant using the MPFB body
-    layers/tracks_layer.gd     footprints from player_step
-    layers/hud_layer.gd
-    characters/                humanoid rig, body/texture generators, hair ribbons,
-                               SkinnedPeople (live characters + CPU pose baking,
-                               body builds, contact helpers), CC0 assets, bone maps
-    shaders/                   skin, hair
     web/shell.html             branded web loader
+  segments/                    one directory per specialist
+    sky/                       environment, sun, fog, clouds; publishes the palette
+    ground/                    terrain surface; variants/beach.gd + shaders/sand.gdshader
+    water/                     variants/beach.gd + shaders/water.gdshader
+    architecture/              variants/beach.gd (hotels, promenade, lifeguard huts)
+    vegetation/                variants/beach.gd (palms, hedges)
+    props/                     variants/beach.gd (loungers, umbrellas, clutter; exposes spots)
+    characters/                humanoid rig, body/texture generators, hair ribbons,
+                               SkinnedPeople (live characters, CPU pose baking, builds,
+                               contact helpers), CC0 assets, bone maps, skin/hair shaders
+    crowd/                     variants/beach.gd (sunbathers, sitters, waders, swimmers,
+                               strollers; contact validator)
+    fauna/                     variants/beach.gd (gulls)
+    player/                    on-foot player: pace, jump, footsteps (vehicle mode to come)
+    camera/                    chase camera, drag-orbit, inspect modes
+    tracks/                    footprints
+    hud/
   worlds/beach/
     beach_world.gd             make_context() / make_layers() / validators()
     beach_context.gd           sand slope, sea level, tide, promenade deck
-    layers/                    ocean, sand, architecture, vegetation, furniture,
-                               crowd (with contact validator), fauna
-    shaders/                   sand, water
+    brief.md                   reference digest and per-segment briefs
 docs/                          GitHub Pages: index.html (landing), play/ (the build),
                                beach/ (redirect for the old URL)
 examples/                      reference clips (gitignored) and their study frames;
                                index.json tags each clip's scene family
-tools/                         Blender / Python pipeline: clip trimming, walk
-                               measurement, MPFB body generation, UV outfit painting,
-                               reference.py (clip -> contact sheet + frames + crops)
+tools/                         Blender / Python pipeline: clip trimming, walk measurement,
+                               MPFB body generation, UV outfit painting, reference.py
 shots/                         headless capture harness (keys, holds, drags)
 design/                        the specialist-models design document
 ```
+
+Naming: a segment's shared code has a plain name (`VegetationLayer`); a
+world's variant is prefixed (`BeachVegetation`). The word "beach" appears
+only in variant files and under `worlds/beach/`.
 
 ## Adding a world
 
 1. `worlds/<name>/<name>_context.gd` extending `WorldContext`: implement
    `ground_height`, and `walk_height` / `constrain` / `wetness_at` if they
    differ from the terrain.
-2. Layers under `worlds/<name>/layers/` extending `SceneLayer` or
-   `ChunkedLayer`; reuse the core sky, camera, player, tracks and HUD layers.
+2. One variant per segment under `segments/<segment>/variants/<name>.gd`
+   extending `SceneLayer` or `ChunkedLayer`; reuse the segment's generators
+   and the generic sky, camera, player, tracks and HUD layers.
 3. `worlds/<name>/<name>_world.gd` with `make_context()`, `make_layers()`
    and `validators()`; register it in `main.gd`'s `WORLDS`.
 4. Study the reference: `python3 tools/reference.py "examples/<clip>.mp4"`.
@@ -88,6 +99,6 @@ design/                        the specialist-models design document
   (GL Compatibility, single-threaded, so it runs on Pages without special headers).
 - Capture: `python3 shots/cdp_gpu.py <url> 8,16 out "6:ArrowUp,10:Space,12:Drag_-260_0"`.
 - Characters: Quaternius Universal Base Characters + Universal Animation Library
-  (CC0), retargeted at import via `core/characters/assets/bonemap_*.tres`;
+  (CC0), retargeted at import via `segments/characters/assets/bonemap_*.tres`;
   outfits painted in UV space by `tools/paint_*.py`; MPFB bodies from
   `tools/mpfb_build.py` in headless Blender.

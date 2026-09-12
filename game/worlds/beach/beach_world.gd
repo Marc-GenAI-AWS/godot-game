@@ -11,14 +11,14 @@ static func make_context() -> WorldContext:
 
 static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
 	var sky := SkyLayer.new()
-	var ocean := OceanLayer.new()
-	var sand := SandLayer.new()
+	var ocean := BeachWater.new()
+	var sand := BeachGround.new()
 	var tracks := TracksLayer.new()
-	var architecture := ArchitectureLayer.new()
-	var vegetation := VegetationLayer.new()
-	var furniture := FurnitureLayer.new()
-	var crowd := CrowdLayer.new()
-	var fauna := FaunaLayer.new()
+	var architecture := BeachArchitecture.new()
+	var vegetation := BeachVegetation.new()
+	var furniture := BeachProps.new()
+	var crowd := BeachCrowd.new()
+	var fauna := BeachFauna.new()
 	var player: PlayerLayer = MpfbPlayerLayer.new() if ctx.variant == "mpfb" else SkinnedPlayerLayer.new()
 	var camera := CameraLayer.new()
 	var hud := HudLayer.new()
@@ -30,5 +30,5 @@ static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
 
 static func validators(layers: Array[SceneLayer]) -> void:
 	for l in layers:
-		if l is CrowdLayer:
-			(l as CrowdLayer).validate_contacts()
+		if l is BeachCrowd:
+			(l as BeachCrowd).validate_contacts()

@@ -52,8 +52,7 @@ The contract is everything a specialist is allowed to assume. It must be
 frozen before any training data is collected, because every example encodes
 it and a later change invalidates the dataset.
 
-**Base class.** A layer subclasses `BeachLayer` (to be renamed `SceneLayer`)
-and implements:
+**Base class.** A layer subclasses `SceneLayer` and implements:
 
 - `build()` – create nodes under itself, reading the context.
 - `tick(delta)` – per-frame update.
@@ -84,6 +83,12 @@ failure in the hand-built version:
   Draw-call and triangle budgets are part of the contract.
 - Import-time retargeting requires the *complete* option block in the
   `.import` file; partial blocks are silently discarded.
+
+**Directory ownership (segment-first).** Each specialist owns one directory,
+`game/segments/<segment>/`, holding the segment's shared generators and one
+variant file per world (`variants/<world>.gd`). A world under `game/worlds/`
+is only its assembly, its terrain context and its brief, which is what the
+director owns. `game/core/` is the contract and nothing else.
 
 **Capture recipes.** Each segment has a standard set of views the verifier
 renders. They are part of the contract because a specialist's definition of
