@@ -16,7 +16,8 @@ Contents
 6. Supervised fine-tuning
 7. Reinforcement learning with verifiable rewards
 8. The agentic loop
-9. Roadmap, risks, and open questions
+9. Building it on AWS with SageMaker AI
+10. Roadmap, risks, and open questions
 
 ---
 
@@ -432,7 +433,63 @@ the end. Everything between is automatic.
 
 ---
 
-## 9. Roadmap, risks, and open questions
+## 9. Building it on AWS with SageMaker AI
+
+The pipeline maps onto SageMaker AI and Bedrock without bending it. Training,
+data, labelling, registry and serving are covered by managed services; the one
+piece with no turnkey answer is the RL environment, because episodes render a
+game scene, and that is a custom container on any cloud.
+
+| Pipeline stage | AWS piece |
+|---|---|
+| Brief sampling and teacher generation | SageMaker Processing jobs; Claude on Bedrock as the teacher |
+| Verifier, mechanical stages | Processing jobs on a custom GPU container (Godot headless + Chromium/EGL, same recipe as `shots/`) |
+| Verifier, judge stage | Claude on Bedrock with image input, called from the same job |
+| Human anchor set, pairwise preferences | Ground Truth labelling jobs with a custom image-comparison task |
+| Dataset versioning | S3 with versioned prefixes keyed by contract version (Feature Store optional) |
+| SFT of specialists | Training jobs on the Hugging Face / PyTorch containers, or JumpStart fine-tuning of open models (7B–14B code models); HyperPod to train many segments at once |
+| RL with verifiable rewards | Training jobs or HyperPod running TRL / veRL, with the verifier container as the environment |
+| Evaluation and registry | Model Registry; the verifier's held-out eval is the approval gate |
+| Serving specialists | Real-time or async endpoints, one per segment or a multi-model endpoint |
+| Director and orchestration | Bedrock Agents, or Step Functions driving Bedrock calls and the specialist endpoints |
+| Pipeline glue | SageMaker Pipelines: generate → filter → train → eval → register |
+
+**Design choices to make early**
+
+- *Where the render environment lives.* For data generation and evaluation,
+  Processing jobs are enough: batch a few hundred briefs per job, render,
+  score, write to S3. For RL the environment must answer the trainer
+  quickly, so it runs inside the same HyperPod cluster, or on a fleet of GPU
+  workers the trainer calls over the network. Build the verifier as one
+  container image from the start and use it in both modes. On x86 with an
+  NVIDIA GPU it renders natively and an episode is seconds, not the minute
+  it takes on the arm64 development box.
+- *Base model for the specialists.* Fine-tuning open weights on SageMaker
+  gives full control and cheap inference for the many-call specialist role,
+  and leaves RL open. Bedrock custom-model fine-tuning is operationally
+  simpler but constrains RL. Recommended: open weights on SageMaker for
+  specialists; Bedrock for the judge and director, where the strongest
+  model matters and calls are few.
+
+**What AWS does not provide**
+
+- A managed RLVR loop. You bring the RL library and the environment. This
+  is true of every cloud today.
+- Anything about scene quality. The contract, capture recipes, rubrics and
+  anchor sets are yours to write regardless of platform, and are most of
+  the intellectual work in this document.
+
+**First milestone.** One SageMaker Pipeline that takes a batch of sky briefs,
+generates layers with Claude on Bedrock, runs the verifier container, writes
+verified examples to S3, and fine-tunes one specialist. That exercises every
+service in the table except RL, and shows within days whether the loop yields
+training data at the needed rate. Develop the verifier container on an x86
+GPU machine; the arm64 box used for the prototype is the wrong architecture
+for a SageMaker image.
+
+---
+
+## 10. Roadmap, risks, and open questions
 
 **Roadmap**
 
