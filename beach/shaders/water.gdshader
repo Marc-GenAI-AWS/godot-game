@@ -9,9 +9,9 @@ render_mode cull_disabled, depth_draw_opaque;
 uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
 uniform float sand_slope = 0.06;
 uniform float tide_amp = 0.14;
-uniform vec3 deep_color : source_color = vec3(0.01, 0.12, 0.32);
-uniform vec3 shallow_color : source_color = vec3(0.06, 0.45, 0.5);
-uniform vec3 sand_color : source_color = vec3(0.42, 0.36, 0.27);
+uniform vec3 deep_color : source_color = vec3(0.0, 0.16, 0.42);
+uniform vec3 shallow_color : source_color = vec3(0.02, 0.34, 0.46);
+uniform vec3 sand_color : source_color = vec3(0.38, 0.31, 0.23);
 
 varying vec3 v_world;
 varying float v_depth;
@@ -37,28 +37,32 @@ void fragment() {
 	float d = v_depth;
 	vec3 col = mix(shallow_color, deep_color, smoothstep(0.0, 7.0, d));
 	// Shallows: let the sand show through.
-	col = mix(sand_color, col, smoothstep(0.0, 0.7, d));
+	col = mix(sand_color, col, smoothstep(0.0, 0.28, d));
 
 	// Foam at the water's edge, streaked and moving up the beach with the tide.
 	float n1 = texture(noise_tex, v_world.xz * vec2(0.25, 0.08) + vec2(-t * 0.08, t * 0.02)).r;
 	float n2 = texture(noise_tex, v_world.xz * vec2(0.9, 0.5) + vec2(t * 0.05, -t * 0.07)).r;
-	float edge_foam = smoothstep(0.9, 0.0, d) * smoothstep(0.35, 0.7, n1 * 0.6 + n2 * 0.5);
+	// Thick lacy foam at the edge: dense band that breaks into holes further out.
+	float n4 = texture(noise_tex, v_world.xz * vec2(1.8, 1.1) + vec2(-t * 0.11, t * 0.04)).r;
+	float lace = n1 * 0.45 + n2 * 0.5 + n4 * 0.35;
+	float edge_foam = smoothstep(0.32, 0.0, d) * smoothstep(0.3, 0.62, lace + smoothstep(0.16, 0.0, d) * 0.55);
+	edge_foam = max(edge_foam, smoothstep(0.05, 0.0, d) * 0.9);
 	// Breaking lines: bands of foam rolling toward shore.
 	float band = sin(v_world.x * 0.5 - t * 1.1 + n1 * 2.0);
 	float breakers = smoothstep(0.75, 0.95, band) * smoothstep(3.0, 9.0, v_world.x) * smoothstep(40.0, 15.0, v_world.x);
 	breakers *= smoothstep(0.3, 0.6, n2);
 	float foam = clamp(edge_foam + breakers * 0.9, 0.0, 1.0);
-	col = mix(col, vec3(0.85, 0.88, 0.9), foam);
+	col = mix(col, vec3(0.88, 0.91, 0.94) * (0.82 + 0.18 * n2), foam);
 
 	// Small ripple normals for sparkle.
 	float r1 = texture(noise_tex, v_world.xz * 0.6 + vec2(t * 0.06, t * 0.04)).r;
 	float r2 = texture(noise_tex, v_world.xz * 0.6 + vec2(0.013, 0.0) + vec2(t * 0.06, t * 0.04)).r;
 	float r3 = texture(noise_tex, v_world.xz * 0.6 + vec2(0.0, 0.013) + vec2(t * 0.06, t * 0.04)).r;
 	vec3 ripple = normalize(vec3((r1 - r2) * 6.0, 1.0, (r1 - r3) * 6.0));
-	NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(ripple, 0.0)).xyz, 0.18));
+	NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(ripple, 0.0)).xyz, 0.12));
 
 	ALBEDO = col;
-	ROUGHNESS = mix(0.22, 0.7, foam);
-	SPECULAR = 0.5;
+	ROUGHNESS = mix(0.3, 0.85, max(foam, 1.0 - smoothstep(0.0, 0.5, d)));
+	SPECULAR = mix(0.25, 0.4, smoothstep(0.0, 1.0, d));
 	METALLIC = 0.0;
 }

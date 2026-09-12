@@ -11,6 +11,8 @@ func build() -> void:
 	material = ShaderMaterial.new()
 	material.shader = load("res://shaders/sand.gdshader")
 	material.set_shader_parameter("noise_tex", ctx.noise_tex)
+	material.set_shader_parameter("grain_normal", ctx.sand_normal_tex)
+	material.set_shader_parameter("sky_color", ctx.sky_horizon)
 	mesh.surface_set_material(0, material)
 	var mi := MeshInstance3D.new()
 	mi.name = "Sand"

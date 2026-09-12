@@ -26,10 +26,12 @@ func _pick(arr: Array, rng: RandomNumberGenerator) -> Color:
 func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 	var L := WorldContext.CHUNK
 	var ci := chunks.size() - 1
+	var statics := MeshBatch.new()   # every posed, non-moving person in this chunk
+	var inv := chunk.global_transform.affine_inverse()
 	# Sunbathers / sitters on furniture spots
 	if furniture and ci < furniture.spots.size():
 		for spot in furniture.spots[ci]:
-			if rng.randf() > 0.7:
+			if rng.randf() > 0.55:
 				continue
 			var h := Humanoid.new()
 			var skin := _pick(skins, rng)
@@ -47,18 +49,21 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 					h.pose_sit()
 					h.position = Vector3(0.0, 0.03, 0.3)
 			node.add_child(h)
-			h.bake_static()
+			h.bake_into(statics, inv * node.global_transform)
+			h.queue_free()
 	# Waders standing in the shallows
-	for i in 5:
+	for i in 8:
 		var h := Humanoid.new()
 		h.build(_pick(skins, rng), skins[0], _pick(bottoms, rng), Color(0.1, 0.07, 0.05), rng.randf() < 0.5, rng.randf_range(0.9, 1.05))
-		var wx := rng.randf_range(4.0, 9.0)
+		var wx := rng.randf_range(3.0, 9.0)
 		var wz := rng.randf_range(-L, 0.0)
 		h.position = Vector3(wx, ctx.sand_height(wx, wz), wz)
 		h.rotation.y = rng.randf_range(-0.6, 0.6) + PI * 0.5
 		h.pose_idle()
-		chunk.add_child(h)
-		h.bake_static()
+		h.bake_into(statics, Transform3D.IDENTITY)
+		h.free()
+	if not statics.is_empty():
+		statics.instance(chunk, "StaticPeople", 0.7)
 	# Swimmers bobbing further out
 	for i in 6:
 		var h := Humanoid.new()
@@ -72,7 +77,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 		h.bake_static()
 		swimmers.append([h, -1.05, rng.randf() * TAU])
 	# Strollers along the waterline, some in pairs
-	for i in 9:
+	for i in 12:
 		var pair := rng.randf() < 0.35
 		var x := rng.randf_range(-12.0, -1.0)
 		var z := rng.randf_range(-L, 0.0)

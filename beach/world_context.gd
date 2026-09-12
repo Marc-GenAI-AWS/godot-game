@@ -10,7 +10,7 @@ signal player_step(pos: Vector3, side: int, yaw: float)
 const CHUNK := 200.0          # scenery period along Z (player walks toward -Z)
 const SAND_SLOPE := 0.06      # sand drops this much per metre into the sea (+X)
 const LAND_SLOPE := 0.03      # and rises this much per metre up the beach (-X)
-const BOARDWALK_X := -66.0
+const BOARDWALK_X := -56.0
 
 var time := 0.0
 var tide_reach := 3.0         # world X the last wave reached (wet line)
@@ -22,7 +22,15 @@ var inspect := false        # orbit the player up close (URL #inspect)
 var lite := false           # skip optional detail for A/B timing (URL #lite)
 var variant := "quaternius"  # which player body to use (URL #mpfb)
 
+# Palette published by the sky layer at build time; other layers read it.
+var sky_zenith := Color(0.1, 0.32, 0.82)
+var sky_horizon := Color(0.62, 0.78, 0.95)
+var sun_dir := Vector3(-0.35, -0.8, -0.35)
+var sun_color := Color(1.0, 0.96, 0.88)
+var fog_color := Color(0.72, 0.82, 0.94)
+
 var noise_tex: ImageTexture
+var sand_normal_tex: ImageTexture
 var cloud_tex: ImageTexture
 var window_tex: ImageTexture
 var frond_tex: ImageTexture
@@ -54,6 +62,14 @@ func make_textures() -> void:
 	n.frequency = 0.02
 	n.fractal_octaves = 4
 	noise_tex = ImageTexture.create_from_image(n.get_seamless_image(256, 256))
+	# fine grain normal map for sand
+	var gn := FastNoiseLite.new()
+	gn.seed = 8
+	gn.frequency = 0.25
+	gn.fractal_octaves = 3
+	var gimg := gn.get_seamless_image(256, 256)
+	gimg.bump_map_to_normal_map(1.2)
+	sand_normal_tex = ImageTexture.create_from_image(gimg)
 
 	# Window tile: pale wall, darker window, a ledge line at the bottom.
 	var img := Image.create(64, 64, false, Image.FORMAT_RGB8)
@@ -80,10 +96,11 @@ func make_textures() -> void:
 			var v := (y - h * 0.5) / (h * 0.5)
 			var r := sqrt(u * u + v * v * 2.2)
 			var m := cn.get_noise_2d(x, y) * 0.5 + 0.5
-			var a := clampf((m - 0.35) * 3.0 - r * 1.3 + 0.55, 0.0, 1.0)
-			a = a * a * (3.0 - 2.0 * a)
-			var shade := clampf(1.0 - (v + 0.4) * 0.25, 0.7, 1.0)
-			cimg.set_pixel(x, y, Color(shade, shade, shade + 0.02, a))
+			var a := clampf((m - 0.3) * 3.2 - r * r * 2.6 + 0.55, 0.0, 1.0)
+			a = a * a * (3.0 - 2.0 * a) * clampf((0.98 - r) * 12.0, 0.0, 1.0)
+			# bright tops, grey-blue undersides
+			var shade := clampf(1.02 - maxf(v + 0.15, 0.0) * 0.45 - (0.5 - m) * 0.2, 0.62, 1.0)
+			cimg.set_pixel(x, y, Color(shade, shade, shade + 0.03, a))
 	cloud_tex = ImageTexture.create_from_image(cimg)
 
 	# Palm frond: serrated leaflets either side of a rib, alpha-cut.

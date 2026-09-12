@@ -10,7 +10,7 @@ var player_layer: PlayerLayer
 func build() -> void:
 	camera = Camera3D.new()
 	camera.name = "ChaseCamera"
-	camera.fov = 55.0
+	camera.fov = 60.0
 	camera.near = 0.1
 	camera.far = 1500.0
 	add_child(camera)
@@ -33,12 +33,12 @@ func tick(delta: float) -> void:
 		return
 	var fwd := player_layer.forward()
 	var right := player_layer.right()
-	var target := p + Vector3(0, 1.8, 0) - fwd * 3.9
+	var target := p + Vector3(0, 1.55, 0) - fwd * 3.3
 	target.y = maxf(target.y, ctx.sand_height(target.x, target.z) + 0.8)
 	# Stabilised: follow the root smoothly with no step bob, sway or roll.
 	var k := 1.0 - exp(-delta * 3.0)
 	camera.global_position = camera.global_position.lerp(target, k)
-	camera.look_at(p + Vector3(0, 1.0, 0) + fwd * 2.6, Vector3.UP)
+	camera.look_at(p + Vector3(0, 0.88, 0) + fwd * 3.0, Vector3.UP)
 
 
 func on_world_wrapped(dz: float) -> void:

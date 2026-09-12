@@ -3,47 +3,79 @@ extends RefCounted
 
 # Merges many small meshes (boxes, cylinders, primitives, posed limbs) into
 # one ArrayMesh with per-vertex colours, so a whole hotel facade or a whole
-# posed sunbather costs a single draw call.
+# crowd costs a single draw call. Accumulates packed arrays and transforms
+# them with the engine's vectorised operators, so it stays fast in GDScript.
 
-var st := SurfaceTool.new()
-var offset := 0
-
-
-func _init() -> void:
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+var verts := PackedVector3Array()
+var norms := PackedVector3Array()
+var uvs := PackedVector2Array()
+var cols := PackedColorArray()
+var idx := PackedInt32Array()
+var _arrays_cache := {}
 
 
 func add(mesh: Mesh, xform: Transform3D, color: Color, surface := 0) -> void:
-	var arrays := mesh.surface_get_arrays(surface)
-	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var norms: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL] if arrays[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
-	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV] if arrays[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
-	var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
-	var nbasis := xform.basis.inverse().transposed()
-	for i in verts.size():
-		st.set_color(color)
-		if norms.size() > i:
-			st.set_normal((nbasis * norms[i]).normalized())
-		if uvs.size() > i:
-			st.set_uv(uvs[i])
-		st.add_vertex(xform * verts[i])
-	if idx.size() > 0:
-		for j in idx:
-			st.add_index(j + offset)
+	var key := mesh.get_rid()
+	var arrays: Array
+	if _arrays_cache.has(key):
+		arrays = _arrays_cache[key]
 	else:
-		for j in verts.size():
-			st.add_index(j + offset)
-	offset += verts.size()
+		arrays = mesh.surface_get_arrays(surface)
+		_arrays_cache[key] = arrays
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var n := v.size()
+	var base := verts.size()
+	verts.append_array(xform * v)
+	if arrays[Mesh.ARRAY_NORMAL] != null:
+		var nb := xform.basis.inverse().transposed()
+		var tn: PackedVector3Array = Transform3D(nb, Vector3.ZERO) * (arrays[Mesh.ARRAY_NORMAL] as PackedVector3Array)
+		# normalise in bulk (scaled transforms) by rebuilding through a Basis is
+		# not available; scales here are near-uniform so this is close enough
+		norms.append_array(tn)
+	else:
+		var flat := PackedVector3Array()
+		flat.resize(n)
+		flat.fill(Vector3.UP)
+		norms.append_array(flat)
+	if arrays[Mesh.ARRAY_TEX_UV] != null:
+		uvs.append_array(arrays[Mesh.ARRAY_TEX_UV])
+	else:
+		var zu := PackedVector2Array()
+		zu.resize(n)
+		uvs.append_array(zu)
+	var c := PackedColorArray()
+	c.resize(n)
+	c.fill(color)
+	cols.append_array(c)
+	var src_idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	if src_idx.size() > 0:
+		var shifted := src_idx.duplicate()
+		for i in shifted.size():
+			shifted[i] += base
+		idx.append_array(shifted)
+	else:
+		var seq := PackedInt32Array()
+		seq.resize(n)
+		for i in n:
+			seq[i] = base + i
+		idx.append_array(seq)
 
 
 func add_box(size: Vector3, color: Color, xform: Transform3D) -> void:
-	var bm := BoxMesh.new()
-	bm.size = size
-	add(bm, xform, color)
+	add(_box_mesh(size), xform * Transform3D(Basis.IDENTITY.scaled(size), Vector3.ZERO), color)
 
 
 func add_box_at(size: Vector3, color: Color, pos: Vector3) -> void:
-	add_box(size, color, Transform3D(Basis.IDENTITY, pos))
+	add(_box_mesh(size), Transform3D(Basis.IDENTITY.scaled(size), pos), color)
+
+
+static var _unit_box: BoxMesh
+static func _box_mesh(size: Vector3) -> Mesh:
+	# one unit box, scaled through the transform, so its arrays are cached once
+	if _unit_box == null:
+		_unit_box = BoxMesh.new()
+		_unit_box.size = Vector3.ONE
+	return _unit_box
 
 
 func add_cylinder(r_top: float, r_bot: float, h: float, color: Color, xform: Transform3D, segs := 8) -> void:
@@ -56,20 +88,26 @@ func add_cylinder(r_top: float, r_bot: float, h: float, color: Color, xform: Tra
 
 
 func is_empty() -> bool:
-	return offset == 0
+	return verts.size() == 0
 
 
 func commit(rough := 0.85) -> ArrayMesh:
-	var m := st.commit()
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
 	mat.roughness = rough
-	m.surface_set_material(0, mat)
-	return m
+	return commit_with(mat)
 
 
 func commit_with(material: Material) -> ArrayMesh:
-	var m := st.commit()
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = norms
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_COLOR] = cols
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	m.surface_set_material(0, material)
 	return m
 

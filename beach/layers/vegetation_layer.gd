@@ -49,34 +49,38 @@ func _make_frond_mesh() -> ArrayMesh:
 
 func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 	var L := WorldContext.CHUNK
-	var z := -L + rng.randf_range(0.0, 8.0)
+	# Tall, thin fan palms in a line along the promenade (as in the reference)
+	var z := -L + rng.randf_range(0.0, 6.0)
 	while z < 0.0:
-		var x := WorldContext.BOARDWALK_X + 4.0 + rng.randf_range(-2.0, 3.0)
-		_palm(chunk, Vector3(x, ctx.sand_height(x, z) - 0.2, z), rng)
-		z += rng.randf_range(9.0, 16.0)
-	for i in 4:
-		var x := rng.randf_range(-54.0, -40.0)
+		var x := WorldContext.BOARDWALK_X - 2.5 + rng.randf_range(-0.6, 0.6)
+		_palm(chunk, Vector3(x, ctx.sand_height(x, z) - 0.2, z), rng, true)
+		z += rng.randf_range(5.5, 8.5)
+	# a few fuller coconut palms on the sand
+	for i in 3:
+		var x := rng.randf_range(-48.0, -38.0)
 		var zz := rng.randf_range(-L, 0.0)
-		_palm(chunk, Vector3(x, ctx.sand_height(x, zz) - 0.2, zz), rng)
+		_palm(chunk, Vector3(x, ctx.sand_height(x, zz) - 0.2, zz), rng, false)
 	# Hedges along the boardwalk's landward side.
 	var hedges := MeshBatch.new()
 	var hz := -L
 	while hz < 0.0:
 		var len := rng.randf_range(6.0, 14.0)
-		var hx := WorldContext.BOARDWALK_X - 7.6
+		var hx := WorldContext.BOARDWALK_X - 8.6
 		hedges.add_box_at(Vector3(1.2, 1.0, len), Color(0.15, 0.4, 0.17), Vector3(hx, ctx.sand_height(hx, hz) + 0.9, hz + len * 0.5))
 		hz += len + rng.randf_range(3.0, 10.0)
 	hedges.instance(chunk, "Hedges", 0.95)
 
 
-func _palm(parent: Node3D, pos: Vector3, rng: RandomNumberGenerator) -> void:
+func _palm(parent: Node3D, pos: Vector3, rng: RandomNumberGenerator, tall := false) -> void:
 	var palm := Node3D.new()
 	palm.position = pos
 	palm.rotation.y = rng.randf() * TAU
 	parent.add_child(palm)
-	var height := rng.randf_range(7.0, 12.0)
+	var height := rng.randf_range(13.0, 18.0) if tall else rng.randf_range(7.0, 11.0)
 	var segs := 7
-	var lean := Vector2(rng.randf_range(-0.12, 0.12), rng.randf_range(-0.12, 0.12))
+	var lean := Vector2(rng.randf_range(-0.04, 0.04), rng.randf_range(-0.04, 0.04)) if tall else Vector2(rng.randf_range(-0.12, 0.12), rng.randf_range(-0.12, 0.12))
+	var r_top := 0.16 if tall else 0.26
+	var r_bot := 0.22 if tall else 0.3
 	var p := Vector3.ZERO
 	var trunk := MeshBatch.new()
 	var probe := Node3D.new()
@@ -85,8 +89,8 @@ func _palm(parent: Node3D, pos: Vector3, rng: RandomNumberGenerator) -> void:
 		var seg_len := height / segs
 		var next := p + Vector3(lean.x * (0.5 + t) * seg_len, seg_len, lean.y * (0.5 + t) * seg_len)
 		var cm := CylinderMesh.new()
-		cm.top_radius = lerpf(0.26, 0.15, t + 0.15)
-		cm.bottom_radius = lerpf(0.3, 0.17, t)
+		cm.top_radius = lerpf(r_top, r_top * 0.75, t + 0.15)
+		cm.bottom_radius = lerpf(r_bot, r_top * 0.8, t)
 		cm.height = seg_len + 0.15
 		cm.radial_segments = 8
 		probe.position = (p + next) * 0.5
@@ -102,14 +106,25 @@ func _palm(parent: Node3D, pos: Vector3, rng: RandomNumberGenerator) -> void:
 	crowns.append(crown)
 	# All fronds of a crown merged into one alpha-cut mesh.
 	var fronds := MeshBatch.new()
-	var n := 10 + rng.randi() % 5
+	var n := (9 + rng.randi() % 3) if tall else (10 + rng.randi() % 5)
 	for i in n:
 		var b := Basis.IDENTITY.rotated(Vector3.FORWARD, rng.randf_range(-0.2, 0.3)).rotated(Vector3.UP, TAU * i / n + rng.randf_range(-0.2, 0.2))
-		b = b.scaled(Vector3.ONE * rng.randf_range(0.9, 1.25))
+		b = b.scaled(Vector3.ONE * (rng.randf_range(0.7, 0.9) if tall else rng.randf_range(0.9, 1.25)))
 		fronds.add(frond_mesh, Transform3D(b, Vector3.ZERO), Color(1, 1, 1))
 	var fm := MeshInstance3D.new()
 	fm.mesh = fronds.commit_with(frond_mesh.surface_get_material(0))
 	crown.add_child(fm)
+	if tall:
+		var shag := CylinderMesh.new()
+		shag.top_radius = 0.28
+		shag.bottom_radius = 0.9
+		shag.height = 1.6
+		shag.radial_segments = 10
+		var sh := MeshInstance3D.new()
+		sh.mesh = shag
+		sh.material_override = ctx.mat(Color(0.45, 0.36, 0.2), 0.95)
+		sh.position.y = -1.0
+		crown.add_child(sh)
 	var nuts := MeshBatch.new()
 	var sm := SphereMesh.new()
 	sm.radius = 0.14

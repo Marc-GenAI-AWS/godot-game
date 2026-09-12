@@ -110,8 +110,15 @@ func _part(parent: Node3D, mesh: Mesh, mat: Material, pos := Vector3.ZERO, rot :
 	return mi
 
 
+static var _lathe_cache := {}
+
 func _lathe(keys: Array, segs: int, a0 := 0.0, a1 := TAU) -> ArrayMesh:
-	return BodyMesh.lathe(BodyMesh.profile_from_keys(keys, 3), segs, 0.0, a0, a1)
+	var key := "%s|%d|%.2f|%.2f" % [str(keys), segs, a0, a1]
+	if _lathe_cache.has(key):
+		return _lathe_cache[key]
+	var m := BodyMesh.lathe(BodyMesh.profile_from_keys(keys, 3), segs, 0.0, a0, a1)
+	_lathe_cache[key] = m
+	return m
 
 
 func _joint(parent: Node3D, r: float, mat: Material, pos := Vector3.ZERO) -> void:
@@ -126,7 +133,7 @@ func _joint(parent: Node3D, r: float, mat: Material, pos := Vector3.ZERO) -> voi
 func build(skin: Color, top: Color, bottom: Color, hair: Color, long_hair: bool, scale_f := 1.0, q := 0) -> void:
 	quality = q
 	scale = Vector3.ONE * scale_f
-	var segs := 10 if q == 0 else 16
+	var segs := 8 if q == 0 else 16
 	var skin_m: Material = _mat(skin, 0.6) if q == 0 else _tex_mat("skin" if q >= 2 else "skin_std", skin, 0.55)
 	var skin_tattoo: Material = skin_m if q < 2 else _tex_mat("skin", skin, 0.55, true)
 	var torso_m: Material = skin_m if q < 2 else _tex_mat("torso", skin, 0.55)
@@ -453,6 +460,17 @@ func bake_static() -> void:
 	for child in get_children():
 		child.queue_free()
 	batch.instance(self, "Baked", 0.7)
+
+
+func bake_into(batch: MeshBatch, xform: Transform3D) -> void:
+	# Append the posed rig to a shared batch (one draw call for a whole crowd).
+	var parts: Array[MeshInstance3D] = []
+	_collect_meshes(self, parts)
+	for mi in parts:
+		var c := Color(1, 1, 1)
+		if mi.material_override is StandardMaterial3D:
+			c = (mi.material_override as StandardMaterial3D).albedo_color
+		batch.add(mi.mesh, xform * transform * _rel_xform(mi), c)
 
 
 func _collect_meshes(n: Node, out: Array[MeshInstance3D]) -> void:

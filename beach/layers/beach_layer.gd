@@ -88,4 +88,5 @@ func grid_mesh(x0: float, x1: float, z0: float, z1: float, step: float, height_f
 			st.add_index(i0); st.add_index(i1); st.add_index(i2)
 			st.add_index(i1); st.add_index(i3); st.add_index(i2)
 	st.generate_normals()
+	st.generate_tangents()
 	return st.commit()
