@@ -649,7 +649,6 @@ func _process(delta: float) -> void:
 		var v := gull.position - prev
 		if v.length() > 0.001:
 			gull.look_at(gull.position + v, Vector3.UP)
-			gull.rotate_object_local(Vector3.UP, PI)
 		gull.visible = true
 		var flap := sin(time * 9.0) * 0.55
 		gull_wings[0].rotation.z = flap
@@ -657,4 +656,4 @@ func _process(delta: float) -> void:
 	else:
 		gull.visible = false
 
-	hud.text = "Beach Walk   %d fps\n← → or A/D steer   Space / tap to stop and go" % Engine.get_frames_per_second()
+	hud.text = "Beach Walk   %d fps\nLeft / Right or A / D to steer   Space or tap to stop and go" % Engine.get_frames_per_second()
