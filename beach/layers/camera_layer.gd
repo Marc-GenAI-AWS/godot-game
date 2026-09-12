@@ -38,7 +38,7 @@ func tick(delta: float) -> void:
 	# Stabilised: follow the root smoothly with no step bob, sway or roll.
 	var k := 1.0 - exp(-delta * 4.0)
 	camera.global_position = camera.global_position.lerp(target, k)
-	camera.look_at(p + Vector3(0, 1.05, 0) + fwd * 2.2 + right * 0.25, Vector3.UP))
+	camera.look_at(p + Vector3(0, 1.05, 0) + fwd * 2.2 + right * 0.25, Vector3.UP)
 
 
 func on_world_wrapped(dz: float) -> void:
