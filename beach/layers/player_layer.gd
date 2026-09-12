@@ -15,7 +15,7 @@ var last_phase := 0.0
 func build() -> void:
 	player = Humanoid.new()
 	player.name = "Player"
-	player.build(Color(0.78, 0.56, 0.4), Color(0.93, 0.5, 0.6), Color(0.55, 0.64, 0.78), Color(0.24, 0.14, 0.08), true, 1.0, 2)
+	player.build(Color(0.76, 0.56, 0.42), Color(0.93, 0.5, 0.6), Color(0.55, 0.64, 0.78), Color(0.3, 0.18, 0.1), true, 1.0, 2)
 	player.position = Vector3(-4.5, ctx.sand_height(-4.5, 0.0), 0.0)
 	add_child(player)
 	ctx.player = player

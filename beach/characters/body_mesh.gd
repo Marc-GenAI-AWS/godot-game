@@ -20,13 +20,15 @@ static func lathe(profile: Array, segs: int, y_offset := 0.0, a0 := 0.0, a1 := T
 			st.add_vertex(Vector3(cos(a) * p.y, p.x + y_offset, sin(a) * p.z))
 	_ring_indices(st, rows, segs)
 	st.generate_normals()
+	st.generate_tangents()
 	return st.commit()
 
 
 # Sweep an elliptical ring along a polyline. radii: Array of Vector2 per point.
-static func tube(points: Array, radii: Array, segs: int, wide_axis := Vector3.ZERO) -> ArrayMesh:
+static func tube(points: Array, radii: Array, segs: int, wide_axis := Vector3.ZERO, color := Color(1, 1, 1)) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_color(color)
 	var rows := points.size()
 	for r in rows:
 		var p: Vector3 = points[r]
@@ -48,10 +50,12 @@ static func tube(points: Array, radii: Array, segs: int, wide_axis := Vector3.ZE
 		var rad: Vector2 = radii[r]
 		for s in segs + 1:
 			var a := TAU * s / segs
+			st.set_color(color)
 			st.set_uv(Vector2(float(s) / segs, float(r) / (rows - 1)))
 			st.add_vertex(p + n * cos(a) * rad.x + b * sin(a) * rad.y)
 	_ring_indices(st, rows, segs)
 	st.generate_normals()
+	st.generate_tangents()
 	return st.commit()
 
 
@@ -203,4 +207,103 @@ static func hair_texture(base: Color) -> ImageTexture:
 		for x in w:
 			var v := n.get_noise_2d(x * 4.0, y * 0.15) * 0.5 + 0.5
 			img.set_pixel(x, y, base.lerp(base.lightened(0.3), v * 0.6))
+	return ImageTexture.create_from_image(img)
+
+
+static func hair_strand_texture() -> ImageTexture:
+	# Vertical streaks with transparent gaps; tips thin out toward v = 1.
+	var w := 64
+	var h := 256
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var n := FastNoiseLite.new()
+	n.seed = 43
+	n.frequency = 0.35
+	for x in w:
+		var col_a := n.get_noise_1d(x * 7.0) * 0.5 + 0.5
+		var col_b := n.get_noise_1d(x * 3.0 + 100.0) * 0.5 + 0.5
+		for y in h:
+			var v := float(y) / h
+			var streak := col_a * 0.7 + col_b * 0.3 + 0.12 * (n.get_noise_2d(x * 2.0, y * 0.4))
+			var taper := 1.0 - smoothstep(0.6, 1.0, v) * (0.35 + 0.65 * col_b)
+			var a := 1.0 if streak * taper > 0.3 else 0.0
+			var shade := 0.55 + 0.45 * col_a
+			img.set_pixel(x, y, Color(shade, shade, shade, a))
+	return ImageTexture.create_from_image(img)
+
+
+static func denim_normal_texture() -> ImageTexture:
+	# Height field matching denim_texture's layout, converted to a normal map.
+	var w := 256
+	var h := 128
+	var img := Image.create(w, h, false, Image.FORMAT_RGB8)
+	var n := FastNoiseLite.new()
+	n.seed = 23
+	n.frequency = 0.9
+	for y in h:
+		for x in w:
+			var u := float(x) / w
+			var v := float(y) / h
+			var hgt := 0.5 + 0.06 * n.get_noise_2d(x * 3.0, y * 0.6)
+			for seam in [0.0, 0.25, 0.5, 0.75, 1.0]:
+				var d := absf(u - seam)
+				if d < 0.014:
+					hgt -= 0.25 * (1.0 - d / 0.014)
+				elif d < 0.02:
+					hgt += 0.12
+			if v > 0.9:
+				hgt += 0.18
+			if absf(v - 0.905) < 0.008:
+				hgt -= 0.2
+			for pc in [0.17, 0.33]:
+				var du := absf(u - pc)
+				if du < 0.055 and v > 0.45 and v < 0.82:
+					hgt += 0.15
+					if du > 0.048 or v < 0.47 or v > 0.80:
+						hgt += 0.12
+			if u > 0.31 and u < 0.36 and v > 0.905 and v < 0.985:
+				hgt += 0.2
+			if v < 0.05:
+				hgt -= 0.15 * (1.0 - v / 0.05)
+			img.set_pixel(x, y, Color(hgt, hgt, hgt))
+	img.bump_map_to_normal_map(6.0)
+	return ImageTexture.create_from_image(img)
+
+
+static func torso_normal_texture() -> ImageTexture:
+	# Spine groove down the back (u ≈ 0.25), shoulder blades, soft abs.
+	var w := 128
+	var h := 128
+	var img := Image.create(w, h, false, Image.FORMAT_RGB8)
+	for y in h:
+		for x in w:
+			var u := float(x) / w
+			var v := float(y) / h
+			var hgt := 0.5
+			var ds := absf(u - 0.25)
+			hgt -= 0.2 * exp(-ds * ds * 900.0) * smoothstep(0.0, 0.2, v) * (1.0 - smoothstep(0.75, 0.95, v))
+			for bx in [0.16, 0.34]:
+				var d := Vector2((u - bx) * 6.0, (v - 0.68) * 4.0).length()
+				hgt += 0.12 * exp(-d * d * 3.0)
+			# navel / soft abdominal centre line at the front (u ≈ 0.75)
+			var df := absf(u - 0.75)
+			hgt -= 0.08 * exp(-df * df * 900.0) * smoothstep(0.1, 0.3, v) * (1.0 - smoothstep(0.5, 0.7, v))
+			img.set_pixel(x, y, Color(hgt, hgt, hgt))
+	img.bump_map_to_normal_map(5.0)
+	return ImageTexture.create_from_image(img)
+
+
+static func top_normal_texture() -> ImageTexture:
+	var w := 128
+	var h := 128
+	var img := Image.create(w, h, false, Image.FORMAT_RGB8)
+	var n := FastNoiseLite.new()
+	n.seed = 17
+	n.frequency = 0.09
+	for y in h:
+		for x in w:
+			var hgt := 0.5 + 0.08 * n.get_noise_2d(x * 1.5, y * 1.5)
+			if y < 6 or y > h - 7:
+				hgt += 0.15   # rolled edge
+			img.set_pixel(x, y, Color(hgt, hgt, hgt))
+	img.bump_map_to_normal_map(4.0)
 	return ImageTexture.create_from_image(img)

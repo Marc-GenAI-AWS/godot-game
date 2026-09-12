@@ -5,8 +5,8 @@ main.gd::GDScript::2223455993989210751::1789172795::0::1::::<>Node3D<><>0<>0<><>
 main.tscn::PackedScene::-1::1789170966::0::1::::<><><>0<>0<><>::res://main.gd
 world_context.gd::GDScript::905731446360704115::1789172795::0::1::::WorldContext<>Node<><>0<>0<><>::
 ::res://characters/::1789172770
-body_mesh.gd::GDScript::5407927342445833849::1789172989::0::1::::BodyMesh<>RefCounted<><>0<>0<><>::
-humanoid.gd::GDScript::5064115425318927974::1789172989::0::1::::Humanoid<>Node3D<><>0<>0<><>::
+body_mesh.gd::GDScript::5407927342445833849::1789181138::0::1::::BodyMesh<>RefCounted<><>0<>0<><>::
+humanoid.gd::GDScript::5064115425318927974::1789181227::0::1::::Humanoid<>Node3D<><>0<>0<><>::
 ::res://layers/::1789172202
 architecture_layer.gd::GDScript::3610280139175100105::1789172199::0::1::::ArchitectureLayer<>ChunkedLayer<><>0<>0<><>::
 beach_layer.gd::GDScript::3150827845585343354::1789171775::0::1::::BeachLayer<>Node3D<><>0<>0<><>::
@@ -18,11 +18,13 @@ furniture_layer.gd::GDScript::3152742388875156421::1789171906::0::1::::Furniture
 hud_layer.gd::GDScript::8200409013748811826::1789171961::0::1::::HudLayer<>BeachLayer<><>0<>0<><>::
 mesh_batch.gd::GDScript::3540424839495466698::1789172199::0::1::::MeshBatch<>RefCounted<><>0<>0<><>::
 ocean_layer.gd::GDScript::2316296829113124658::1789171817::0::1::::OceanLayer<>BeachLayer<><>0<>0<><>::
-player_layer.gd::GDScript::6504751365113831718::1789172989::0::1::::PlayerLayer<>BeachLayer<><>0<>0<><>::
+player_layer.gd::GDScript::6504751365113831718::1789181138::0::1::::PlayerLayer<>BeachLayer<><>0<>0<><>::
 sand_layer.gd::GDScript::3482789294932083267::1789172286::0::1::::SandLayer<>BeachLayer<><>0<>0<><>::
 sky_layer.gd::GDScript::4679301141746557777::1789171817::0::1::::SkyLayer<>BeachLayer<><>0<>0<><>::
 tracks_layer.gd::GDScript::7570677040364299276::1789172286::0::1::::TracksLayer<>BeachLayer<><>0<>0<><>::
 vegetation_layer.gd::GDScript::6015848337891788944::1789172199::0::1::::VegetationLayer<>ChunkedLayer<><>0<>0<><>::
-::res://shaders/::1789171975
+::res://shaders/::1789181040
+hair.gdshader::Shader::8959065049250708663::1789181138::0::1::::<><><>0<>0<><>::
 sand.gdshader::Shader::6843298152864955149::1789171324::0::1::::<><><>0<>0<><>::
+skin.gdshader::Shader::7292272826605736300::1789181138::0::1::::<><><>0<>0<><>::
 water.gdshader::Shader::2565863443294297951::1789171324::0::1::::<><><>0<>0<><>::

@@ -26,6 +26,8 @@ beach/
                              walk cycle with foot roll / hip sway, sit/lie poses, bake_static()
   characters/body_mesh.gd    lathe / tube mesh builders + procedural skin, denim, floral,
                              hair textures
+  shaders/skin.gdshader      wrap-lit skin with scatter, sheen, joint AO, optional normal map
+  shaders/hair.gdshader      alpha-cut strands, per-strand sway, anisotropic highlight
   shaders/sand.gdshader      dry/wet sand with a moving tide line
   shaders/water.gdshader     swells, depth colour, edge foam, breaker lines
   layers/

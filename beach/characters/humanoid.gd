@@ -47,22 +47,48 @@ static func _mat(c: Color, rough := 0.85) -> StandardMaterial3D:
 	return m
 
 
-static func _tex_mat(kind: String, c: Color, rough: float, tattoo := false) -> StandardMaterial3D:
+static func _tex_mat(kind: String, c: Color, rough: float, tattoo := false) -> Material:
 	var key := "%s_%s_%s" % [kind, c.to_html(), tattoo]
 	if _tex_cache.has(key):
 		return _tex_cache[key]
-	var m := StandardMaterial3D.new()
+	var m: Material
 	match kind:
-		"skin":
-			m.albedo_texture = BodyMesh.skin_texture(c, tattoo)
-		"top":
-			m.albedo_texture = BodyMesh.floral_top_texture(c)
-		"denim":
-			m.albedo_texture = BodyMesh.denim_texture(c)
-		"hair":
-			m.albedo_texture = BodyMesh.hair_texture(c)
-			rough = 0.62
-	m.roughness = rough
+		"skin", "torso":
+			var sm := ShaderMaterial.new()
+			sm.shader = load("res://shaders/skin.gdshader")
+			sm.set_shader_parameter("albedo_tex", BodyMesh.skin_texture(c, tattoo))
+			if kind == "torso":
+				sm.set_shader_parameter("normal_tex", BodyMesh.torso_normal_texture())
+				sm.set_shader_parameter("normal_strength", 0.6)
+			m = sm
+		"hair_strand":
+			var hm := ShaderMaterial.new()
+			hm.shader = load("res://shaders/hair.gdshader")
+			hm.set_shader_parameter("strand_tex", BodyMesh.hair_strand_texture())
+			hm.set_shader_parameter("base_color", c)
+			hm.set_shader_parameter("tip_color", c.lightened(0.3))
+			m = hm
+		_:
+			var st := StandardMaterial3D.new()
+			match kind:
+				"skin_std":
+					st.albedo_texture = BodyMesh.skin_texture(c, tattoo)
+					rough = 0.6
+				"top":
+					st.albedo_texture = BodyMesh.floral_top_texture(c)
+					st.normal_enabled = true
+					st.normal_texture = BodyMesh.top_normal_texture()
+					st.normal_scale = 0.5
+				"denim":
+					st.albedo_texture = BodyMesh.denim_texture(c)
+					st.normal_enabled = true
+					st.normal_texture = BodyMesh.denim_normal_texture()
+					st.normal_scale = 0.8
+				"hair":
+					st.albedo_texture = BodyMesh.hair_texture(c)
+					rough = 0.62
+			st.roughness = rough
+			m = st
 	_tex_cache[key] = m
 	return m
 
@@ -101,11 +127,13 @@ func build(skin: Color, top: Color, bottom: Color, hair: Color, long_hair: bool,
 	quality = q
 	scale = Vector3.ONE * scale_f
 	var segs := 10 if q == 0 else 16
-	var skin_m: Material = _mat(skin, 0.6) if q == 0 else _tex_mat("skin", skin, 0.55)
+	var skin_m: Material = _mat(skin, 0.6) if q == 0 else _tex_mat("skin" if q >= 2 else "skin_std", skin, 0.55)
 	var skin_tattoo: Material = skin_m if q < 2 else _tex_mat("skin", skin, 0.55, true)
+	var torso_m: Material = skin_m if q < 2 else _tex_mat("torso", skin, 0.55)
 	var top_m: Material = _mat(top, 0.9) if q == 0 else _tex_mat("top", top, 0.9)
 	var bot_m: Material = _mat(bottom, 0.95) if q == 0 else _tex_mat("denim", bottom, 0.95)
 	var hair_m: Material = _mat(hair, 0.5) if q == 0 else _tex_mat("hair", hair, 0.45)
+	var strand_m: Material = hair_m if q < 2 else _tex_mat("hair_strand", hair, 0.6)
 
 	# ---- pelvis / hips
 	hips = _pivot(self, Vector3(0, base_height, 0))
@@ -118,7 +146,7 @@ func build(skin: Color, top: Color, bottom: Color, hair: Color, long_hair: bool,
 	# ---- chest / torso (bare midriff between shorts and top)
 	chest = _pivot(hips, Vector3(0, 0.16, 0))
 	var torso := _lathe([Vector3(-0.02, 0.118, 0.082), Vector3(0.08, 0.13, 0.095), Vector3(0.16, 0.15, 0.115), Vector3(0.25, 0.185, 0.1), Vector3(0.31, 0.12, 0.075)], segs)
-	_part(chest, torso, skin_m)
+	_part(chest, torso, torso_m)
 	var crop := _lathe([Vector3(0.09, 0.14, 0.104), Vector3(0.16, 0.162, 0.127), Vector3(0.24, 0.17, 0.118)], segs)
 	_part(chest, crop, top_m)
 
@@ -137,9 +165,13 @@ func build(skin: Color, top: Color, bottom: Color, hair: Color, long_hair: bool,
 	hair_pivot = _pivot(head_pivot, Vector3(0, 0.02, 0.0))
 	hair_pivot2 = _pivot(hair_pivot, Vector3(0, -0.2, 0.06))
 	if long_hair:
-		_build_hair(hair_m, q)
+		_build_hair(strand_m, q)
 	if q >= 1:
 		_build_face(skin, segs)
+		# ears
+		for side in [-1.0, 1.0]:
+			var ear := _part(head_pivot, _sphere_mesh(0.022), skin_m, Vector3(side * 0.083, 0.0, 0.005))
+			ear.scale = Vector3(0.35, 1.0, 0.75)
 
 	# ---- arms
 	l_shoulder = _pivot(chest, Vector3(-0.2, 0.265, 0))
@@ -161,6 +193,9 @@ func build(skin: Color, top: Color, bottom: Color, hair: Color, long_hair: bool,
 	var hand := _lathe([Vector3(-0.17, 0.02, 0.01), Vector3(-0.1, 0.04, 0.016), Vector3(-0.03, 0.036, 0.018), Vector3(0.01, 0.01, 0.01)], segs)
 	_part(l_hand, hand, skin_m)
 	_part(r_hand, hand, skin_m)
+	if q >= 2:
+		_build_fingers(l_hand, skin_m, -1.0)
+		_build_fingers(r_hand, skin_m, 1.0)
 
 	# ---- legs
 	l_hip = _pivot(hips, Vector3(-0.095, -0.06, 0))
@@ -187,6 +222,9 @@ func build(skin: Color, top: Color, bottom: Color, hair: Color, long_hair: bool,
 	var foot := _lathe([Vector3(-0.07, 0.03, 0.028), Vector3(0.0, 0.04, 0.03), Vector3(0.1, 0.045, 0.025), Vector3(0.17, 0.042, 0.018), Vector3(0.21, 0.01, 0.008)], segs)
 	_part(l_ankle, foot, skin_m, Vector3(0, -0.045, 0.02), Vector3(-PI * 0.5, 0, 0))
 	_part(r_ankle, foot, skin_m, Vector3(0, -0.045, 0.02), Vector3(-PI * 0.5, 0, 0))
+	if q >= 2:
+		_build_toes(l_ankle, skin_m, -1.0)
+		_build_toes(r_ankle, skin_m, 1.0)
 
 
 func _build_hair(hair_m: Material, q: int) -> void:
@@ -207,17 +245,24 @@ func _build_hair(hair_m: Material, q: int) -> void:
 		var tangent := Vector3(-sin(a), 0, cos(a))
 		var wob := rng.randf_range(-0.012, 0.012)
 		var w := (0.05 if q == 2 else 0.07) * rng.randf_range(0.85, 1.15)
-		# upper: root → shoulder-blade level, easing toward the back surface
+		# upper: root → shoulder-blade level, easing toward the back surface;
+		# the outermost strands on each side fall forward over the shoulders.
+		var front := i < 2 or i > n - 3
 		var mid := Vector3(root.x * 0.8 + wob, -0.2, 0.065 + maxf(root.z - 0.02, 0.0) * 0.5)
+		if front:
+			mid = Vector3(root.x * 1.25 + wob, -0.19, -0.04)
 		var upper_pts := [root, root + outward * 0.012 + Vector3(0, -0.06, 0.005), (root + mid) * 0.5 + Vector3(0, 0, 0.015), mid]
 		var upper_r := [Vector2(w * 0.8, 0.012), Vector2(w, 0.012), Vector2(w, 0.011), Vector2(w * 0.95, 0.01)]
-		_part(hair_pivot, BodyMesh.tube(upper_pts, upper_r, segs, tangent), hair_m)
+		var seed_c := Color(rng.randf(), 0, 0)
+		_part(hair_pivot, BodyMesh.tube(upper_pts, upper_r, segs, tangent, seed_c), hair_m)
 		# lower: down the back to a tapered tip (in hair_pivot2 space)
 		var m2 := mid - Vector3(0, -0.2, 0.06)
 		var tip_len := rng.randf_range(0.2, 0.3)
 		var lower_pts := [m2, m2 + Vector3(-m2.x * 0.1, -tip_len * 0.5, 0.008), m2 + Vector3(-m2.x * 0.25, -tip_len, 0.0)]
+		if front:
+			lower_pts = [m2, m2 + Vector3(-m2.x * 0.15, -tip_len * 0.5, -0.03), m2 + Vector3(-m2.x * 0.3, -tip_len * 0.9, -0.05)]
 		var lower_r := [Vector2(w * 0.95, 0.01), Vector2(w * 0.85, 0.009), Vector2(w * 0.4, 0.005)]
-		_part(hair_pivot2, BodyMesh.tube(lower_pts, lower_r, segs, tangent), hair_m)
+		_part(hair_pivot2, BodyMesh.tube(lower_pts, lower_r, segs, tangent, seed_c), hair_m)
 
 
 func _build_face(skin: Color, segs: int) -> void:
@@ -244,6 +289,34 @@ func _sphere_mesh(r: float) -> SphereMesh:
 	sm.radial_segments = 10
 	sm.rings = 6
 	return sm
+
+
+func _build_fingers(hand: Node3D, skin_m: Material, side: float) -> void:
+	# Four slightly curled fingers off the end of the hand, plus a thumb.
+	var segs := 6
+	for i in 4:
+		var x := (i - 1.5) * 0.014
+		var len := 0.055 + 0.012 * sin(i * 1.2 + 0.6)
+		var p0 := Vector3(x, -0.15, 0.0)
+		var pts := [p0, p0 + Vector3(0, -len * 0.5, -0.004), p0 + Vector3(0, -len * 0.85, -0.014), p0 + Vector3(0, -len, -0.026)]
+		var rad := [Vector2(0.0065, 0.006), Vector2(0.0062, 0.0058), Vector2(0.0055, 0.005), Vector2(0.004, 0.0035)]
+		_part(hand, BodyMesh.tube(pts, rad, segs), skin_m)
+	var t0 := Vector3(-side * 0.03, -0.06, -0.008)
+	var tpts := [t0, t0 + Vector3(-side * 0.012, -0.022, -0.012), t0 + Vector3(-side * 0.018, -0.045, -0.02)]
+	var trad := [Vector2(0.008, 0.007), Vector2(0.007, 0.006), Vector2(0.0045, 0.004)]
+	_part(hand, BodyMesh.tube(tpts, trad, segs), skin_m)
+
+
+func _build_toes(ankle: Node3D, skin_m: Material, side: float) -> void:
+	var segs := 6
+	for i in 5:
+		var x := (i - 2) * 0.014 * side
+		var len := 0.03 - i * 0.003
+		var p0 := Vector3(x, -0.075, -0.18)
+		var pts := [p0, p0 + Vector3(0, -0.002, -len * 0.6), p0 + Vector3(0, -0.004, -len)]
+		var r := 0.0075 - i * 0.0007
+		var rad := [Vector2(r, r * 0.8), Vector2(r * 0.95, r * 0.75), Vector2(r * 0.7, r * 0.55)]
+		_part(ankle, BodyMesh.tube(pts, rad, segs), skin_m)
 
 
 # ---------------------------------------------------------------- poses
@@ -281,6 +354,7 @@ func pose_walk(delta: float, speed: float) -> void:
 	r_hand.rotation.x = 0.15
 	l_hand.rotation.z = 0.15
 	r_hand.rotation.z = -0.15
+	_breathe(delta)
 	# Head stays level against the chest twist.
 	head_pivot.rotation.y = -0.1 * s
 	head_pivot.rotation.x = 0.02 * cos(2.0 * p)
@@ -293,7 +367,14 @@ func pose_walk(delta: float, speed: float) -> void:
 		hair_pivot2.rotation.z = 0.12 * sin(p - 1.5) + wind
 
 
+func _breathe(delta: float) -> void:
+	idle_t += delta
+	var b := 0.5 + 0.5 * sin(idle_t * 1.3)
+	chest.scale = Vector3(1.0 + 0.006 * b, 1.0 + 0.008 * b, 1.0 + 0.018 * b)
+
+
 func pose_idle() -> void:
+	_breathe(get_process_delta_time())
 	l_shoulder.rotation.z = 0.12
 	r_shoulder.rotation.z = -0.12
 	l_elbow.rotation.x = 0.2
