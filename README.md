@@ -21,6 +21,13 @@ driven by the CC0 [Universal Animation Library](https://quaternius.com/packs/uni
 walk cycle, with our own painted crop-top / denim texture and ribbon hair
 extension. Both packs are public domain (CC0 1.0); thanks Quaternius.
 
+Everyone else on the beach uses the same rigged bodies and animation library as
+the player (female and male bases, four hairstyles, ten painted swimwear
+textures, five skin tones). Strollers are live characters with staggered walk
+cycles; sunbathers, sitters, waders and swimmers are posed from clips, skinned
+once on the CPU (`characters/skinned_people.gd`) and batched per material.
+`#inspect-crowd` orbits the lounger rows.
+
 Add `#inspect` to the URL to orbit the character up close:
 https://mlobree.github.io/boulder-hill/beach/#inspect
 

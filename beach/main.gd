@@ -15,6 +15,8 @@ func _ready() -> void:
 	if OS.has_feature("web"):
 		var hash_v = JavaScriptBridge.eval("window.location.hash", true)
 		ctx.inspect = str(hash_v).begins_with("#inspect")
+		if str(hash_v).find("crowd") >= 0:
+			ctx.inspect_offset = Vector3(-19.0, 0.0, -8.0)
 		ctx.lite = str(hash_v).find("lite") >= 0
 		if str(hash_v).find("mpfb") >= 0:
 			ctx.variant = "mpfb"

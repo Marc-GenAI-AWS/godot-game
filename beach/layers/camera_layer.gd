@@ -27,9 +27,12 @@ func tick(delta: float) -> void:
 	if ctx.inspect:
 		# Slow orbit at close range, eye level, for checking the character.
 		var a := ctx.time * 0.35
-		var eye := p + Vector3(sin(a) * 2.6, 1.25, cos(a) * 2.6)
+		var centre := p + ctx.inspect_offset
+		var r := 2.6 if ctx.inspect_offset == Vector3.ZERO else 5.5
+		var eye := centre + Vector3(sin(a) * r, 1.25 if ctx.inspect_offset == Vector3.ZERO else 2.2, cos(a) * r)
+		eye.y = maxf(eye.y, ctx.sand_height(eye.x, eye.z) + 0.6)
 		camera.global_position = eye
-		camera.look_at(p + Vector3(0, 0.95, 0), Vector3.UP)
+		camera.look_at(centre + Vector3(0, 0.95 if ctx.inspect_offset == Vector3.ZERO else 0.5, 0), Vector3.UP)
 		return
 	var fwd := player_layer.forward()
 	var right := player_layer.right()

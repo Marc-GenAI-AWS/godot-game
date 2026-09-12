@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _init() -> void:
-	for path in ["res://characters/mpfb/mpfb_player.glb", "res://characters/assets/ual_walk.glb", "res://characters/assets/Superhero_Female_FullBody.gltf", "res://characters/assets/Hair_Long.gltf"]:
+	for path in ["res://characters/assets/Superhero_Male_FullBody.gltf", "res://characters/assets/Hair_Buns.gltf", "res://characters/assets/Hair_SimpleParted.gltf", "res://characters/assets/Hair_BuzzedFemale.gltf", "res://characters/assets/Hair_Buzzed.gltf", "res://characters/assets/ual_walk.glb"]:
 		var ps: PackedScene = load(path)
 		if ps == null:
 			print("FAILED ", path)

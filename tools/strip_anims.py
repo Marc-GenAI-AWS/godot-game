@@ -1,7 +1,7 @@
 import bpy, sys
 src = "/home/marc/dev/graphics-gen/assets/ual/pack/godot/UAL1_Standard.glb"
 dst = "/home/marc/dev/graphics-gen/assets/ual_walk.glb"
-keep = {"Walk_Loop", "Idle_Loop", "Walk_Formal_Loop", "Jog_Fwd_Loop", "A_TPose"}
+keep = {"Walk_Loop", "Idle_Loop", "Idle_Talking_Loop", "Walk_Formal_Loop", "Jog_Fwd_Loop", "A_TPose", "Sitting_Idle_Loop", "Sitting_Talking_Loop", "Swim_Idle_Loop", "Swim_Fwd_Loop", "Crouch_Idle_Loop"}
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=src)
 for a in list(bpy.data.actions):
