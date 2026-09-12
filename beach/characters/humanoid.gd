@@ -1,25 +1,39 @@
 class_name Humanoid
 extends Node3D
 
-# A stylised low-poly person built from primitives, with a procedural walk
-# cycle. Root sits at the feet, facing -Z.
+# A stylised person built from smooth lathed body parts, with procedural
+# clothing textures, strand hair with secondary motion and a walk cycle
+# with foot roll and hip sway. Root sits at the feet, facing -Z.
+#
+# quality: 0 = flat colours, few segments (crowd, gets baked)
+#          1 = smooth + textures (animated extras)
+#          2 = full detail, dense hair (the player)
 
 var hips: Node3D
 var chest: Node3D
+var neck: Node3D
 var head_pivot: Node3D
 var l_hip: Node3D
 var r_hip: Node3D
 var l_knee: Node3D
 var r_knee: Node3D
+var l_ankle: Node3D
+var r_ankle: Node3D
 var l_shoulder: Node3D
 var r_shoulder: Node3D
 var l_elbow: Node3D
 var r_elbow: Node3D
+var l_hand: Node3D
+var r_hand: Node3D
 var hair_pivot: Node3D
+var hair_pivot2: Node3D
 var phase := 0.0
-var base_height := 0.95
+var base_height := 0.93
+var quality := 0
+var idle_t := 0.0
 
 static var _mat_cache := {}
+static var _tex_cache := {}
 
 
 static func _mat(c: Color, rough := 0.85) -> StandardMaterial3D:
@@ -33,30 +47,24 @@ static func _mat(c: Color, rough := 0.85) -> StandardMaterial3D:
 	return m
 
 
-func _capsule(parent: Node3D, length: float, radius: float, c: Color, y_offset := 0.0) -> MeshInstance3D:
-	# Capsule hanging downward from the parent pivot (limbs).
-	var mi := MeshInstance3D.new()
-	var cm := CapsuleMesh.new()
-	cm.radius = radius
-	cm.height = length + radius * 2.0
-	cm.radial_segments = 10
-	cm.rings = 4
-	mi.mesh = cm
-	mi.material_override = _mat(c)
-	mi.position.y = -length * 0.5 + y_offset
-	parent.add_child(mi)
-	return mi
-
-
-func _box(parent: Node3D, size: Vector3, c: Color, pos: Vector3) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mi.mesh = bm
-	mi.material_override = _mat(c)
-	mi.position = pos
-	parent.add_child(mi)
-	return mi
+static func _tex_mat(kind: String, c: Color, rough: float, tattoo := false) -> StandardMaterial3D:
+	var key := "%s_%s_%s" % [kind, c.to_html(), tattoo]
+	if _tex_cache.has(key):
+		return _tex_cache[key]
+	var m := StandardMaterial3D.new()
+	match kind:
+		"skin":
+			m.albedo_texture = BodyMesh.skin_texture(c, tattoo)
+		"top":
+			m.albedo_texture = BodyMesh.floral_top_texture(c)
+		"denim":
+			m.albedo_texture = BodyMesh.denim_texture(c)
+		"hair":
+			m.albedo_texture = BodyMesh.hair_texture(c)
+			rough = 0.62
+	m.roughness = rough
+	_tex_cache[key] = m
+	return m
 
 
 func _pivot(parent: Node3D, pos: Vector3) -> Node3D:
@@ -66,122 +74,238 @@ func _pivot(parent: Node3D, pos: Vector3) -> Node3D:
 	return p
 
 
-func build(skin: Color, top: Color, bottom: Color, hair: Color, long_hair: bool, scale_f := 1.0) -> void:
-	scale = Vector3.ONE * scale_f
-	hips = _pivot(self, Vector3(0, base_height, 0))
-	# Pelvis / shorts
-	_box(hips, Vector3(0.34, 0.2, 0.22), bottom, Vector3(0, -0.02, 0))
-	# Waist (bare midriff) and chest (top)
-	_box(hips, Vector3(0.28, 0.16, 0.18), skin, Vector3(0, 0.16, 0))
-	chest = _pivot(hips, Vector3(0, 0.24, 0))
-	_box(chest, Vector3(0.34, 0.26, 0.2), top, Vector3(0, 0.13, 0))
-	# Neck + head
-	head_pivot = _pivot(chest, Vector3(0, 0.27, 0))
-	_capsule(head_pivot, 0.06, 0.05, skin, 0.06)
-	var head := MeshInstance3D.new()
-	var sm := SphereMesh.new()
-	sm.radius = 0.115
-	sm.height = 0.25
-	sm.radial_segments = 14
-	sm.rings = 8
-	head.mesh = sm
-	head.material_override = _mat(skin)
-	head.position = Vector3(0, 0.19, 0)
-	head_pivot.add_child(head)
-	# Hair cap plus optional long hair down the back
-	var cap := MeshInstance3D.new()
-	var cs := SphereMesh.new()
-	cs.radius = 0.125
-	cs.height = 0.2
-	cs.is_hemisphere = true
-	cap.mesh = cs
-	cap.material_override = _mat(hair, 0.7)
-	cap.position = Vector3(0, 0.2, -0.01)
-	head_pivot.add_child(cap)
-	hair_pivot = _pivot(head_pivot, Vector3(0, 0.22, -0.09))
-	if long_hair:
-		var hb := MeshInstance3D.new()
-		var hm := CapsuleMesh.new()
-		hm.radius = 0.09
-		hm.height = 0.5
-		hm.radial_segments = 10
-		hb.mesh = hm
-		hb.material_override = _mat(hair, 0.7)
-		hb.position = Vector3(0, -0.18, -0.02)
-		hb.scale = Vector3(1.4, 1.0, 0.6)
-		hair_pivot.add_child(hb)
-	# Arms
-	l_shoulder = _pivot(chest, Vector3(-0.22, 0.22, 0))
-	r_shoulder = _pivot(chest, Vector3(0.22, 0.22, 0))
-	for sh in [l_shoulder, r_shoulder]:
-		var ball := MeshInstance3D.new()
-		var bs := SphereMesh.new()
-		bs.radius = 0.06
-		bs.height = 0.12
-		bs.radial_segments = 10
-		bs.rings = 5
-		ball.mesh = bs
-		ball.material_override = _mat(skin)
-		sh.add_child(ball)
-	_capsule(l_shoulder, 0.28, 0.05, skin)
-	_capsule(r_shoulder, 0.28, 0.05, skin)
-	l_elbow = _pivot(l_shoulder, Vector3(0, -0.28, 0))
-	r_elbow = _pivot(r_shoulder, Vector3(0, -0.28, 0))
-	_capsule(l_elbow, 0.26, 0.045, skin)
-	_capsule(r_elbow, 0.26, 0.045, skin)
-	# Legs
-	l_hip = _pivot(hips, Vector3(-0.1, -0.08, 0))
-	r_hip = _pivot(hips, Vector3(0.1, -0.08, 0))
-	_capsule(l_hip, 0.42, 0.075, skin)
-	_capsule(r_hip, 0.42, 0.075, skin)
-	# short leg of the shorts
-	_capsule(l_hip, 0.1, 0.085, bottom, 0.0)
-	_capsule(r_hip, 0.1, 0.085, bottom, 0.0)
-	l_knee = _pivot(l_hip, Vector3(0, -0.42, 0))
-	r_knee = _pivot(r_hip, Vector3(0, -0.42, 0))
-	_capsule(l_knee, 0.4, 0.06, skin)
-	_capsule(r_knee, 0.4, 0.06, skin)
-	_box(l_knee, Vector3(0.1, 0.05, 0.22), skin, Vector3(0, -0.43, -0.05))
-	_box(r_knee, Vector3(0.1, 0.05, 0.22), skin, Vector3(0, -0.43, -0.05))
+func _part(parent: Node3D, mesh: Mesh, mat: Material, pos := Vector3.ZERO, rot := Vector3.ZERO) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = mat
+	mi.position = pos
+	mi.rotation = rot
+	parent.add_child(mi)
+	return mi
 
+
+func _lathe(keys: Array, segs: int, a0 := 0.0, a1 := TAU) -> ArrayMesh:
+	return BodyMesh.lathe(BodyMesh.profile_from_keys(keys, 3), segs, 0.0, a0, a1)
+
+
+func _joint(parent: Node3D, r: float, mat: Material, pos := Vector3.ZERO) -> void:
+	var sm := SphereMesh.new()
+	sm.radius = r
+	sm.height = r * 2.0
+	sm.radial_segments = 10
+	sm.rings = 6
+	_part(parent, sm, mat, pos)
+
+
+func build(skin: Color, top: Color, bottom: Color, hair: Color, long_hair: bool, scale_f := 1.0, q := 0) -> void:
+	quality = q
+	scale = Vector3.ONE * scale_f
+	var segs := 10 if q == 0 else 16
+	var skin_m: Material = _mat(skin, 0.6) if q == 0 else _tex_mat("skin", skin, 0.55)
+	var skin_tattoo: Material = skin_m if q < 2 else _tex_mat("skin", skin, 0.55, true)
+	var top_m: Material = _mat(top, 0.9) if q == 0 else _tex_mat("top", top, 0.9)
+	var bot_m: Material = _mat(bottom, 0.95) if q == 0 else _tex_mat("denim", bottom, 0.95)
+	var hair_m: Material = _mat(hair, 0.5) if q == 0 else _tex_mat("hair", hair, 0.45)
+
+	# ---- pelvis / hips
+	hips = _pivot(self, Vector3(0, base_height, 0))
+	var pelvis := _lathe([Vector3(-0.13, 0.09, 0.065), Vector3(-0.04, 0.17, 0.115), Vector3(0.06, 0.155, 0.105), Vector3(0.15, 0.115, 0.082)], segs)
+	_part(hips, pelvis, skin_m)
+	# shorts over the pelvis, a touch larger
+	var shorts := _lathe([Vector3(-0.11, 0.105, 0.08), Vector3(-0.04, 0.183, 0.128), Vector3(0.07, 0.165, 0.115), Vector3(0.17, 0.125, 0.09)], segs)
+	_part(hips, shorts, bot_m)
+
+	# ---- chest / torso (bare midriff between shorts and top)
+	chest = _pivot(hips, Vector3(0, 0.16, 0))
+	var torso := _lathe([Vector3(-0.02, 0.118, 0.082), Vector3(0.08, 0.13, 0.095), Vector3(0.16, 0.15, 0.115), Vector3(0.25, 0.185, 0.1), Vector3(0.31, 0.12, 0.075)], segs)
+	_part(chest, torso, skin_m)
+	var crop := _lathe([Vector3(0.09, 0.14, 0.104), Vector3(0.16, 0.162, 0.127), Vector3(0.24, 0.17, 0.118)], segs)
+	_part(chest, crop, top_m)
+
+	# ---- neck / head
+	neck = _pivot(chest, Vector3(0, 0.30, 0))
+	_part(neck, _lathe([Vector3(-0.02, 0.05, 0.055), Vector3(0.05, 0.045, 0.05), Vector3(0.1, 0.05, 0.055)], segs), skin_m)
+	head_pivot = _pivot(neck, Vector3(0, 0.1, 0))
+	var head := _lathe([Vector3(-0.09, 0.035, 0.045), Vector3(-0.055, 0.065, 0.075), Vector3(0.0, 0.082, 0.097), Vector3(0.06, 0.086, 0.1), Vector3(0.11, 0.06, 0.075), Vector3(0.135, 0.005, 0.005)], segs)
+	_part(head_pivot, head, skin_m, Vector3(0, 0, 0.005))
+	# Hair: a crown cap above the hairline, and a back mass (rear half only)
+	# that gives the volume; ribbons hang from its lower rim.
+	var crown := _lathe([Vector3(0.06, 0.092, 0.107), Vector3(0.1, 0.078, 0.093), Vector3(0.13, 0.05, 0.062), Vector3(0.152, 0.005, 0.005)], segs)
+	_part(head_pivot, crown, hair_m, Vector3(0, 0.0, 0.012))
+	var back_mass := _lathe([Vector3(-0.14, 0.07, 0.09), Vector3(-0.06, 0.1, 0.12), Vector3(0.02, 0.105, 0.122), Vector3(0.07, 0.095, 0.112)], segs, 0.08, PI - 0.08)
+	_part(head_pivot, back_mass, hair_m, Vector3(0, 0.0, 0.01))
+	hair_pivot = _pivot(head_pivot, Vector3(0, 0.02, 0.0))
+	hair_pivot2 = _pivot(hair_pivot, Vector3(0, -0.2, 0.06))
+	if long_hair:
+		_build_hair(hair_m, q)
+	if q >= 1:
+		_build_face(skin, segs)
+
+	# ---- arms
+	l_shoulder = _pivot(chest, Vector3(-0.2, 0.265, 0))
+	r_shoulder = _pivot(chest, Vector3(0.2, 0.265, 0))
+	_joint(l_shoulder, 0.052, skin_m)
+	_joint(r_shoulder, 0.052, skin_m)
+	var upper := _lathe([Vector3(-0.3, 0.038, 0.04), Vector3(-0.15, 0.046, 0.048), Vector3(0.0, 0.055, 0.055), Vector3(0.04, 0.03, 0.03)], segs)
+	_part(l_shoulder, upper, skin_m)
+	_part(r_shoulder, upper, skin_m)
+	l_elbow = _pivot(l_shoulder, Vector3(0, -0.29, 0))
+	r_elbow = _pivot(r_shoulder, Vector3(0, -0.29, 0))
+	_joint(l_elbow, 0.04, skin_m)
+	_joint(r_elbow, 0.04, skin_m)
+	var fore := _lathe([Vector3(-0.26, 0.026, 0.02), Vector3(-0.12, 0.036, 0.034), Vector3(0.0, 0.04, 0.042), Vector3(0.02, 0.02, 0.02)], segs)
+	_part(l_elbow, fore, skin_m)
+	_part(r_elbow, fore, skin_m)
+	l_hand = _pivot(l_elbow, Vector3(0, -0.26, 0))
+	r_hand = _pivot(r_elbow, Vector3(0, -0.26, 0))
+	var hand := _lathe([Vector3(-0.17, 0.02, 0.01), Vector3(-0.1, 0.04, 0.016), Vector3(-0.03, 0.036, 0.018), Vector3(0.01, 0.01, 0.01)], segs)
+	_part(l_hand, hand, skin_m)
+	_part(r_hand, hand, skin_m)
+
+	# ---- legs
+	l_hip = _pivot(hips, Vector3(-0.095, -0.06, 0))
+	r_hip = _pivot(hips, Vector3(0.095, -0.06, 0))
+	var thigh := _lathe([Vector3(-0.45, 0.058, 0.062), Vector3(-0.3, 0.074, 0.08), Vector3(-0.12, 0.092, 0.102), Vector3(0.0, 0.098, 0.106), Vector3(0.04, 0.05, 0.05)], segs)
+	_part(l_hip, thigh, skin_m)
+	_part(r_hip, thigh, skin_tattoo)
+	# shorts leg openings ride with the thighs
+	var leg_open := _lathe([Vector3(-0.1, 0.104, 0.112), Vector3(-0.02, 0.104, 0.112), Vector3(0.05, 0.1, 0.108)], segs)
+	_part(l_hip, leg_open, bot_m)
+	_part(r_hip, leg_open, bot_m)
+	l_knee = _pivot(l_hip, Vector3(0, -0.45, 0))
+	r_knee = _pivot(r_hip, Vector3(0, -0.45, 0))
+	_joint(l_knee, 0.058, skin_m)
+	_joint(r_knee, 0.058, skin_m)
+	var shin := _lathe([Vector3(-0.42, 0.034, 0.04), Vector3(-0.3, 0.045, 0.055), Vector3(-0.14, 0.062, 0.07), Vector3(0.0, 0.058, 0.062), Vector3(0.04, 0.03, 0.03)], segs)
+	_part(l_knee, shin, skin_m)
+	_part(r_knee, shin, skin_m)
+	l_ankle = _pivot(l_knee, Vector3(0, -0.42, 0))
+	r_ankle = _pivot(r_knee, Vector3(0, -0.42, 0))
+	_joint(l_ankle, 0.034, skin_m)
+	_joint(r_ankle, 0.034, skin_m)
+	# foot: lathed along +Y then rotated so it points forward (-Z)
+	var foot := _lathe([Vector3(-0.07, 0.03, 0.028), Vector3(0.0, 0.04, 0.03), Vector3(0.1, 0.045, 0.025), Vector3(0.17, 0.042, 0.018), Vector3(0.21, 0.01, 0.008)], segs)
+	_part(l_ankle, foot, skin_m, Vector3(0, -0.045, 0.02), Vector3(-PI * 0.5, 0, 0))
+	_part(r_ankle, foot, skin_m, Vector3(0, -0.045, 0.02), Vector3(-PI * 0.5, 0, 0))
+
+
+func _build_hair(hair_m: Material, q: int) -> void:
+	# Flat overlapping ribbons hang from the back mass around the rear of the
+	# head, in an upper and a lower segment so the lower half can lag.
+	var n := 8 if q == 0 else (16 if q == 1 else 30)
+	var segs := 4 if q == 0 else 6
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	for i in n:
+		var t := float(i) / (n - 1)
+		var a := lerpf(0.1, PI - 0.1, t)             # around the head, PI/2 = straight back
+		var row := i % 2
+		var ry := -0.05 - row * 0.05
+		var r := 0.108 - row * 0.012
+		var root := Vector3(cos(a) * r, ry, sin(a) * r * 1.1 + 0.01)
+		var outward := Vector3(cos(a), 0, sin(a))
+		var tangent := Vector3(-sin(a), 0, cos(a))
+		var wob := rng.randf_range(-0.012, 0.012)
+		var w := (0.05 if q == 2 else 0.07) * rng.randf_range(0.85, 1.15)
+		# upper: root → shoulder-blade level, easing toward the back surface
+		var mid := Vector3(root.x * 0.8 + wob, -0.2, 0.065 + maxf(root.z - 0.02, 0.0) * 0.5)
+		var upper_pts := [root, root + outward * 0.012 + Vector3(0, -0.06, 0.005), (root + mid) * 0.5 + Vector3(0, 0, 0.015), mid]
+		var upper_r := [Vector2(w * 0.8, 0.012), Vector2(w, 0.012), Vector2(w, 0.011), Vector2(w * 0.95, 0.01)]
+		_part(hair_pivot, BodyMesh.tube(upper_pts, upper_r, segs, tangent), hair_m)
+		# lower: down the back to a tapered tip (in hair_pivot2 space)
+		var m2 := mid - Vector3(0, -0.2, 0.06)
+		var tip_len := rng.randf_range(0.2, 0.3)
+		var lower_pts := [m2, m2 + Vector3(-m2.x * 0.1, -tip_len * 0.5, 0.008), m2 + Vector3(-m2.x * 0.25, -tip_len, 0.0)]
+		var lower_r := [Vector2(w * 0.95, 0.01), Vector2(w * 0.85, 0.009), Vector2(w * 0.4, 0.005)]
+		_part(hair_pivot2, BodyMesh.tube(lower_pts, lower_r, segs, tangent), hair_m)
+
+
+func _build_face(skin: Color, segs: int) -> void:
+	# Minimal features so the head reads as a face from the front (-Z).
+	var white := _mat(Color(0.95, 0.95, 0.93), 0.4)
+	var dark := _mat(Color(0.12, 0.09, 0.07), 0.5)
+	var lip := _mat(skin.lerp(Color(0.75, 0.3, 0.35), 0.6), 0.5)
+	for side in [-1.0, 1.0]:
+		var eye := _part(head_pivot, _sphere_mesh(0.013), white, Vector3(side * 0.031, 0.01, -0.083))
+		eye.scale = Vector3(1.0, 0.6, 0.5)
+		_part(head_pivot, _sphere_mesh(0.008), dark, Vector3(side * 0.031, 0.01, -0.09))
+		var brow := _part(head_pivot, _sphere_mesh(0.02), dark, Vector3(side * 0.032, 0.033, -0.082))
+		brow.scale = Vector3(1.0, 0.18, 0.3)
+	var nose := _part(head_pivot, _sphere_mesh(0.014), _mat(skin, 0.55), Vector3(0, -0.015, -0.095))
+	nose.scale = Vector3(0.7, 1.1, 0.8)
+	var mouth := _part(head_pivot, _sphere_mesh(0.02), lip, Vector3(0, -0.048, -0.082))
+	mouth.scale = Vector3(1.0, 0.35, 0.5)
+
+
+func _sphere_mesh(r: float) -> SphereMesh:
+	var sm := SphereMesh.new()
+	sm.radius = r
+	sm.height = r * 2.0
+	sm.radial_segments = 10
+	sm.rings = 6
+	return sm
+
+
+# ---------------------------------------------------------------- poses
 
 func pose_walk(delta: float, speed: float) -> void:
-	phase += delta * speed * 4.2
+	phase += delta * speed * 4.4
 	var p := phase
 	var s := sin(p)
-	# Legs: thigh swings, knee bends as the leg comes forward.
-	l_hip.rotation.x = 0.55 * s
-	r_hip.rotation.x = -0.55 * s
-	l_knee.rotation.x = -0.9 * maxf(0.0, sin(p + 1.4)) * 0.6 - 0.05
-	r_knee.rotation.x = -0.9 * maxf(0.0, sin(p + PI + 1.4)) * 0.6 - 0.05
-	# Arms swing opposite the legs, elbows slightly bent.
-	l_shoulder.rotation.x = -0.6 * s
-	r_shoulder.rotation.x = 0.6 * s
-	l_shoulder.rotation.z = 0.12
-	r_shoulder.rotation.z = -0.12
-	l_elbow.rotation.x = -0.35
-	r_elbow.rotation.x = -0.35
-	# Bob, hip sway and a little counter-rotation of the chest.
-	hips.position.y = base_height + 0.035 * absf(cos(p))
-	hips.rotation.z = 0.05 * s
-	hips.rotation.y = 0.08 * s
-	chest.rotation.y = -0.12 * s
-	chest.rotation.x = 0.06
+	var c := cos(p)
+	# Legs: thigh swing; knee bends through the swing, straightens for heel strike.
+	l_hip.rotation.x = 0.5 * s
+	r_hip.rotation.x = -0.5 * s
+	l_knee.rotation.x = -(0.12 + 0.75 * maxf(0.0, cos(p - 0.5)))
+	r_knee.rotation.x = -(0.12 + 0.75 * maxf(0.0, cos(p + PI - 0.5)))
+	# Ankles: toes up before heel strike, toes down at push-off.
+	l_ankle.rotation.x = 0.18 * s - 0.3 * pow(maxf(0.0, -sin(p - 0.5)), 2.0)
+	r_ankle.rotation.x = -0.18 * s - 0.3 * pow(maxf(0.0, sin(p - 0.5)), 2.0)
+	# Pelvis: bob at step rate, weight shift and roll over the stance leg, yaw with the stride.
+	hips.position.y = base_height + 0.025 * cos(2.0 * p)
+	hips.position.x = 0.022 * s
+	hips.rotation.z = 0.07 * s
+	hips.rotation.y = -0.13 * s
+	# Chest counter-rotates and tilts the other way.
+	chest.rotation.y = 0.17 * s
+	chest.rotation.z = -0.05 * s
+	chest.rotation.x = 0.04
+	# Arms swing opposite the legs, elbows bend more when the arm is forward.
+	l_shoulder.rotation.x = -0.4 * s
+	r_shoulder.rotation.x = 0.4 * s
+	l_shoulder.rotation.z = 0.1
+	r_shoulder.rotation.z = -0.1
+	l_elbow.rotation.x = 0.32 + 0.35 * maxf(0.0, -s)
+	r_elbow.rotation.x = 0.32 + 0.35 * maxf(0.0, s)
+	l_hand.rotation.x = 0.15
+	r_hand.rotation.x = 0.15
+	l_hand.rotation.z = 0.15
+	r_hand.rotation.z = -0.15
+	# Head stays level against the chest twist.
+	head_pivot.rotation.y = -0.1 * s
+	head_pivot.rotation.x = 0.02 * cos(2.0 * p)
+	# Hair follows with lag; the lower half lags more.
 	if hair_pivot:
-		hair_pivot.rotation.x = 0.05 * sin(p * 2.0) + 0.04
-		hair_pivot.rotation.z = 0.06 * s
+		var wind := 0.02 * sin(p * 0.37 + 1.0)
+		hair_pivot.rotation.x = -0.05 + 0.05 * cos(2.0 * p - 0.9)
+		hair_pivot.rotation.z = 0.09 * sin(p - 0.7) + wind
+		hair_pivot2.rotation.x = 0.06 * cos(2.0 * p - 1.7)
+		hair_pivot2.rotation.z = 0.12 * sin(p - 1.5) + wind
 
 
 func pose_idle() -> void:
-	l_shoulder.rotation.z = 0.15
-	r_shoulder.rotation.z = -0.15
-	l_elbow.rotation.x = -0.2
-	r_elbow.rotation.x = -0.2
+	l_shoulder.rotation.z = 0.12
+	r_shoulder.rotation.z = -0.12
+	l_elbow.rotation.x = 0.2
+	r_elbow.rotation.x = 0.2
+	l_hand.rotation.x = 0.1
+	r_hand.rotation.x = 0.1
+	chest.rotation.x = 0.02
 
 
 func pose_sit() -> void:
 	# Sitting on the sand, knees up, leaning back on the hands.
-	hips.position.y = 0.32
+	hips.position.y = 0.3
 	rotation.x = 0.0
 	chest.rotation.x = -0.25
 	l_hip.rotation.x = 1.35
@@ -190,12 +314,14 @@ func pose_sit() -> void:
 	r_hip.rotation.z = -0.12
 	l_knee.rotation.x = -1.9
 	r_knee.rotation.x = -1.9
+	l_ankle.rotation.x = 0.3
+	r_ankle.rotation.x = 0.3
 	l_shoulder.rotation.x = 0.9
 	r_shoulder.rotation.x = 0.9
 	l_shoulder.rotation.z = 0.35
 	r_shoulder.rotation.z = -0.35
-	l_elbow.rotation.x = -0.15
-	r_elbow.rotation.x = -0.15
+	l_elbow.rotation.x = 0.15
+	r_elbow.rotation.x = 0.15
 	head_pivot.rotation.x = 0.15
 
 
@@ -207,17 +333,21 @@ func pose_lying() -> void:
 	r_shoulder.rotation.z = -0.35
 	l_shoulder.rotation.x = 0.25
 	r_shoulder.rotation.x = 0.25
-	l_elbow.rotation.x = -0.6
-	r_elbow.rotation.x = -0.6
+	l_elbow.rotation.x = 0.6
+	r_elbow.rotation.x = 0.6
 	l_knee.rotation.x = -0.35
 	r_knee.rotation.x = -0.35
 	l_hip.rotation.x = 0.15
 	r_hip.rotation.x = 0.15
 	l_hip.rotation.z = 0.06
 	r_hip.rotation.z = -0.06
+	l_ankle.rotation.x = -0.4
+	r_ankle.rotation.x = -0.4
 	if hair_pivot:
 		hair_pivot.rotation.x = -0.9
 
+
+# ---------------------------------------------------------------- baking
 
 func _rel_xform(node: Node3D) -> Transform3D:
 	var t := Transform3D.IDENTITY
@@ -241,7 +371,7 @@ func bake_static() -> void:
 		batch.add(mi.mesh, _rel_xform(mi), c)
 	for child in get_children():
 		child.queue_free()
-	batch.instance(self, "Baked")
+	batch.instance(self, "Baked", 0.7)
 
 
 func _collect_meshes(n: Node, out: Array[MeshInstance3D]) -> void:

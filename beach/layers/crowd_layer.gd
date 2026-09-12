@@ -80,7 +80,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 		var speed := rng.randf_range(1.1, 1.6)
 		for k in (2 if pair else 1):
 			var h := Humanoid.new()
-			h.build(_pick(skins, rng), _pick(tops, rng), _pick(bottoms, rng), _pick(hairs, rng), rng.randf() < 0.5, rng.randf_range(0.9, 1.05))
+			h.build(_pick(skins, rng), _pick(tops, rng), _pick(bottoms, rng), _pick(hairs, rng), rng.randf() < 0.5, rng.randf_range(0.9, 1.05), 1)
 			var xx := x + k * 0.8
 			h.position = Vector3(xx, ctx.sand_height(xx, z), z)
 			h.rotation.y = 0.0 if dir < 0 else PI

@@ -18,6 +18,7 @@ var wind := Vector2(1.0, 0.45)
 var player: Node3D
 var player_phase := 0.0       # walk-cycle phase, for camera bob etc.
 var camera: Camera3D
+var inspect := false        # orbit the player up close (URL #inspect)
 
 var noise_tex: ImageTexture
 var cloud_tex: ImageTexture

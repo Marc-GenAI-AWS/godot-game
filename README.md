@@ -12,6 +12,9 @@ hotels, a lifeguard tower, drifting clouds and a passing seagull. Steer with
 the arrow keys or A/D; Space or tap stops and starts walking. The scenery
 repeats every 200 m so the walk loops seamlessly.
 
+Add `#inspect` to the URL to orbit the character up close:
+https://mlobree.github.io/boulder-hill/beach/#inspect
+
 The scene is built as a stack of independent **layers** so any one element
 can be specialised without touching the rest:
 
@@ -19,7 +22,10 @@ can be specialised without touching the rest:
 beach/
   main.gd                    composition root: instantiates layers, runs the tick loop
   world_context.gd           shared state: time, tide line, sand_height(), textures, signals
-  characters/humanoid.gd     primitive-based person: walk cycle, sit/lie poses, bake_static()
+  characters/humanoid.gd     person rig: lathed body parts, cloth textures, strand hair,
+                             walk cycle with foot roll / hip sway, sit/lie poses, bake_static()
+  characters/body_mesh.gd    lathe / tube mesh builders + procedural skin, denim, floral,
+                             hair textures
   shaders/sand.gdshader      dry/wet sand with a moving tide line
   shaders/water.gdshader     swells, depth colour, edge foam, breaker lines
   layers/

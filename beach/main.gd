@@ -12,6 +12,11 @@ var layers: Array[BeachLayer] = []
 func _ready() -> void:
 	add_child(ctx)
 	ctx.make_textures()
+	if OS.has_feature("web"):
+		var hash_v = JavaScriptBridge.eval("window.location.hash", true)
+		ctx.inspect = str(hash_v).begins_with("#inspect")
+	elif OS.get_cmdline_user_args().has("--inspect"):
+		ctx.inspect = true
 
 	var sky := SkyLayer.new()
 	var ocean := OceanLayer.new()

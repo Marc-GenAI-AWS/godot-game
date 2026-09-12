@@ -15,7 +15,7 @@ var last_phase := 0.0
 func build() -> void:
 	player = Humanoid.new()
 	player.name = "Player"
-	player.build(Color(0.72, 0.5, 0.36), Color(0.92, 0.45, 0.6), Color(0.42, 0.5, 0.68), Color(0.16, 0.1, 0.06), true, 1.0)
+	player.build(Color(0.78, 0.56, 0.4), Color(0.93, 0.5, 0.6), Color(0.55, 0.64, 0.78), Color(0.24, 0.14, 0.08), true, 1.0, 2)
 	player.position = Vector3(-4.5, ctx.sand_height(-4.5, 0.0), 0.0)
 	add_child(player)
 	ctx.player = player
@@ -49,7 +49,7 @@ func tick(delta: float) -> void:
 	player.rotation.y = yaw
 
 	if walking:
-		var p := player.position + forward() * WALK_SPEED * delta
+		var p := player.position + forward() * (0.0 if ctx.inspect else WALK_SPEED) * delta
 		p.x = clampf(p.x, -50.0, 1.2)
 		p.y = ctx.sand_height(p.x, p.z)
 		player.position = p
