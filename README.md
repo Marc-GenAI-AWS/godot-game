@@ -12,6 +12,12 @@ hotels, a lifeguard tower, drifting clouds and a passing seagull. Steer with
 the arrow keys or A/D; Space or tap stops and starts walking. The scenery
 repeats every 200 m so the walk loops seamlessly.
 
+The walker is a CC0 rigged body from Quaternius'
+[Universal Base Characters](https://quaternius.com/packs/universalbasecharacters.html)
+driven by the CC0 [Universal Animation Library](https://quaternius.com/packs/universalanimationlibrary.html)
+walk cycle, with our own painted crop-top / denim texture and ribbon hair
+extension. Both packs are public domain (CC0 1.0); thanks Quaternius.
+
 Add `#inspect` to the URL to orbit the character up close:
 https://mlobree.github.io/boulder-hill/beach/#inspect
 
@@ -22,7 +28,11 @@ can be specialised without touching the rest:
 beach/
   main.gd                    composition root: instantiates layers, runs the tick loop
   world_context.gd           shared state: time, tide line, sand_height(), textures, signals
-  characters/humanoid.gd     person rig: lathed body parts, cloth textures, strand hair,
+  characters/assets/         CC0 body (glTF), long hairstyle, trimmed walk/idle clips,
+                             painted T_Player_BaseColor.png (see assets/paint_player3.py)
+  characters/hair_ribbons.gd ribbon-hair builder shared by both rigs
+  layers/skinned_player_layer.gd  player on the skinned body + animation library
+  characters/humanoid.gd     procedural rig (extras): lathed body parts, cloth textures, strand hair,
                              walk cycle with foot roll / hip sway, sit/lie poses, bake_static()
   characters/body_mesh.gd    lathe / tube mesh builders + procedural skin, denim, floral,
                              hair textures

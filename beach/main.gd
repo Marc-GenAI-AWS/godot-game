@@ -15,6 +15,7 @@ func _ready() -> void:
 	if OS.has_feature("web"):
 		var hash_v = JavaScriptBridge.eval("window.location.hash", true)
 		ctx.inspect = str(hash_v).begins_with("#inspect")
+		ctx.lite = str(hash_v).find("lite") >= 0
 	elif OS.get_cmdline_user_args().has("--inspect"):
 		ctx.inspect = true
 
@@ -27,7 +28,7 @@ func _ready() -> void:
 	var furniture := FurnitureLayer.new()
 	var crowd := CrowdLayer.new()
 	var fauna := FaunaLayer.new()
-	var player := PlayerLayer.new()
+	var player: PlayerLayer = SkinnedPlayerLayer.new()
 	var camera := CameraLayer.new()
 	var hud := HudLayer.new()
 

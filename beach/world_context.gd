@@ -19,6 +19,7 @@ var player: Node3D
 var player_phase := 0.0       # walk-cycle phase, for camera bob etc.
 var camera: Camera3D
 var inspect := false        # orbit the player up close (URL #inspect)
+var lite := false           # skip optional detail for A/B timing (URL #lite)
 
 var noise_tex: ImageTexture
 var cloud_tex: ImageTexture

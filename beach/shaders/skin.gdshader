@@ -22,8 +22,8 @@ void fragment() {
 	float ends = smoothstep(0.3, 0.0, v_v) + smoothstep(0.7, 1.0, v_v);
 	ALBEDO = c;
 	AO = 1.0 - ao_ends * ends;
-	ROUGHNESS = 0.72;
-	SPECULAR = 0.22;
+	ROUGHNESS = 0.78;
+	SPECULAR = 0.15;
 	if (normal_strength > 0.0) {
 		NORMAL_MAP = texture(normal_tex, UV).rgb;
 		NORMAL_MAP_DEPTH = normal_strength;
