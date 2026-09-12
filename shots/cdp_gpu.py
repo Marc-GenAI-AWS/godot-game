@@ -4,6 +4,7 @@ import websockets
 URL = sys.argv[1]
 TIMES = [float(t) for t in sys.argv[2].split(",")]
 OUT = sys.argv[3]
+KEYS = [(float(k.split(":")[0]), k.split(":")[1]) for k in sys.argv[4].split(",")] if len(sys.argv) > 4 and sys.argv[4] else []
 PORT = 9333
 
 proc = subprocess.Popen([
@@ -46,9 +47,19 @@ async def main():
         await send("Page.enable")
         await send("Page.navigate", url=URL)
         t0 = time.time()
+        KEYMAP = {"Space": (" ", "Space", 32), "ArrowUp": ("ArrowUp", "ArrowUp", 38), "ArrowDown": ("ArrowDown", "ArrowDown", 40), "ArrowLeft": ("ArrowLeft", "ArrowLeft", 37), "ArrowRight": ("ArrowRight", "ArrowRight", 39)}
+        pending = sorted(KEYS)
+        async def press(name):
+            key, code, vk = KEYMAP[name]
+            await send("Input.dispatchKeyEvent", type="keyDown", key=key, code=code, windowsVirtualKeyCode=vk, nativeVirtualKeyCode=vk)
+            await asyncio.sleep(0.12)
+            await send("Input.dispatchKeyEvent", type="keyUp", key=key, code=code, windowsVirtualKeyCode=vk, nativeVirtualKeyCode=vk)
+            print("pressed", name)
         for i, t in enumerate(TIMES):
             # drain events while waiting
             while time.time() - t0 < t:
+                while pending and time.time() - t0 >= pending[0][0]:
+                    await press(pending.pop(0)[1])
                 try:
                     msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=0.2))
                     ev = msg.get("method")

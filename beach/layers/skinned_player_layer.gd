@@ -26,6 +26,16 @@ var body: Node3D
 var skel: Skeleton3D
 var anim: AnimationPlayer
 var last_anim_t := -1.0
+# Locomotion: 0 = stopped, 1 = walk, 2 = jog. Space jumps.
+var pace := 1
+var jog_speed := 4.0
+const JOG_CLIP_SPEED := 5.26      # m/s the Jog_Fwd clip covers at speed 1 (measured)
+const JOG_STEP_L := 0.04
+const JOG_STEP_R := 0.5
+var vy := 0.0
+var airborne := false
+var landing_t := 0.0
+var jump_t := 0.0
 var foot_l := -1
 var foot_r := -1
 var hair_pivot: Node3D
@@ -126,6 +136,30 @@ func _apply_materials() -> void:
 		mi.set_surface_override_material(0, hair_mat)
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_UP, KEY_W:
+				pace = mini(pace + 1, 2)
+			KEY_DOWN, KEY_S:
+				pace = maxi(pace - 1, 0)
+			KEY_SPACE:
+				_jump()
+	elif (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
+		pace = 1 if pace == 0 else 0
+	walking = pace > 0
+
+
+func _jump() -> void:
+	if airborne or landing_t > 0.0:
+		return
+	airborne = true
+	vy = 3.4
+	jump_t = 0.0
+	anim.play("Jump_Start", 0.1)
+	anim.speed_scale = 2.2
+
+
 func tick(delta: float) -> void:
 	var steer := 0.0
 	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
@@ -138,17 +172,45 @@ func tick(delta: float) -> void:
 	yaw = clampf(yaw, -0.9, 0.9)
 	body.rotation.y = yaw
 
-	var want := "Walk" if walking else "Idle"
-	if anim.current_animation != want:
-		anim.play(want, 0.35)
-	if walking and not ctx.inspect:
-		var p := body.position + forward() * WALK_SPEED * delta
+	walking = pace > 0
+	var speed := 0.0 if pace == 0 else (WALK_SPEED if pace == 1 else jog_speed)
+	var ground := ctx.sand_height(body.position.x, body.position.z)
+	if airborne:
+		# ballistic arc; keep forward momentum
+		jump_t += delta
+		vy -= 9.8 * delta
+		var p := body.position + forward() * (0.0 if ctx.inspect else speed) * delta
 		p.x = clampf(p.x, -50.0, 1.2)
-		p.y = ctx.sand_height(p.x, p.z)
+		p.y += vy * delta
+		var g := ctx.sand_height(p.x, p.z)
+		if jump_t > 0.35 and anim.current_animation != "Jump":
+			anim.play("Jump", 0.15)
+			anim.speed_scale = 1.0
+		if vy < 0.0 and p.y <= g:
+			p.y = g
+			airborne = false
+			landing_t = 0.32
+			anim.play("Jump_Land", 0.08)
+			anim.speed_scale = 2.4
 		body.position = p
-	if walking:
+	else:
+		if landing_t > 0.0:
+			landing_t -= delta
+		else:
+			var want := "Idle" if pace == 0 else ("Walk" if pace == 1 else "Jog_Fwd")
+			if anim.current_animation != want:
+				anim.play(want, 0.3)
+			anim.speed_scale = 1.0 if pace == 0 else (WALK_SPEED / ANIM_WALK_SPEED if pace == 1 else jog_speed / JOG_CLIP_SPEED)
+		if speed > 0.0 and not ctx.inspect:
+			var p := body.position + forward() * speed * (0.5 if landing_t > 0.0 else 1.0) * delta
+			p.x = clampf(p.x, -50.0, 1.2)
+			p.y = ctx.sand_height(p.x, p.z)
+			body.position = p
+		else:
+			body.position.y = ground
+	if walking and not airborne:
 		_emit_steps_from_clip()
-		ctx.player_phase = anim.current_animation_position / anim.current_animation_length * TAU
+		ctx.player_phase = anim.current_animation_position / maxf(anim.current_animation_length, 0.01) * TAU
 	if hair_pivot:
 		var p := ctx.player_phase
 		hair_pivot.rotation.x = -0.04 + 0.05 * cos(2.0 * p - 0.9)
@@ -162,12 +224,15 @@ func tick(delta: float) -> void:
 
 
 func _emit_steps_from_clip() -> void:
-	if anim.current_animation != "Walk":
+	var clip := anim.current_animation
+	if clip != "Walk" and clip != "Jog_Fwd":
 		last_anim_t = -1.0
 		return
+	var sl := STEP_L if clip == "Walk" else JOG_STEP_L
+	var sr := STEP_R if clip == "Walk" else JOG_STEP_R
 	var t := anim.current_animation_position
 	if last_anim_t >= 0.0:
-		for pair in [[STEP_L, foot_l, -1], [STEP_R, foot_r, 1]]:
+		for pair in [[sl, foot_l, -1], [sr, foot_r, 1]]:
 			var st: float = pair[0]
 			var crossed := (last_anim_t < st and t >= st) or (t < last_anim_t and (last_anim_t < st or t >= st))
 			if crossed and pair[1] >= 0:

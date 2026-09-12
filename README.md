@@ -11,9 +11,12 @@ Two small Godot 4 scenes exported to the web and served by GitHub Pages.
 
 A stylised recreation of a third-person beach stroll: a walker on wet sand
 along the surf line, sunbathers and striped umbrellas, palms, pastel art-deco
-hotels, a lifeguard tower, drifting clouds and a passing seagull. Steer with
-the arrow keys or A/D; Space or tap stops and starts walking. The scenery
-repeats every 200 m so the walk loops seamlessly.
+hotels, a lifeguard tower, drifting clouds and a passing seagull.
+
+Controls: **Up** steps the pace up (stop → walk → jog), **Down** steps it
+down, **Left / Right** (or A / D) steer, **Space** jumps. A tap toggles
+walking on touch screens. The scenery repeats every 200 m so the walk loops
+seamlessly.
 
 The walker is a CC0 rigged body from Quaternius'
 [Universal Base Characters](https://quaternius.com/packs/universalbasecharacters.html)

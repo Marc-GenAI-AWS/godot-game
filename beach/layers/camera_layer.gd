@@ -39,7 +39,7 @@ func tick(delta: float) -> void:
 	var target := p + Vector3(0, 1.55, 0) - fwd * 3.3
 	target.y = maxf(target.y, ctx.sand_height(target.x, target.z) + 0.8)
 	# Stabilised: follow the root smoothly with no step bob, sway or roll.
-	var k := 1.0 - exp(-delta * 3.0)
+	var k := 1.0 - exp(-delta * 4.5)
 	camera.global_position = camera.global_position.lerp(target, k)
 	camera.look_at(p + Vector3(0, 0.88, 0) + fwd * 3.0, Vector3.UP)
 

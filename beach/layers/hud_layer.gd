@@ -18,4 +18,4 @@ func build() -> void:
 
 
 func tick(_delta: float) -> void:
-	label.text = "Beach Walk   %d fps\nLeft / Right or A / D to steer   Space or tap to stop and go" % Engine.get_frames_per_second()
+	label.text = "Beach Walk   %d fps\nUp: faster   Down: slower   Left / Right: steer   Space: jump" % Engine.get_frames_per_second()
