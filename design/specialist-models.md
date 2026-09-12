@@ -250,6 +250,21 @@ Design rules:
   it on outputs produced under its own scores. If it needs specialising, use
   human pairwise preferences collected from the loop.
 
+**One verifier, three consumers.** The same pipeline serves data
+generation (as a filter), training (as the reward), and the orchestrator (as
+the acceptance test). It therefore returns both a continuous score, for
+training, and a pass flag against per-segment thresholds, for acceptance,
+along with the evidence strings that become revision briefs.
+
+- The orchestrator never forms its own visual opinion of a sub-agent's
+  output; it reads the verifier's verdict. Two judges that can disagree
+  means sub-agents are trained by one and accepted by another.
+- What the orchestrator adds is the *composite* check, the whole assembled
+  scene, which runs through the same pipeline with a whole-scene rubric.
+- The orchestrator may run the cheap stages alone (static and runtime gates)
+  mid-loop to reject broken candidates in seconds before paying for capture
+  and judging.
+
 Cost: an episode on the current headless setup is about a minute, dominated
 by the web export and browser boot. Native rendering on a GPU host brings it
 to a few seconds; episodes are independent processes and parallelise freely.
@@ -393,7 +408,9 @@ else is parallel.
 Never touch another layer. Never change the contract.
 
 **Verifier responsibilities.** Score per layer and per composite; produce
-evidence; never be edited by the loop.
+evidence and a pass flag; never be edited by the loop. It is the same
+verifier used to filter training data and to compute rewards, so acceptance
+in the loop and quality in training are one definition.
 
 **Budget and stopping.** Each segment gets a revision budget (three rounds is
 plenty in practice). The director stops when the composite passes or the
