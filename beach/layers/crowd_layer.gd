@@ -26,11 +26,12 @@ func _person(rng: RandomNumberGenerator) -> Dictionary:
 	var spec: Dictionary = SkinnedPeople.BODIES[sex]
 	var hairs: Array = spec["hairs"].keys()
 	return {"sex": sex, "hair": _pick(hairs, rng), "outfit": _pick(spec["outfits"], rng),
-		"skin": _pick(SkinnedPeople.SKIN_TINTS, rng), "hair_tint": _pick(SkinnedPeople.HAIR_TINTS, rng)}
+		"skin": _pick(SkinnedPeople.SKIN_TINTS, rng), "hair_tint": _pick(SkinnedPeople.HAIR_TINTS, rng),
+		"body": SkinnedPeople.pick_body_type(rng)}
 
 
 func _add_baked(p: Dictionary, clip: String, t: float, xform: Transform3D, tweaks: Dictionary = {}) -> void:
-	var baked := SkinnedPeople.bake(p["sex"], p["hair"], clip, t, self, tweaks)
+	var baked := SkinnedPeople.bake(p["sex"], p["hair"], clip, t, self, tweaks, p["body"])
 	_batch_for(p["outfit"]).add(baked["body"], xform, p["skin"])
 	if baked["eyes"]:
 		_batch_for("eyes").add(baked["eyes"], xform, Color(1, 1, 1))
@@ -93,7 +94,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 		sw.rotation.y = rng.randf() * TAU
 		chunk.add_child(sw)
 		var b := MeshBatch.new()
-		var baked := SkinnedPeople.bake(p["sex"], p["hair"], "Swim_Idle", _pick(idle_ts, rng), self)
+		var baked := SkinnedPeople.bake(p["sex"], p["hair"], "Swim_Idle", _pick(idle_ts, rng), self, {}, p["body"])
 		b.add(baked["body"], Transform3D.IDENTITY, p["skin"])
 		var mi := MeshInstance3D.new()
 		mi.mesh = b.commit_with(SkinnedPeople.outfit_material(p["outfit"]))
@@ -118,32 +119,69 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 		mi.name = "People_" + key
 		mi.mesh = _batches[key].commit_with(mat)
 		chunk.add_child(mi)
-	# Strollers along the waterline: live characters, staggered cycles
-	for i in 7:
+	# Strollers along the waterline: live characters with varied gaits.
+	# Each gets a clip, a ground speed, a cadence and a wander amplitude.
+	for i in 8:
 		var pair := rng.randf() < 0.35
 		var x := rng.randf_range(-12.0, -1.0)
 		var z := rng.randf_range(-L, 0.0)
 		var dir := 1.0 if rng.randf() < 0.5 else -1.0
-		var speed := rng.randf_range(1.0, 1.5)
+		var gait := _pick_gait(rng)
 		for k in (2 if pair else 1):
 			var p := _person(rng)
-			var root := SkinnedPeople.animated(p["sex"], p["hair"], p["outfit"], p["skin"], p["hair_tint"])
+			var root := SkinnedPeople.animated(p["sex"], p["hair"], p["outfit"], p["skin"], p["hair_tint"], p["body"])
 			var xx := x + k * 0.8
 			root.position = Vector3(xx, ctx.sand_height(xx, z), z)
 			root.rotation.y = 0.0 if dir < 0 else PI
 			chunk.add_child(root)
+			SkinnedPeople.apply_bone_scales(root.get_meta("skeleton"), p["body"])
 			var ap: AnimationPlayer = root.get_meta("anim")
-			ap.play("Walk")
+			ap.play(gait["clip"])
 			ap.seek(rng.randf_range(0.0, 1.3), true)
-			ap.speed_scale = speed / 0.975
-			walkers.append([root, speed, dir])
+			# cadence: heavier builds stride slower, slim ones quicker
+			var cadence: float = gait["cadence"] * (0.92 if p["body"] in ["heavy", "stocky"] else (1.06 if p["body"] in ["slim", "short"] else 1.0))
+			var speed: float = gait["clip_speed"] * cadence
+			ap.speed_scale = cadence
+			walkers.append({"root": root, "speed": speed, "dir": dir, "x0": xx, "wander": rng.randf_range(0.0, 1.6), "wfreq": rng.randf_range(0.03, 0.08), "phase": rng.randf() * TAU, "skel": root.get_meta("skeleton"), "body": p["body"]})
+
+
+# Gait table: clip, the ground speed the clip covers at cadence 1 (measured in
+# Blender), and a cadence range so identical clips still read differently.
+const GAITS := [
+	{"clip": "Walk", "clip_speed": 0.975, "w": 0.5, "cad": [0.85, 1.15]},
+	{"clip": "Walk_Formal", "clip_speed": 0.975, "w": 0.22, "cad": [0.8, 1.05]},
+	{"clip": "Jog_Fwd", "clip_speed": 5.26, "w": 0.18, "cad": [0.6, 0.8]},
+	{"clip": "Sprint", "clip_speed": 8.25, "w": 0.07, "cad": [0.6, 0.8]},
+]
+
+func _pick_gait(rng: RandomNumberGenerator) -> Dictionary:
+	var r := rng.randf()
+	var acc := 0.0
+	var g: Dictionary = GAITS[0]
+	for cand in GAITS:
+		acc += cand["w"]
+		if r <= acc:
+			g = cand
+			break
+	return {"clip": g["clip"], "clip_speed": g["clip_speed"], "cadence": rng.randf_range(g["cad"][0], g["cad"][1])}
 
 
 func tick(delta: float) -> void:
 	for w in walkers:
-		var root: Node3D = w[0]
-		root.position.z = wrap_local_z(root.position.z + w[2] * w[1] * delta)
-		root.position.y = ctx.sand_height(root.position.x, root.position.z)
+		var root: Node3D = w["root"]
+		var z: float = wrap_local_z(root.position.z + w["dir"] * w["speed"] * delta)
+		# gentle wander across the beach so paths aren't ruler-straight
+		var wx: float = w["x0"] + w["wander"] * sin(z * w["wfreq"] * TAU + w["phase"])
+		var dx: float = wx - root.position.x
+		root.position.x = wx
+		root.position.z = z
+		root.position.y = ctx.sand_height(wx, z)
+		# face the direction of travel
+		var heading := Vector3(dx, 0, w["dir"] * w["speed"] * delta)
+		if heading.length() > 0.0001:
+			root.rotation.y = atan2(-heading.x, -heading.z)
+		# keep the build's bone scales in place (clips carry no scale tracks, but be safe)
+		SkinnedPeople.apply_bone_scales(w["skel"], w["body"])
 	for s in swimmers:
 		var sw: Node3D = s[0]
 		sw.position.y = s[1] + ctx.sea_level() + 0.12 * sin(ctx.time * 1.3 + s[2])

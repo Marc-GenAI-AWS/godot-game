@@ -4,7 +4,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath="/home/marc/dev/graphics-gen/assets/ual/pack/godot/UAL1_Standard_RM.glb")
 arm = [o for o in bpy.data.objects if o.type == "ARMATURE"][0]
 out = {}
-for name in ["Walk_Loop", "Walk_Formal_Loop", "Idle_Loop", "Jog_Fwd_Loop"]:
+for name in ["Walk_Loop", "Walk_Formal_Loop", "Jog_Fwd_Loop", "Sprint_Loop"]:
     act = bpy.data.actions[name]
     arm.animation_data.action = act
     try:

@@ -27,8 +27,9 @@ extension. Both packs are public domain (CC0 1.0); thanks Quaternius.
 
 Everyone else on the beach uses the same rigged bodies and animation library as
 the player (female and male bases, four hairstyles, ten painted swimwear
-textures, five skin tones). Strollers are live characters with staggered walk
-cycles; sunbathers, sitters, waders and swimmers are posed from clips, skinned
+textures, five skin tones, seven body builds via root and bone scaling).
+Strollers are live characters with one of four gaits (walk, formal walk, jog,
+sprint), their own cadence and a gentle wander; sunbathers, sitters, waders and swimmers are posed from clips, skinned
 once on the CPU (`characters/skinned_people.gd`) and batched per material.
 `#inspect-crowd` orbits the lounger rows.
 

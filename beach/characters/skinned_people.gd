@@ -17,6 +17,38 @@ const BODIES := {
 }
 const ANIM_SCENE := "res://characters/assets/ual_walk.glb"
 const SKIN_TINTS := [Color(1.0, 0.95, 0.9), Color(0.88, 0.72, 0.58), Color(0.7, 0.52, 0.4), Color(0.5, 0.35, 0.26), Color(0.95, 0.85, 0.78)]
+# Body builds: root scale (x, y, z) plus per-bone pose scales. Child bones
+# inherit scale, so the chest/lower-leg entries undo what the parent added.
+const BODY_TYPES := {
+	"slim":    {"root": Vector3(0.95, 1.0, 0.95), "bones": {}},
+	"average": {"root": Vector3(1.0, 1.0, 1.0), "bones": {}},
+	"tall":    {"root": Vector3(1.0, 1.07, 1.0), "bones": {}},
+	"short":   {"root": Vector3(1.0, 0.92, 1.0), "bones": {}},
+	"stocky":  {"root": Vector3(1.1, 0.98, 1.1), "bones": {"Spine": Vector3(1.1, 1.0, 1.15), "Chest": Vector3(0.95, 1.0, 0.9)}},
+	"heavy":   {"root": Vector3(1.14, 0.98, 1.14), "bones": {"Spine": Vector3(1.22, 1.0, 1.32), "Chest": Vector3(0.88, 1.0, 0.82),
+		"LeftUpperLeg": Vector3(1.15, 1.0, 1.15), "RightUpperLeg": Vector3(1.15, 1.0, 1.15), "LeftLowerLeg": Vector3(0.92, 1.0, 0.92), "RightLowerLeg": Vector3(0.92, 1.0, 0.92)}},
+	"athletic": {"root": Vector3(1.04, 1.03, 1.0), "bones": {"Chest": Vector3(1.08, 1.0, 1.05), "Spine": Vector3(0.96, 1.0, 0.96)}},
+}
+const BODY_TYPE_WEIGHTS := {"slim": 0.15, "average": 0.35, "tall": 0.1, "short": 0.1, "stocky": 0.12, "heavy": 0.08, "athletic": 0.1}
+
+static func pick_body_type(rng: RandomNumberGenerator) -> String:
+	var r := rng.randf()
+	var acc := 0.0
+	for k in BODY_TYPE_WEIGHTS:
+		acc += BODY_TYPE_WEIGHTS[k]
+		if r <= acc:
+			return k
+	return "average"
+
+
+static func apply_bone_scales(skel: Skeleton3D, body_type: String) -> void:
+	var bt: Dictionary = BODY_TYPES.get(body_type, BODY_TYPES["average"])
+	for bone_name in bt["bones"]:
+		var bi := skel.find_bone(bone_name)
+		if bi >= 0:
+			skel.set_bone_pose_scale(bi, bt["bones"][bone_name])
+
+
 const HAIR_TINTS := [Color(0.25, 0.15, 0.08), Color(0.12, 0.09, 0.07), Color(0.75, 0.55, 0.3), Color(0.45, 0.25, 0.12), Color(0.9, 0.8, 0.55)]
 
 static var _anim_lib: AnimationLibrary
@@ -76,7 +108,7 @@ static func hair_tex_for(style: String) -> String:
 # ---------------------------------------------------------------- live character
 
 # Returns a root Node3D facing -Z with meta: skeleton, anim, body_mesh.
-static func animated(sex: String, hair: String, outfit: String, skin_tint: Color, hair_tint: Color) -> Node3D:
+static func animated(sex: String, hair: String, outfit: String, skin_tint: Color, hair_tint: Color, body_type := "average") -> Node3D:
 	var spec: Dictionary = BODIES[sex]
 	var root: Node3D = (load(spec["scene"]) as PackedScene).instantiate()
 	var skel: Skeleton3D = root.find_child("GeneralSkeleton", true, false)
@@ -87,6 +119,9 @@ static func animated(sex: String, hair: String, outfit: String, skin_tint: Color
 	root.add_child(ap)
 	ap.add_animation_library("", anim_library())
 	_apply_materials(skel, spec, hair, outfit, skin_tint, hair_tint)
+	var bt: Dictionary = BODY_TYPES.get(body_type, BODY_TYPES["average"])
+	root.scale = bt["root"]
+	root.set_meta("body_type", body_type)
 	root.set_meta("skeleton", skel)
 	root.set_meta("anim", ap)
 	return root
@@ -127,8 +162,8 @@ static func _apply_materials(skel: Skeleton3D, spec: Dictionary, hair: String, o
 # Returns {"body": ArrayMesh, "eyes": ArrayMesh, "brows": ArrayMesh, "hair": ArrayMesh or null}
 # posed from `clip` at time `t`, in root space (facing -Z, feet at y=0).
 # tweaks: {bone_name: Basis} applied on top of the clip pose (e.g. bend the spine)
-static func bake(sex: String, hair: String, clip: String, t: float, tree_parent: Node = null, tweaks: Dictionary = {}) -> Dictionary:
-	var key := "%s|%s|%s|%.2f|%s" % [sex, hair, clip, t, str(tweaks)]
+static func bake(sex: String, hair: String, clip: String, t: float, tree_parent: Node = null, tweaks: Dictionary = {}, body_type := "average") -> Dictionary:
+	var key := "%s|%s|%s|%.2f|%s|%s" % [sex, hair, clip, t, str(tweaks), body_type]
 	if _pose_cache.has(key):
 		return _pose_cache[key]
 	var spec: Dictionary = BODIES[sex]
@@ -154,8 +189,10 @@ static func bake(sex: String, hair: String, clip: String, t: float, tree_parent:
 		if bi >= 0:
 			var q := skel.get_bone_pose_rotation(bi)
 			skel.set_bone_pose_rotation(bi, q * Quaternion(tweaks[bone_name]))
+	apply_bone_scales(skel, body_type)
 	skel.force_update_all_bone_transforms()
-	var to_root := arm.transform * skel.transform
+	var bt: Dictionary = BODY_TYPES.get(body_type, BODY_TYPES["average"])
+	var to_root := Transform3D(Basis.IDENTITY.scaled(bt["root"]), Vector3.ZERO) * arm.transform * skel.transform
 	var out := {}
 	for kind in ["body", "eyes", "brows"]:
 		var mi: MeshInstance3D = skel.get_node_or_null(spec[kind])
