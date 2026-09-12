@@ -16,6 +16,8 @@ func _ready() -> void:
 		var hash_v = JavaScriptBridge.eval("window.location.hash", true)
 		ctx.inspect = str(hash_v).begins_with("#inspect")
 		ctx.lite = str(hash_v).find("lite") >= 0
+		if str(hash_v).find("mpfb") >= 0:
+			ctx.variant = "mpfb"
 	elif OS.get_cmdline_user_args().has("--inspect"):
 		ctx.inspect = true
 
@@ -28,7 +30,7 @@ func _ready() -> void:
 	var furniture := FurnitureLayer.new()
 	var crowd := CrowdLayer.new()
 	var fauna := FaunaLayer.new()
-	var player: PlayerLayer = SkinnedPlayerLayer.new()
+	var player: PlayerLayer = MpfbPlayerLayer.new() if ctx.variant == "mpfb" else SkinnedPlayerLayer.new()
 	var camera := CameraLayer.new()
 	var hud := HudLayer.new()
 

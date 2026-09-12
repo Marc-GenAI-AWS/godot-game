@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _init() -> void:
-	for path in ["res://characters/assets/Superhero_Female_FullBody.gltf", "res://characters/assets/Hair_Long.gltf", "res://characters/assets/ual_walk.glb"]:
+	for path in ["res://characters/mpfb/mpfb_player.glb", "res://characters/assets/ual_walk.glb", "res://characters/assets/Superhero_Female_FullBody.gltf", "res://characters/assets/Hair_Long.gltf"]:
 		var ps: PackedScene = load(path)
 		if ps == null:
 			print("FAILED ", path)
@@ -15,7 +15,10 @@ func _init() -> void:
 func _dump(n: Node, depth: int) -> void:
 	var extra := ""
 	if n is Skeleton3D:
-		extra = " bones=%d" % n.get_bone_count()
+		var names := []
+		for i in mini(8, n.get_bone_count()):
+			names.append(n.get_bone_name(i))
+		extra = " bones=%d first=%s" % [n.get_bone_count(), names]
 	elif n is MeshInstance3D:
 		extra = " mesh=%s surfaces=%d skeleton=%s" % [n.mesh.resource_name if n.mesh else "-", n.mesh.get_surface_count() if n.mesh else 0, n.skeleton]
 		for i in (n.mesh.get_surface_count() if n.mesh else 0):

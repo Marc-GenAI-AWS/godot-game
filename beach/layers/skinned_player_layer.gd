@@ -6,13 +6,21 @@ extends PlayerLayer
 # crop top / denim texture. Same interface as PlayerLayer so the camera,
 # tracks and HUD layers don't care which one is active.
 
-const BODY_SCENE := "res://characters/assets/Superhero_Female_FullBody.gltf"
-const HAIR_SCENE := "res://characters/assets/Hair_Long.gltf"
 const ANIM_SCENE := "res://characters/assets/ual_walk.glb"
 const ANIM_WALK_SPEED := 0.975      # m/s the Walk clip covers at speed 1 (measured)
 const STEP_L := 0.25                # foot-contact times inside the Walk clip (s)
 const STEP_R := 0.667
-const FACING_FLIP := true           # model faces +Z; our world walks toward -Z
+
+# Configuration (a subclass can change these in _init before build runs).
+var body_scene := "res://characters/assets/Superhero_Female_FullBody.gltf"
+var hair_scene := "res://characters/assets/Hair_Long.gltf"   # "" = none
+var body_mesh_name := "Superhero_Female"
+var hair_mesh_names: Array[String] = ["Hair_Long", "Eyebrows"]
+var painted_texture := "res://characters/assets/T_Player_BaseColor.png"
+var normal_texture := "res://characters/assets/T_Superhero_Female_Normal.png"   # "" = none
+var facing_flip := true             # model faces +Z; our world walks toward -Z
+var extend_hair := true             # add ribbon strands under the stock hair
+var hair_tint := Color(0.55, 0.36, 0.22)
 
 var body: Node3D
 var skel: Skeleton3D
@@ -25,20 +33,23 @@ var hair_pivot2: Node3D
 
 
 func build() -> void:
-	body = (load(BODY_SCENE) as PackedScene).instantiate()
+	body = (load(body_scene) as PackedScene).instantiate()
 	body.name = "Player"
-	skel = body.get_node("Armature/Skeleton3D")
-	if FACING_FLIP:
-		body.get_node("Armature").rotation.y = PI
+	skel = body.find_child("*Skeleton*", true, false) as Skeleton3D
+	if skel == null:
+		skel = body.find_child("GeneralSkeleton", true, false) as Skeleton3D
+	if facing_flip:
+		(skel.get_parent() as Node3D).rotation.y = PI
 
 	# Long hair: a mesh skinned to the same rig, just re-parented to our skeleton.
-	var hair_scene: Node3D = (load(HAIR_SCENE) as PackedScene).instantiate()
-	var hair_mesh: MeshInstance3D = hair_scene.get_node("Armature/Skeleton3D/Hair_Long")
-	hair_mesh.owner = null
-	hair_mesh.get_parent().remove_child(hair_mesh)
-	skel.add_child(hair_mesh)
-	hair_mesh.skeleton = NodePath("..")
-	hair_scene.free()
+	if hair_scene != "":
+		var hs: Node3D = (load(hair_scene) as PackedScene).instantiate()
+		var hair_mesh: MeshInstance3D = hs.find_child(hair_mesh_names[0], true, false)
+		hair_mesh.owner = null
+		hair_mesh.get_parent().remove_child(hair_mesh)
+		skel.add_child(hair_mesh)
+		hair_mesh.skeleton = NodePath("..")
+		hs.free()
 
 	# Animation library from the trimmed UAL file (same skeleton, same paths).
 	var ual: Node = (load(ANIM_SCENE) as PackedScene).instantiate()
@@ -53,14 +64,15 @@ func build() -> void:
 			anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
 
 	_apply_materials()
-	_extend_hair()
+	if extend_hair:
+		_extend_hair()
 
 	body.position = Vector3(-4.5, ctx.sand_height(-4.5, 0.0), 0.0)
 	add_child(body)
 	ctx.player = body
 	player = null
-	foot_l = skel.find_bone("foot_l")
-	foot_r = skel.find_bone("foot_r")
+	foot_l = skel.find_bone("LeftFoot") if skel.find_bone("LeftFoot") >= 0 else skel.find_bone("foot_l")
+	foot_r = skel.find_bone("RightFoot") if skel.find_bone("RightFoot") >= 0 else skel.find_bone("foot_r")
 	anim.play("Walk")
 	anim.speed_scale = WALK_SPEED / ANIM_WALK_SPEED
 
@@ -87,25 +99,30 @@ func _extend_hair() -> void:
 
 
 func _apply_materials() -> void:
-	var mesh: MeshInstance3D = skel.get_node("Superhero_Female")
+	var mesh: MeshInstance3D = skel.get_node(body_mesh_name)
 	var skin := ShaderMaterial.new()
 	skin.shader = load("res://shaders/skin.gdshader")
-	skin.set_shader_parameter("albedo_tex", load("res://characters/assets/T_Player_BaseColor.png"))
-	skin.set_shader_parameter("normal_tex", load("res://characters/assets/T_Superhero_Female_Normal.png"))
-	skin.set_shader_parameter("normal_strength", 1.0)
+	skin.set_shader_parameter("albedo_tex", load(painted_texture))
+	if normal_texture != "":
+		skin.set_shader_parameter("normal_tex", load(normal_texture))
+		skin.set_shader_parameter("normal_strength", 1.0)
 	skin.set_shader_parameter("ao_ends", 0.0)
 	skin.set_shader_parameter("sheen", 0.025)
 	mesh.set_surface_override_material(0, skin)
 
-	var hair_mat := StandardMaterial3D.new()
-	hair_mat.albedo_texture = load("res://characters/assets/T_Hair_2_BaseColor.png")
-	hair_mat.albedo_color = Color(0.55, 0.36, 0.22)
-	hair_mat.normal_enabled = true
-	hair_mat.normal_texture = load("res://characters/assets/T_Hair_2_Normal.png")
-	hair_mat.roughness = 0.55
-	hair_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	for n in ["Hair_Long", "Eyebrows"]:
-		var mi: MeshInstance3D = skel.get_node(n)
+	for n in hair_mesh_names:
+		var mi: MeshInstance3D = skel.get_node_or_null(n)
+		if mi == null:
+			continue
+		# keep the imported textures, tint and make it double sided / alpha-cut
+		var src := mi.mesh.surface_get_material(0)
+		var hair_mat: StandardMaterial3D = src.duplicate() if src is StandardMaterial3D else StandardMaterial3D.new()
+		hair_mat.albedo_color = hair_tint
+		hair_mat.roughness = 0.55
+		hair_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		if hair_mat.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+			hair_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+			hair_mat.alpha_scissor_threshold = 0.5
 		mi.set_surface_override_material(0, hair_mat)
 
 

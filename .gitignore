@@ -7,3 +7,4 @@ shots/.profile/
 examples/
 # raw asset downloads (large zips); project copies live in beach/characters/assets
 assets/
+**/.godot/

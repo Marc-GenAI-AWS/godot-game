@@ -21,6 +21,30 @@ extension. Both packs are public domain (CC0 1.0); thanks Quaternius.
 Add `#inspect` to the URL to orbit the character up close:
 https://mlobree.github.io/boulder-hill/beach/#inspect
 
+There is a second, parametric body generated with the open-source MPFB2 human
+generator (Blender, CC0 MakeHuman system assets). Add `#mpfb` to switch to it,
+or `#inspect-mpfb` to orbit it: https://mlobree.github.io/boulder-hill/beach/#mpfb
+
+### Character pipeline
+
+Both bodies go through the same Godot path: import the glTF with a humanoid
+`BoneMap` (`characters/assets/bonemap_*.tres`) and the retarget options in the
+`.import` file, which renames bones to Godot's `SkeletonProfileHumanoid` and
+normalises the rest pose, so one animation library (`ual_walk.glb`) drives
+any humanoid rig regardless of its native names or A/T-pose.
+
+- `tools/strip_anims.py` – headless Blender: trim the animation library to the clips we use.
+- `tools/measure_walk.py` – headless Blender: clip length, root-motion speed, foot-contact times.
+- `tools/paint_player2.py` + `paint_player3.py` – rasterise body height / bone region into UV
+  space, then paint crop top, denim shorts and tattoo onto the Quaternius skin texture.
+- `tools/mpfb_build.py` – headless Blender + MPFB2: female base mesh with hip / waist /
+  glute targets, skin, eyes, brows, lashes, long hair, game-engine rig, 1K textures, glTF.
+- `tools/paint_mpfb.py` – same garment painting for the MPFB skin texture.
+
+Blender for this arm64 machine is the community build from
+https://github.com/lfdevs/blender-linux-arm64 with the MPFB extension installed via
+`blender --command extension install-file`.
+
 The scene is built as a stack of independent **layers** so any one element
 can be specialised without touching the rest:
 
@@ -31,7 +55,9 @@ beach/
   characters/assets/         CC0 body (glTF), long hairstyle, trimmed walk/idle clips,
                              painted T_Player_BaseColor.png (see assets/paint_player3.py)
   characters/hair_ribbons.gd ribbon-hair builder shared by both rigs
-  layers/skinned_player_layer.gd  player on the skinned body + animation library
+  layers/skinned_player_layer.gd  player on a skinned body + animation library (configurable)
+  layers/mpfb_player_layer.gd     the MPFB-body variant of the above
+  characters/mpfb/           MPFB-generated body (glTF) and its painted texture
   characters/humanoid.gd     procedural rig (extras): lathed body parts, cloth textures, strand hair,
                              walk cycle with foot roll / hip sway, sit/lie poses, bake_static()
   characters/body_mesh.gd    lathe / tube mesh builders + procedural skin, denim, floral,
