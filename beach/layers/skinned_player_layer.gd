@@ -36,6 +36,7 @@ var vy := 0.0
 var airborne := false
 var landing_t := 0.0
 var jump_t := 0.0
+var _press_pos := Vector2.ZERO
 var foot_l := -1
 var foot_r := -1
 var hair_pivot: Node3D
@@ -145,8 +146,16 @@ func _unhandled_input(event: InputEvent) -> void:
 				pace = maxi(pace - 1, 0)
 			KEY_SPACE:
 				_jump()
-	elif (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
-		pace = 1 if pace == 0 else 0
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_press_pos = event.position
+		elif event.position.distance_to(_press_pos) < 8.0:
+			pace = 1 if pace == 0 else 0
+	elif event is InputEventScreenTouch:
+		if event.pressed:
+			_press_pos = event.position
+		elif event.position.distance_to(_press_pos) < 12.0:
+			pace = 1 if pace == 0 else 0
 	walking = pace > 0
 
 

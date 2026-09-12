@@ -49,7 +49,19 @@ async def main():
         t0 = time.time()
         KEYMAP = {"Space": (" ", "Space", 32), "ArrowUp": ("ArrowUp", "ArrowUp", 38), "ArrowDown": ("ArrowDown", "ArrowDown", 40), "ArrowLeft": ("ArrowLeft", "ArrowLeft", 37), "ArrowRight": ("ArrowRight", "ArrowRight", 39)}
         pending = sorted(KEYS)
+        async def drag(dx, dy):
+            x, y = 640, 300
+            await send("Input.dispatchMouseEvent", type="mousePressed", x=x, y=y, button="left", clickCount=1)
+            steps = 12
+            for k in range(1, steps + 1):
+                await send("Input.dispatchMouseEvent", type="mouseMoved", x=x + dx * k / steps, y=y + dy * k / steps, button="left", buttons=1)
+                await asyncio.sleep(0.03)
+            await send("Input.dispatchMouseEvent", type="mouseReleased", x=x + dx, y=y + dy, button="left", clickCount=1)
+            print("dragged", dx, dy)
         async def press(name):
+            if name.startswith("Drag"):
+                _, dx, dy = name.split("_")
+                await drag(float(dx), float(dy)); return
             key, code, vk = KEYMAP[name]
             await send("Input.dispatchKeyEvent", type="keyDown", key=key, code=code, windowsVirtualKeyCode=vk, nativeVirtualKeyCode=vk)
             await asyncio.sleep(0.12)

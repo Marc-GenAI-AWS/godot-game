@@ -14,7 +14,8 @@ along the surf line, sunbathers and striped umbrellas, palms, pastel art-deco
 hotels, a lifeguard tower, drifting clouds and a passing seagull.
 
 Controls: **Up** steps the pace up (stop → walk → jog), **Down** steps it
-down, **Left / Right** (or A / D) steer, **Space** jumps. A tap toggles
+down, **Left / Right** (or A / D) steer, **Space** jumps. Hold the mouse button (or a finger) and drag to orbit the
+camera around her; it eases back behind her once she walks on. A tap toggles
 walking on touch screens. The scenery repeats every 200 m so the walk loops
 seamlessly.
 

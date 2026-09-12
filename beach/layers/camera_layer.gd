@@ -5,6 +5,11 @@ extends BeachLayer
 
 var camera: Camera3D
 var player_layer: PlayerLayer
+# Drag-orbit: hold the mouse / a finger and drag to look around the walker.
+var orbit_yaw := 0.0
+var orbit_pitch := 0.16
+const PITCH_DEFAULT := 0.16
+var dragging := false
 
 
 func build() -> void:
@@ -18,6 +23,16 @@ func build() -> void:
 	ctx.camera = camera
 	if ctx.player:
 		camera.global_position = ctx.player.position + Vector3(0.6, 1.8, 3.8)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		dragging = event.pressed
+	elif event is InputEventScreenTouch:
+		dragging = event.pressed
+	elif dragging and (event is InputEventMouseMotion or event is InputEventScreenDrag):
+		orbit_yaw -= event.relative.x * 0.006
+		orbit_pitch = clampf(orbit_pitch + event.relative.y * 0.004, -0.15, 1.1)
 
 
 func tick(delta: float) -> void:
@@ -35,13 +50,22 @@ func tick(delta: float) -> void:
 		camera.look_at(centre + Vector3(0, 0.95 if ctx.inspect_offset == Vector3.ZERO else 0.5, 0), Vector3.UP)
 		return
 	var fwd := player_layer.forward()
-	var right := player_layer.right()
-	var target := p + Vector3(0, 1.55, 0) - fwd * 3.3
-	target.y = maxf(target.y, ctx.sand_height(target.x, target.z) + 0.8)
+	# Ease back behind her while she moves; hold the angle while she stands.
+	if not dragging and player_layer.walking:
+		var e := 1.0 - exp(-delta * 1.2)
+		orbit_yaw = lerp_angle(orbit_yaw, 0.0, e)
+		orbit_pitch = lerpf(orbit_pitch, PITCH_DEFAULT, e)
+	var a := player_layer.yaw + orbit_yaw
+	var dist := 3.5
+	var dir := Vector3(sin(a) * cos(orbit_pitch), sin(orbit_pitch), cos(a) * cos(orbit_pitch))
+	var focus := p + Vector3(0, 1.0, 0)
+	var target := focus + dir * dist
+	target.y = maxf(target.y, ctx.sand_height(target.x, target.z) + 0.5)
 	# Stabilised: follow the root smoothly with no step bob, sway or roll.
-	var k := 1.0 - exp(-delta * 4.5)
+	var k := 1.0 - exp(-delta * (9.0 if dragging else 4.5))
 	camera.global_position = camera.global_position.lerp(target, k)
-	camera.look_at(p + Vector3(0, 0.88, 0) + fwd * 3.0, Vector3.UP)
+	var ahead := fwd * 1.4 * maxf(cos(orbit_yaw), 0.0)
+	camera.look_at(focus + Vector3(0, -0.1, 0) + ahead, Vector3.UP)
 
 
 func on_world_wrapped(dz: float) -> void:

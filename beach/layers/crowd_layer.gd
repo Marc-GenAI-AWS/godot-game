@@ -64,12 +64,12 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 			var node: Node3D = spot["node"]
 			var base: Transform3D = inv * node.global_transform
 			if spot["kind"] == "lounger":
-				# lie back on the lounger: rotate the idle pose onto the backrest
-				var lie := Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, -PI * 0.5 + 0.34), Vector3(0, 0.42, 0.9))
+				# lie on the back, head at the backrest: face the body +Z first, then tip it over
+				var lie := Transform3D(Basis.IDENTITY.rotated(Vector3.UP, PI).rotated(Vector3.RIGHT, -PI * 0.5 + 0.34), Vector3(0, 0.44, 0.9))
 				_add_baked(p, "Idle", _pick(lie_ts, rng), base * lie)
 			else:
 				if rng.randf() < 0.5:
-					var lie := Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, -PI * 0.5 + 0.05), Vector3(0, 0.06, 0.9))
+					var lie := Transform3D(Basis.IDENTITY.rotated(Vector3.UP, PI).rotated(Vector3.RIGHT, -PI * 0.5 + 0.05), Vector3(0, 0.08, 0.9))
 					_add_baked(p, "Idle", _pick(lie_ts, rng), base * lie)
 				else:
 					_add_baked(p, "Sitting_Idle", _pick(sit_ts, rng), base * Transform3D(Basis.IDENTITY, Vector3(0, 0.0, 0.2)))
