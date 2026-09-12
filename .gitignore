@@ -3,3 +3,5 @@ boulder/.godot/
 # local screenshot harness output
 shots/*.png
 shots/.profile/
+# reference footage, not redistributed
+examples/

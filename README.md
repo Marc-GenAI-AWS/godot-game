@@ -1,4 +1,22 @@
-# Boulder Hill
+# Godot web demos
+
+Two small Godot 4 scenes exported to the web and served by GitHub Pages.
+
+## Beach Walk
+
+**Play it:** https://mlobree.github.io/boulder-hill/beach/
+
+A stylised recreation of a third-person beach stroll: a walker on wet sand
+along the surf line, sunbathers and striped umbrellas, palms, pastel art-deco
+hotels, a lifeguard tower, drifting clouds and a passing seagull. Steer with
+the arrow keys or A/D; Space or tap stops and starts walking. The scenery
+repeats every 200 m so the walk loops seamlessly.
+
+Source is in `beach/`: `main.gd` builds the world, `humanoid.gd` is a
+primitive-based person with a procedural walk cycle, and `sand.gdshader` /
+`water.gdshader` do the wet-sand line, swells and foam.
+
+## Boulder Hill
 
 A small Godot 4 scene: a large boulder rolls down a grassy hillside, kicking up
 dust and flattening the grass in its path, with a chase camera following it
@@ -6,7 +24,7 @@ into the valley. The grass is ~70k shader-animated blades in a MultiMesh,
 swaying in a scrolling wind field. Click, tap, or press
 R / Space to roll it again. It restarts on its own once the rock comes to rest.
 
-**Play it in the browser:** https://mlobree.github.io/boulder-hill/
+**Play it:** https://mlobree.github.io/boulder-hill/
 
 The web build in `docs/` is served by GitHub Pages.
 
