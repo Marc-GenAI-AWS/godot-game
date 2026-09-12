@@ -60,5 +60,5 @@ if tat_zone.any():
     motif = (d < 0.45) | ((d < 1.0) & (np.sin(ang * 5.0) > 0.55)) | ((d > 1.05) & (d < 1.2))
     out = np.where((motif & tat_zone)[..., None], out * 0.25 + np.array([0.05, 0.04, 0.06]), out)
     print("tattoo at", int(cx), int(cy))
-Image.fromarray((out * 255).astype(np.uint8)).resize((1024, 1024), Image.LANCZOS).save("/home/marc/dev/graphics-gen/beach/characters/assets/T_Player_BaseColor.png")
+Image.fromarray((out * 255).astype(np.uint8)).resize((1024, 1024), Image.LANCZOS).save("/home/marc/dev/graphics-gen/game/core/characters/assets/T_Player_BaseColor.png")
 print("shorts px", int(ms.sum()), "top px", int(mt.sum()))

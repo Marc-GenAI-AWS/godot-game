@@ -2,8 +2,8 @@
 # using per-pixel body height rasterised from the mesh (same approach as route 1).
 import struct, json, io, numpy as np
 from PIL import Image, ImageFilter
-GLB = "/home/marc/dev/graphics-gen/beach/characters/mpfb/mpfb_player.glb"
-OUT = "/home/marc/dev/graphics-gen/beach/characters/mpfb/T_MPFB_BaseColor.png"
+GLB = "/home/marc/dev/graphics-gen/game/core/characters/mpfb/mpfb_player.glb"
+OUT = "/home/marc/dev/graphics-gen/game/core/characters/mpfb/T_MPFB_BaseColor.png"
 d = open(GLB, "rb").read(); ln = struct.unpack("<I", d[12:16])[0]; g = json.loads(d[20:20 + ln])
 bo = 20 + ln; bl = struct.unpack("<I", d[bo:bo + 4])[0]; b = d[bo + 8:bo + 8 + bl]
 def acc(i):

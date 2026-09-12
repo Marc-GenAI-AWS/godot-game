@@ -30,7 +30,7 @@ that exports to the web and runs at a fixed frame budget.
 
 **Shape.** A scene is a stack of independent *layers*. Each layer is one source
 file that builds itself from a shared *world context* and updates itself every
-frame. Layers never call each other. This is already how `beach/` is built,
+frame. Layers never call each other. This is already how `game/worlds/beach/` is built,
 and it is the property that makes specialisation possible: a model that owns
 one layer needs the contract, its brief, and its own file, and nothing else.
 

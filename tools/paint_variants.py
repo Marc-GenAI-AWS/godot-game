@@ -3,7 +3,7 @@
 import json, numpy as np, os
 from PIL import Image, ImageFilter
 SRC = "/home/marc/dev/graphics-gen/assets/ubc/pack/base/"
-OUT = "/home/marc/dev/graphics-gen/beach/characters/assets/"
+OUT = "/home/marc/dev/graphics-gen/game/core/characters/assets/"
 W = 1024
 
 def load(gltf, bin_):
