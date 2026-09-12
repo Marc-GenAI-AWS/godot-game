@@ -39,14 +39,21 @@ void fragment() {
 	// Shallows: let the sand show through.
 	col = mix(sand_color, col, smoothstep(0.0, 0.28, d));
 
-	// Foam at the water's edge, streaked and moving up the beach with the tide.
+	// Water's edge in three zones (d = water depth over the sand):
+	//  wash  d < ~0.05  thin dark film that mirrors the sky
+	//  band  0.04-0.2   dense foam broken by lace holes
+	//  outer 0.2-0.5    sparse lace streaks
 	float n1 = texture(noise_tex, v_world.xz * vec2(0.25, 0.08) + vec2(-t * 0.08, t * 0.02)).r;
 	float n2 = texture(noise_tex, v_world.xz * vec2(0.9, 0.5) + vec2(t * 0.05, -t * 0.07)).r;
-	// Thick lacy foam at the edge: dense band that breaks into holes further out.
 	float n4 = texture(noise_tex, v_world.xz * vec2(1.8, 1.1) + vec2(-t * 0.11, t * 0.04)).r;
 	float lace = n1 * 0.45 + n2 * 0.5 + n4 * 0.35;
-	float edge_foam = smoothstep(0.32, 0.0, d) * smoothstep(0.3, 0.62, lace + smoothstep(0.16, 0.0, d) * 0.55);
-	edge_foam = max(edge_foam, smoothstep(0.05, 0.0, d) * 0.9);
+	float wash = smoothstep(0.07, 0.015, d);
+	float foam_band = smoothstep(0.03, 0.07, d) * smoothstep(0.24, 0.12, d);
+	float outer = smoothstep(0.18, 0.28, d) * smoothstep(0.55, 0.3, d);
+	float edge_foam = foam_band * smoothstep(0.28, 0.5, lace + 0.25) + outer * smoothstep(0.42, 0.62, lace);
+	edge_foam = max(edge_foam, wash * smoothstep(0.5, 0.7, lace) * 0.5);
+	vec3 wet_film = mix(sand_color * 0.75, vec3(0.32, 0.46, 0.64), 0.4);
+	col = mix(col, wet_film, wash);
 	// Breaking lines: bands of foam rolling toward shore.
 	float band = sin(v_world.x * 0.5 - t * 1.1 + n1 * 2.0);
 	float breakers = smoothstep(0.75, 0.95, band) * smoothstep(3.0, 9.0, v_world.x) * smoothstep(40.0, 15.0, v_world.x);
@@ -62,7 +69,7 @@ void fragment() {
 	NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(ripple, 0.0)).xyz, 0.12));
 
 	ALBEDO = col;
-	ROUGHNESS = mix(0.3, 0.85, max(foam, 1.0 - smoothstep(0.0, 0.5, d)));
-	SPECULAR = mix(0.25, 0.4, smoothstep(0.0, 1.0, d));
+	ROUGHNESS = mix(mix(0.3, 0.05, wash), 0.85, foam);
+	SPECULAR = mix(mix(0.3, 0.6, wash), 0.15, foam);
 	METALLIC = 0.0;
 }
