@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image, ImageFilter
 W = 2048
-ymap = np.load("ymap.npy"); region = np.load("region.npy"); zn = np.load("zn.npy")
+_A = "/home/marc/dev/graphics-gen/assets/"; ymap = np.load(_A + "ymap.npy"); region = np.load(_A + "region.npy"); zn = np.load(_A + "zn.npy")
 valid = np.isfinite(ymap); y = np.where(valid, ymap, -10)
 src = "/home/marc/dev/graphics-gen/assets/ubc/pack/base/Textures/T_Superhero_Female_Light_BaseColor.png"
 base = Image.open(src).convert("RGB"); arr = np.asarray(base).astype(np.float32) / 255.0
@@ -11,8 +11,15 @@ arr = np.clip(arr * 0.9 + lum * 0.1, 0, 1)   # slightly less saturated
 hsv = np.asarray(base.convert("HSV")).astype(np.float32) / 255.0
 grey = (hsv[..., 1] < 0.12) & (hsv[..., 2] > 0.45)
 yy, xx = np.mgrid[0:W, 0:W]
-grey_top = grey & (xx < 1100) & (yy < 1900)
-grey_shorts = grey & ~grey_top
+# Assign underwear-grey pixels by the body region they map to (dilated so
+# island borders are covered), not by a texture rectangle.
+from PIL import ImageFilter as _IF
+_reg = np.asarray(Image.fromarray(region.astype(np.uint8)).filter(_IF.MaxFilter(9)))
+grey_top = grey & np.isin(_reg, [5, 6])
+grey_shorts = grey & np.isin(_reg, [1, 2, 3, 4])
+_rest = grey & (_reg == 0)
+grey_top |= _rest & (yy < 1300)
+grey_shorts |= _rest & (yy >= 1300)
 # garments by body height, clean edges from the interpolated height map
 shorts = (np.isin(region, [1, 2, 3, 4]) & (y > 0.755) & (y < 1.045)) | grey_shorts
 top = (np.isin(region, [5, 6]) & (y > 1.215) & (y < 1.40)) | grey_top
