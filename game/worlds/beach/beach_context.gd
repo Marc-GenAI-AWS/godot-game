@@ -11,6 +11,10 @@ const BOARDWALK_X := -56.0
 var tide_reach := 3.0         # world X the last wave reached (wet line)
 
 
+func _init() -> void:
+	world_title = "Beach Walk"
+
+
 func ground_height(x: float, z: float) -> float:
 	var h := -SAND_SLOPE * x if x > 0.0 else -LAND_SLOPE * x
 	h += 0.06 * sin(z * 0.21 + x * 0.1) + 0.04 * sin(z * 0.7 - x * 0.3)

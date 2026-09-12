@@ -198,7 +198,6 @@ func validate_contacts() -> Dictionary:
 
 
 func tick(delta: float) -> void:
-	ctx.dynamic_obstacles.clear()
 	for w in walkers:
 		var root: Node3D = w["root"]
 		ctx.dynamic_obstacles.append([root.global_position, 0.42])

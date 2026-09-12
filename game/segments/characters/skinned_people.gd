@@ -15,6 +15,10 @@ const BODIES := {
 		"hairs": {"buzz": ["res://segments/characters/assets/Hair_Buzzed.gltf", "Hair_Buzzed"], "parted": ["res://segments/characters/assets/Hair_SimpleParted.gltf", "Hair_SimpleParted"]},
 		"outfits": ["T_M_trunks_blue", "T_M_trunks_red", "T_M_trunks_floral", "T_M_trunks_black"]},
 }
+const CASUAL_OUTFITS := {
+	"F": ["T_F_tee_white_jeans", "T_F_tee_red_shorts", "T_F_tee_navy_chinos", "T_F_tee_green_shorts", "T_F_tee_black_jeans"],
+	"M": ["T_M_tee_white_jeans", "T_M_tee_red_shorts", "T_M_tee_navy_chinos", "T_M_tee_green_shorts", "T_M_tee_black_jeans"],
+}
 const ANIM_SCENE := "res://segments/characters/assets/ual_walk.glb"
 const SKIN_TINTS := [Color(1.0, 0.95, 0.9), Color(0.88, 0.72, 0.58), Color(0.7, 0.52, 0.4), Color(0.5, 0.35, 0.26), Color(0.95, 0.85, 0.78)]
 # Body builds: root scale (x, y, z) plus per-bone pose scales. Child bones

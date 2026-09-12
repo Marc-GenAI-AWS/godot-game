@@ -55,16 +55,20 @@ func tick(delta: float) -> void:
 		var e := 1.0 - exp(-delta * 1.2)
 		orbit_yaw = lerp_angle(orbit_yaw, 0.0, e)
 		orbit_pitch = lerpf(orbit_pitch, PITCH_DEFAULT, e)
+	var prof: Dictionary = ctx.camera_profile
+	if camera.fov != float(prof["fov"]):
+		camera.fov = prof["fov"]
 	var a := player_layer.yaw + orbit_yaw
-	var dist := 3.5
-	var dir := Vector3(sin(a) * cos(orbit_pitch), sin(orbit_pitch), cos(a) * cos(orbit_pitch))
-	var focus := p + Vector3(0, 1.0, 0)
+	var dist: float = prof["dist"]
+	var pitch := orbit_pitch + (float(prof["height"]) / dist - PITCH_DEFAULT)
+	var dir := Vector3(sin(a) * cos(pitch), sin(pitch), cos(a) * cos(pitch))
+	var focus := p + Vector3(0, float(prof["look"]), 0)
 	var target := focus + dir * dist
 	target.y = maxf(target.y, ctx.ground_height(target.x, target.z) + 0.5)
 	# Stabilised: follow the root smoothly with no step bob, sway or roll.
 	var k := 1.0 - exp(-delta * (9.0 if dragging else 4.5))
 	camera.global_position = camera.global_position.lerp(target, k)
-	var ahead := fwd * 1.4 * maxf(cos(orbit_yaw), 0.0)
+	var ahead := fwd * float(prof["lookahead"]) * 0.47 * maxf(cos(orbit_yaw), 0.0)
 	camera.look_at(focus + Vector3(0, -0.1, 0) + ahead, Vector3.UP)
 
 

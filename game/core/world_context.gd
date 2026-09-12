@@ -15,6 +15,11 @@ var wind := Vector2(1.0, 0.45)
 var player: Node3D
 var player_phase := 0.0       # walk-cycle phase, for camera bob etc.
 var camera: Camera3D
+# Camera framing the current player mode wants (the camera layer reads it).
+var camera_profile := {"dist": 3.3, "height": 1.55, "look": 0.88, "fov": 60.0, "lookahead": 3.0}
+var hud_hint := "Up: faster   Down: slower   Left / Right: steer   Space: jump   Drag: look around"
+var hud_status := ""
+var world_title := "Scene Studio"
 var inspect := false        # orbit the player up close (URL #inspect)
 var inspect_offset := Vector3.ZERO   # #inspect-crowd orbits the lounger rows instead
 var lite := false           # skip optional detail for A/B timing (URL #lite)
@@ -50,6 +55,23 @@ func resolve_obstacles(pos: Vector3, radius: float) -> Vector3:
 	for ob in dynamic_obstacles:
 		pos = _push_out(pos, ob[0], ob[1] + radius)
 	return pos
+
+
+# Debug: nearest obstacle (static or dynamic) to a point: [distance, centre, radius, kind]
+func nearest_obstacle(pos: Vector3) -> Array:
+	var best := [INF, Vector3.ZERO, 0.0, "none"]
+	var b0 := int(floor(pos.z / OB_BUCKET))
+	for b in [b0 - 1, b0, b0 + 1]:
+		if _obstacles.has(b):
+			for ob in _obstacles[b]:
+				var d: float = Vector2(pos.x - ob[0].x, pos.z - ob[0].z).length() - ob[1]
+				if d < best[0]:
+					best = [d, ob[0], ob[1], "static"]
+	for ob in dynamic_obstacles:
+		var d: float = Vector2(pos.x - ob[0].x, pos.z - ob[0].z).length() - ob[1]
+		if d < best[0]:
+			best = [d, ob[0], ob[1], "dynamic"]
+	return best
 
 
 static func _push_out(pos: Vector3, centre: Vector3, r: float) -> Vector3:
@@ -97,6 +119,7 @@ func mat(c: Color, rough := 0.85) -> StandardMaterial3D:
 
 func tick(delta: float) -> void:
 	time += delta
+	dynamic_obstacles.clear()   # layers re-register moving obstacles each frame
 
 
 func make_textures() -> void:

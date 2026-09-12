@@ -3,7 +3,7 @@
 import json, numpy as np, os
 from PIL import Image, ImageFilter
 SRC = "/home/marc/dev/graphics-gen/assets/ubc/pack/base/"
-OUT = "/home/marc/dev/graphics-gen/game/core/characters/assets/"
+OUT = "/home/marc/dev/graphics-gen/game/segments/characters/assets/"
 W = 1024
 
 def load(gltf, bin_):
@@ -23,7 +23,7 @@ def rasterise(g, acc, mesh_name):
     j = acc(p["attributes"]["JOINTS_0"]); w = acc(p["attributes"]["WEIGHTS_0"]); idx = acc(p["indices"]).reshape(-1, 3)
     names = [g["nodes"][x]["name"] for x in g["skins"][0]["joints"]]
     dom = np.array([names[k] for k in j[np.arange(len(j)), w.argmax(1)]])
-    rid = {"pelvis": 1, "thigh_l": 2, "thigh_r": 3, "spine_01": 4, "spine_02": 5, "spine_03": 6}
+    rid = {"pelvis": 1, "thigh_l": 2, "thigh_r": 3, "spine_01": 4, "spine_02": 5, "spine_03": 6, "calf_l": 7, "calf_r": 8, "upperarm_l": 9, "upperarm_r": 10, "lowerarm_l": 11, "lowerarm_r": 12, "clavicle_l": 13, "clavicle_r": 14}
     ymap = np.full((W, W), np.nan); region = np.zeros((W, W), dtype=np.int16)
     for tri in idx:
         uvs = uv[tri] * W; ys = pos[tri, 1]
@@ -107,3 +107,34 @@ mtr = clean(trunks)
 for name, col, pat in [("M_trunks_blue", [0.15, 0.3, 0.75], None), ("M_trunks_red", [0.8, 0.15, 0.15], None), ("M_trunks_floral", [0.1, 0.45, 0.4], "floral"), ("M_trunks_black", [0.08, 0.08, 0.1], "stripes")]:
     Image.fromarray((paint(arr, [(mtr, fabric(col, rng, pat))], [1.0, 0.97, 0.93]) * 255).astype(np.uint8)).resize((512, 512), Image.LANCZOS).save(OUT + "T_%s.png" % name)
     print("wrote", name, "body mesh", body_name, "H", round(H, 2))
+
+
+# ---------------- casual clothes (street pedestrians) ----------------
+def casual_masks(y, region, H):
+    tee = (np.isin(region, [4, 5, 6, 13, 14]) & (y > 0.55 * H) & (y < 0.86 * H)) | (np.isin(region, [9, 10]) & (y > 0.72 * H))
+    shorts = np.isin(region, [1, 2, 3]) & (y > 0.34 * H) & (y < 0.6 * H)
+    jeans = (np.isin(region, [1, 2, 3, 7, 8]) & (y > 0.06 * H) & (y < 0.6 * H))
+    return clean(tee), clean(shorts), clean(jeans)
+
+for sex, gltf, bin_, mesh_name, tex in [
+    ("F", "godot/Superhero_Female_FullBody.gltf", "godot/Superhero_Female_FullBody.bin", "Superhero_Female", "Textures/T_Superhero_Female_Light_BaseColor.png"),
+    ("M", "godot/Superhero_Male_FullBody.gltf", "godot/Superhero_Male_FullBody.bin", None, "Textures/T_Superhero_Male_Ligh.png")]:
+    g, acc = load(SRC + gltf, SRC + bin_)
+    if mesh_name is None:
+        mesh_name = [m["name"] for m in g["meshes"] if "Retopology" in m["name"]][0]
+    y, region, H = rasterise(g, acc, mesh_name)
+    base = Image.open(SRC + tex).convert("RGB").resize((W, W), Image.LANCZOS)
+    arr = np.asarray(base).astype(np.float32) / 255.0
+    grey = grey_mask(base)
+    tee, shorts, jeans = casual_masks(y, region, H)
+    jeans = np.clip(jeans + grey, 0, 1); shorts = np.clip(shorts + grey, 0, 1)
+    sets = [
+        ("tee_white_jeans", [(jeans, fabric([0.2, 0.28, 0.45], rng)), (tee, fabric([0.93, 0.93, 0.9], rng))]),
+        ("tee_red_shorts", [(shorts, fabric([0.35, 0.33, 0.3], rng)), (tee, fabric([0.75, 0.15, 0.15], rng))]),
+        ("tee_navy_chinos", [(jeans, fabric([0.7, 0.62, 0.48], rng)), (tee, fabric([0.12, 0.18, 0.4], rng))]),
+        ("tee_green_shorts", [(shorts, fabric([0.16, 0.2, 0.3], rng)), (tee, fabric([0.2, 0.5, 0.35], rng, "stripes"))]),
+        ("tee_black_jeans", [(jeans, fabric([0.1, 0.1, 0.12], rng)), (tee, fabric([0.5, 0.2, 0.55], rng))]),
+    ]
+    for name, mc in sets:
+        Image.fromarray((paint(arr, mc, [1.0, 0.97, 0.93]) * 255).astype(np.uint8)).resize((512, 512), Image.LANCZOS).save(OUT + "T_%s_%s.png" % (sex, name))
+        print("wrote", sex, name)

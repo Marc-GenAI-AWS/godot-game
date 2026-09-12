@@ -5,7 +5,7 @@ extends Node3D
 # the tick loop. Worlds live in worlds/<name>/<name>_world.gd and expose
 # make_context() / make_layers() / validators().
 
-var WORLDS := {"beach": BeachWorld}
+var WORLDS := {"beach": BeachWorld, "street": StreetWorld}
 const DEFAULT_WORLD := "beach"
 
 var ctx: WorldContext

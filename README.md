@@ -28,6 +28,24 @@ Everyone on the beach uses the same CC0 rigged bodies and animation library
 as the player (female and male bases, four hairstyles, ten painted swimwear
 textures, five skin tones, seven body builds, four gaits).
 
+### Street Drive (`#world=street`)
+
+A suburban street modelled on the driving clips: a small yellow hatchback
+with a black roof on a two-lane road with a double yellow centre line,
+parked cars along both kerbs, traffic in both lanes that keeps its distance,
+kerbs and sidewalks, grass verges with fan palms and leafy trees, garden
+walls and pitched-roof houses, lamps, a stop sign, pedestrians in casual
+clothes, and a downtown skyline far off.
+
+Controls: **Up** accelerates, **Down** brakes / reverses, **Left / Right**
+steer (less lock at speed), drag to orbit. The road is endless.
+`&variant=walk` puts the on-foot player on the street instead.
+
+Segments added for it: `segments/vehicles/` (procedural cars: hatch, sedan,
+suv, pickup; parked + traffic layer with car-following) and the vehicle
+player mode `segments/player/vehicle_player_layer.gd`. Shared palm and tree
+generators live in `segments/vegetation/species/`.
+
 ## Layout
 
 Segment-first: each specialist owns one directory under `game/segments/`;
@@ -49,7 +67,7 @@ game/
     ground/                    terrain surface; variants/beach.gd + shaders/sand.gdshader
     water/                     variants/beach.gd + shaders/water.gdshader
     architecture/              variants/beach.gd (hotels, promenade, lifeguard huts)
-    vegetation/                variants/beach.gd (palms, hedges)
+    vegetation/                species/palm.gd (palms, leafy trees); variants/beach.gd, street.gd
     props/                     variants/beach.gd (loungers, umbrellas, clutter; exposes spots)
     characters/                humanoid rig, body/texture generators, hair ribbons,
                                SkinnedPeople (live characters, CPU pose baking, builds,
@@ -57,13 +75,14 @@ game/
     crowd/                     variants/beach.gd (sunbathers, sitters, waders, swimmers,
                                strollers; contact validator)
     fauna/                     variants/beach.gd (gulls)
-    player/                    on-foot player: pace, jump, footsteps (vehicle mode to come)
+    player/                    on-foot player (pace, jump, footsteps) and vehicle mode
+    vehicles/                  car generator; variants/street.gd (parked cars + traffic)
     camera/                    chase camera, drag-orbit, inspect modes
     tracks/                    footprints
     hud/
-  worlds/beach/
-    beach_world.gd             make_context() / make_layers() / validators()
-    beach_context.gd           sand slope, sea level, tide, promenade deck
+  worlds/beach/, worlds/street/
+    <name>_world.gd            make_context() / make_layers() / validators()
+    <name>_context.gd          terrain, walkable area, constants
     brief.md                   reference digest and per-segment briefs
 docs/                          GitHub Pages: index.html (landing), play/ (the build),
                                beach/ (redirect for the old URL)
