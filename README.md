@@ -1,5 +1,8 @@
 # Godot web demos
 
+Design note: [Specialised models for building game scenes](design/specialist-models.md)
+describes how to turn this layered scene into a training and agentic pipeline.
+
 Two small Godot 4 scenes exported to the web and served by GitHub Pages.
 
 ## Beach Walk
