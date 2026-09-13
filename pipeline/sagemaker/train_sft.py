@@ -34,8 +34,16 @@ def main():
     tok = AutoTokenizer.from_pretrained(a.model)
     tok.pad_token = tok.pad_token or tok.eos_token
     gpu = torch.cuda.is_available()
+    n_gpu = torch.cuda.device_count() if gpu else 0
+    # several small GPUs (e.g. 4x A10G on g5.12xlarge): shard the model across them
+    # (naive pipeline via device_map) instead of replicating it per device
+    kwargs = {"device_map": "auto"} if n_gpu > 1 else {}
     model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.bfloat16 if gpu else torch.float32,
-                                                 attn_implementation="sdpa")
+                                                 attn_implementation="sdpa", **kwargs)
+    if n_gpu > 1:
+        model.is_parallelizable = True
+        model.model_parallel = True
+        print(f"model sharded across {n_gpu} GPUs")
     model.gradient_checkpointing_enable()
 
     ds = load_dataset("json", data_files={"train": a.train, "val": a.val} if os.path.exists(a.val) else {"train": a.train})
