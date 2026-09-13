@@ -84,7 +84,7 @@ def bedrock():
     return _client
 
 
-def converse(model: str, system: str, user_blocks, max_tokens=6000, temperature=None, retries=4):
+def converse(model: str, system: str, user_blocks, max_tokens=9000, temperature=None, retries=4):
     """One Bedrock Converse call. user_blocks is a list of {"text":..} or
     {"image": {"format": "png", "source": {"bytes": ...}}} blocks.
     Claude 5 models reject `temperature`; it is only sent when explicitly

@@ -38,6 +38,8 @@ def generate(brief, k, out_dir, model, temperature):
         prompt = user_prompt(brief)
         text, usage = converse(model, system, [{"text": prompt}], temperature=temperature)
         code = extract_code(text)
+        if usage.get("outputTokens", 0) >= 8990:
+            print(f"  {brief['id']}_{i}: hit the output cap, likely truncated", flush=True)
         cid = f"{brief['id']}_{i}"
         (out_dir / "candidates" / f"{cid}.gd").write_text(code)
         rows.append({"candidate": cid, "brief_id": brief["id"], "brief": brief, "segment": brief["segment"],
