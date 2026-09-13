@@ -25,6 +25,8 @@ func _ready() -> void:
 	ctx.lite = flags.has("lite")
 	if flags.has("mpfb"):
 		ctx.variant = "mpfb"
+	if flags.has("variant"):
+		ctx.variant = str(flags["variant"])
 	if flags.has("crowd"):
 		ctx.inspect_offset = Vector3(-14.2, 0.0, -6.0)
 	add_child(ctx)
@@ -36,6 +38,7 @@ func _ready() -> void:
 		layers.append(layer)
 	if DisplayServer.get_name() == "headless" or flags.has("validate"):
 		world.validators(layers)
+	print("world ready: ", world_name)   # capture harness syncs its clock to this line
 
 
 # Flags from the URL fragment ("#world=beach&inspect" or the legacy

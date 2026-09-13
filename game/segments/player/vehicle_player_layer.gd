@@ -10,6 +10,7 @@ var speed := 0.0
 var steer := 0.0
 var spin := 0.0
 var kind := "hatch"
+var brake_latch := false   # Down while rolling brakes to a stop; release and press again to reverse
 var paint := Color(0.95, 0.75, 0.1)
 var roof := Color(0.08, 0.08, 0.08)
 
@@ -20,6 +21,7 @@ const DRAG := 0.6
 const REVERSE_MAX := 6.0
 const WHEELBASE := 2.5
 const MAX_STEER := 0.5
+const PROFILE := {"dist": 7.0, "height": 2.4, "look": 0.8, "fov": 66.0, "lookahead": 3.0, "clip_h": 2.6}
 
 
 func build() -> void:
@@ -30,7 +32,7 @@ func build() -> void:
 	ctx.player = car
 	player = null
 	walking = false
-	ctx.camera_profile = {"dist": 7.0, "height": 2.4, "look": 0.8, "fov": 66.0, "lookahead": 3.0, "clip_h": 2.6}
+	ctx.camera_profile = PROFILE
 
 
 func _unhandled_input(_event: InputEvent) -> void:
@@ -53,8 +55,15 @@ func tick(delta: float) -> void:
 	if throttle > 0.0:
 		speed = minf(speed + ACCEL * delta, MAX_SPEED)
 	elif throttle < 0.0:
-		speed = maxf(speed - (BRAKE if speed > 0.0 else ACCEL * 0.6) * delta, -REVERSE_MAX)
+		if speed > 0.05:
+			brake_latch = true
+			speed = maxf(speed - BRAKE * delta, 0.0)
+		elif brake_latch:
+			speed = 0.0
+		else:
+			speed = maxf(speed - ACCEL * 0.6 * delta, -REVERSE_MAX)
 	else:
+		brake_latch = false
 		speed = move_toward(speed, 0.0, (DRAG + absf(speed) * 0.12) * delta)
 	# steering: ease toward input, less lock at speed
 	var lock := MAX_STEER * clampf(1.0 - absf(speed) / (MAX_SPEED * 1.4), 0.35, 1.0)

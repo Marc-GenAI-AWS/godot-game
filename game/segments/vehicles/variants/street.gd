@@ -18,7 +18,8 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 	# parked cars, nose along the road, in the parking strips
 	for side: float in [-1.0, 1.0]:
 		var z := -L + rng.randf_range(2.0, 10.0)
-		while z < -6.0:
+		# the right kerb near the chunk start stays free: the player's car parks there
+		while z < (-32.0 if side > 0.0 else -6.0):
 			if rng.randf() < 0.55:
 				var car := Car.build(Car.random_kind(rng), Car.PAINTS[rng.randi() % Car.PAINTS.size()])
 				var len: float = car.get_meta("length")
@@ -56,8 +57,9 @@ func _gap_ahead(t: Dictionary) -> float:
 	for o in traffic:
 		if o != t and absf(o["lane"] - t["lane"]) < 0.5:
 			candidates.append([(o["node"] as Node3D).global_position, "traffic"])
-	if ctx.player and absf(ctx.player.global_position.x - t["lane"]) < 1.6:
-		candidates.append([ctx.player.global_position, "player"])
+	for who in [ctx.player, ctx.player_vehicle]:
+		if who and absf(who.global_position.x - t["lane"]) < 1.6:
+			candidates.append([who.global_position, "player"])
 	for c in candidates:
 		var d: float = (c[0].z - gp.z) * t["dir"]
 		if d > 0.0 and d < best:

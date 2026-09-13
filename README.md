@@ -37,15 +37,23 @@ kerbs and sidewalks, grass verges with fan palms and leafy trees, garden
 walls and pitched-roof houses, lamps, a stop sign, pedestrians in casual
 clothes, and a downtown skyline far off.
 
-Controls: **Up** accelerates, **Down** brakes / reverses, **Left / Right**
-steer (less lock at speed), drag to orbit (the camera boom pulls in rather
-than clipping into parked cars). The road is endless.
-`&variant=walk` puts the on-foot player on the street instead.
+You start on foot on the sidewalk, in a blue shirt, beside a parked yellow
+hatchback. Walk up to the driver's door and press **E** (or Enter): the
+character walks to the door, it swings open, he slides in and it shuts, and
+the camera pulls back to the chase view. Behind the wheel **Up** accelerates,
+**Down** brakes to a stop (release and press again to reverse), **Left /
+Right** steer (less lock at speed); traffic keeps its distance from you and
+you from it. Stop and press **E** to get out on the street side. Drag orbits
+in both modes; the camera boom pulls in rather than clipping into parked
+cars. The road is endless. `&variant=walk` is on foot only, `&variant=drive`
+is the car only (each isolates one player mode for its specialist).
 
 Segments added for it: `segments/vehicles/` (procedural cars: hatch, sedan,
-suv, pickup; parked + traffic layer with car-following) and the vehicle
-player mode `segments/player/vehicle_player_layer.gd`. Shared palm and tree
-generators live in `segments/vegetation/species/`.
+suv, pickup, each with a hinged driver's door; parked + traffic layer with
+car-following) and three player modes in `segments/player/`: the on-foot
+street walker, the vehicle mode, and `driver_layer.gd` which composes the two
+and scripts the get-in / get-out transition. Shared palm and tree generators
+live in `segments/vegetation/species/`.
 
 ## Layout
 
@@ -76,7 +84,8 @@ game/
     crowd/                     variants/beach.gd (sunbathers, sitters, waders, swimmers,
                                strollers; contact validator)
     fauna/                     variants/beach.gd (gulls)
-    player/                    on-foot player (pace, jump, footsteps) and vehicle mode
+    player/                    on-foot player (pace, jump, footsteps), vehicle mode,
+                               and the driver layer that switches between them
     vehicles/                  car generator; variants/street.gd (parked cars + traffic)
     camera/                    chase camera, drag-orbit, inspect modes
     tracks/                    footprints
@@ -117,8 +126,9 @@ only in variant files and under `worlds/beach/`.
 
 - Export: `godot --headless --path game --export-release Web docs/play/index.html`
   (GL Compatibility, single-threaded, so it runs on Pages without special headers).
-- Capture: `python3 shots/cdp_gpu.py <url> 8,16 out "6:ArrowUp~2.0,10:Space,12:Drag_-260_0"`
-  (`~s` holds a key; the harness clicks the canvas before each key so it has focus).
+- Capture: `python3 shots/cdp_gpu.py <url> 8,16 out "6:ArrowUp~2.0,10:Space,12:KeyE,14:Drag_-260_0"`.
+  Times are seconds after the game prints `world ready`, so scripts are
+  repeatable; `~s` holds a key without blocking the screenshot schedule.
 - Export from the repo root with an absolute target path; a relative one is
   resolved against `game/` and fails.
 - Characters: Quaternius Universal Base Characters + Universal Animation Library

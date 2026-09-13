@@ -13,12 +13,20 @@ static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
 	var props := StreetProps.new()
 	var crowd := StreetCrowd.new()
 	var traffic := StreetTraffic.new()
-	var player: PlayerLayer = SkinnedPlayerLayer.new() if ctx.variant == "walk" else VehiclePlayerLayer.new()
+	# default: the full loop (on foot, get in, drive, get out); &variant=walk
+	# or &variant=drive isolate one mode for the player specialist
+	var player: PlayerLayer
+	match ctx.variant:
+		"walk":
+			player = StreetWalkerLayer.new()
+		"drive":
+			player = VehiclePlayerLayer.new()
+			ctx.hud_hint = "Up: accelerate   Down: brake / reverse   Left / Right: steer   Drag: look around"
+		_:
+			player = DriverLayer.new()
 	var camera := CameraLayer.new()
 	var hud := HudLayer.new()
 	camera.player_layer = player
-	if ctx.variant != "walk":
-		ctx.hud_hint = "Up: accelerate   Down: brake / reverse   Left / Right: steer   Drag: look around"
 	var out: Array[SceneLayer] = [sky, ground, architecture, vegetation, props, traffic, crowd, player, camera, hud]
 	return out
 

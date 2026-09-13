@@ -56,8 +56,7 @@ func tick(delta: float) -> void:
 		orbit_yaw = lerp_angle(orbit_yaw, 0.0, e)
 		orbit_pitch = lerpf(orbit_pitch, PITCH_DEFAULT, e)
 	var prof: Dictionary = ctx.camera_profile
-	if camera.fov != float(prof["fov"]):
-		camera.fov = prof["fov"]
+	camera.fov = lerpf(camera.fov, float(prof["fov"]), 1.0 - exp(-delta * 3.0))
 	var a := player_layer.yaw + orbit_yaw
 	var dist: float = prof["dist"]
 	var pitch := orbit_pitch + (float(prof["height"]) / dist - PITCH_DEFAULT)

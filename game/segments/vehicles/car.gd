@@ -188,6 +188,43 @@ static func build(kind: String, paint: Color, roof: Color = Color(-1, 0, 0), pla
 	sh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(sh)
 	root.set_meta("body_mesh", body_root)
+	# driver's door (left side, -X), hinged at its front edge so it can swing
+	# open; a dark "gap" panel shows the opening while it is open
+	var zf := cz - cab_l * 0.5 + 0.1
+	var dl := (cz + 0.05) - zf
+	var door := Node3D.new()
+	door.name = "DoorL"
+	door.position = Vector3(-W * 0.5, 0.0, zf)
+	body_root.add_child(door)
+	var db := MeshBatch.new()
+	db.add_box_at(Vector3(0.05, bh * 0.78, dl - 0.04), paint, Vector3(-0.012, ground + bh * 0.52, dl * 0.5))
+	db.add_box_at(Vector3(0.05, gh * 0.9, dl * 0.8), roof_c, Vector3(W * 0.035 - 0.012, gy + gh * 0.5 - 0.01, dl * 0.5 - 0.05))   # window frame
+	var door_mi := MeshInstance3D.new()
+	door_mi.mesh = db.commit_with(_paint_mat)
+	door.add_child(door_mi)
+	var dgb := MeshBatch.new()
+	dgb.add_box_at(Vector3(0.05, gh * 0.8, dl * 0.7), glass, Vector3(W * 0.035 - 0.014, gy, dl * 0.5 - 0.05))
+	var door_glass := MeshInstance3D.new()
+	door_glass.mesh = dgb.commit_with(_glass_mat)
+	door_glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	door.add_child(door_glass)
+	var dcb := MeshBatch.new()
+	dcb.add_box_at(Vector3(0.03, 0.03, 0.14), Color(0.9, 0.9, 0.92), Vector3(-0.045, ground + bh * 0.66, dl * 0.72))
+	var door_handle := MeshInstance3D.new()
+	door_handle.mesh = dcb.commit_with(_chrome_mat)
+	door.add_child(door_handle)
+	var gap := MeshBatch.new()
+	gap.add_box_at(Vector3(0.02, bh * 0.78, dl - 0.04), Color(0.03, 0.03, 0.035), Vector3(-W * 0.5 - 0.012, ground + bh * 0.52, zf + dl * 0.5))
+	gap.add_box_at(Vector3(0.02, gh * 0.8, dl * 0.7), Color(0.03, 0.03, 0.035), Vector3(-W * 0.465 - 0.014, gy, zf + dl * 0.5 - 0.05))
+	var gap_mi := MeshInstance3D.new()
+	gap_mi.mesh = gap.commit_with(_trim_mat)
+	gap_mi.visible = false
+	body_root.add_child(gap_mi)
+	root.set_meta("door_l", door)
+	root.set_meta("door_gap", gap_mi)
+	root.set_meta("door_point", Vector3(-(W * 0.5 + 0.75), 0.0, zf + dl * 0.5))
+	root.set_meta("seat", Vector3(-0.32, ground + bh + 0.25, cz - 0.05))
+	root.set_meta("roof_y", cy + cab_h * 0.18 + cab_h * 0.5)
 	# wheels: tyre + rim with spokes, as separate nodes so they spin / steer
 	var wheels: Array[Node3D] = []
 	for sz: float in [-1.0, 1.0]:

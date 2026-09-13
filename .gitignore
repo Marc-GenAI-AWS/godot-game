@@ -5,6 +5,6 @@ shots/*.png
 shots/.profile/
 # reference footage, not redistributed
 examples/
-# raw asset downloads (large zips); project copies live in beach/characters/assets
-assets/
+# raw asset downloads (large zips); project copies live in game/segments/characters/assets
+/assets/
 **/.godot/

@@ -135,6 +135,8 @@ for sex, gltf, bin_, mesh_name, tex in [
         ("tee_green_shorts", [(shorts, fabric([0.16, 0.2, 0.3], rng)), (tee, fabric([0.2, 0.5, 0.35], rng, "stripes"))]),
         ("tee_black_jeans", [(jeans, fabric([0.1, 0.1, 0.12], rng)), (tee, fabric([0.5, 0.2, 0.55], rng))]),
     ]
+    if sex == "M":   # the street driver: blue shirt over dark jeans (car-entry reference)
+        sets.append(("shirt_blue_jeans", [(jeans, fabric([0.14, 0.16, 0.22], rng)), (tee, fabric([0.28, 0.42, 0.66], rng))]))
     for name, mc in sets:
         Image.fromarray((paint(arr, mc, [1.0, 0.97, 0.93]) * 255).astype(np.uint8)).resize((512, 512), Image.LANCZOS).save(OUT + "T_%s_%s.png" % (sex, name))
         print("wrote", sex, name)

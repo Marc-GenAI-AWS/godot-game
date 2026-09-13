@@ -13,6 +13,7 @@ const CHUNK := 200.0          # scenery period along Z (player walks toward -Z)
 var time := 0.0
 var wind := Vector2(1.0, 0.45)
 var player: Node3D
+var player_vehicle: Node3D   # the player's car when a world has one (driven or parked)
 var player_phase := 0.0       # walk-cycle phase, for camera bob etc.
 var camera: Camera3D
 # Camera framing the current player mode wants (the camera layer reads it).
