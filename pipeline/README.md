@@ -105,15 +105,18 @@ L40S, about $0.75 billable.
 
 ### Results so far (sky)
 
-| Adapter | Data | One-shot pass (18 held-out) | After one self-revision | Teacher one-shot, same briefs |
-|---|---|---|---|---|
-| 7B LoRA, contract v1 data | 140 examples | 39% (6 gate fails) | 78% | 61% |
+| Adapter | Data | Held-out briefs | One-shot pass | After one self-revision | Teacher one-shot, same briefs |
+|---|---|---|---|---|---|
+| 7B LoRA, contract v1 data | 140 examples | 18 | 39% (6 gate fails) | 78% | 61% |
+| 7B LoRA, contract v1.1 data | 293 examples | 30 | 60% (0 gate fails, judge 6.83 vs 6.64) | 77% | 60% |
 
 The gap between the specialist and the teacher one-shot is entirely code that
 fails to load (duplicate `var` declarations, a hallucinated `aerial_perspective`
 property); judge quality on the candidates that ran was at parity (6.67 vs
 6.69). With the verifier's evidence fed back once, the specialist beats the
-teacher's one-shot rate, which is how the loop uses it.
+teacher's one-shot rate, which is how the loop uses it. The second adapter,
+trained on data written under the same contract it is prompted with, reaches
+teacher parity one-shot with no gate failures at all.
 
 ## The loop
 
