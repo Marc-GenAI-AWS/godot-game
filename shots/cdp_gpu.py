@@ -58,7 +58,14 @@ async def main():
                 await asyncio.sleep(0.03)
             await send("Input.dispatchMouseEvent", type="mouseReleased", x=x + dx, y=y + dy, button="left", clickCount=1)
             print("dragged", dx, dy)
+        async def focus_canvas():
+            # a real click is what gives the Godot canvas keyboard focus
+            await send("Input.dispatchMouseEvent", type="mousePressed", x=640, y=300, button="left", clickCount=1)
+            await send("Input.dispatchMouseEvent", type="mouseReleased", x=640, y=300, button="left", clickCount=1)
+            r = await send("Runtime.evaluate", expression="(function(){var c=document.getElementById('canvas'); if(c){c.focus();} return document.activeElement===c;})()")
+            print("focus", r.get("result", {}).get("value"))
         async def press(name):
+            await focus_canvas()
             hold = 0.12
             if "~" in name:
                 name, h = name.split("~"); hold = float(h)

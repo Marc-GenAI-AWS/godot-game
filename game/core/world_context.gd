@@ -57,6 +57,36 @@ func resolve_obstacles(pos: Vector3, radius: float) -> Vector3:
 	return pos
 
 
+# Free distance along `dir` (xz) from `pos` before a circle (expanded by
+# `radius`) is hit, up to `max_d`. Used by vehicles to follow instead of push.
+func free_distance(pos: Vector3, dir: Vector3, radius: float, max_d: float) -> float:
+	var best := max_d
+	var p2 := Vector2(pos.x, pos.z)
+	var d2 := Vector2(dir.x, dir.z).normalized()
+	var checks: Array = []
+	var b0 := int(floor(pos.z / OB_BUCKET))
+	var span := int(ceil(max_d / OB_BUCKET)) + 1
+	for b in range(b0 - span, b0 + span + 1):
+		if _obstacles.has(b):
+			for ob in _obstacles[b]:
+				checks.append(ob)
+	for ob in dynamic_obstacles:
+		checks.append(ob)
+	for ob in checks:
+		var c := Vector2(ob[0].x, ob[0].z) - p2
+		var r: float = ob[1] + radius
+		var along := c.dot(d2)
+		if along < -r or along > best + r:
+			continue
+		var perp := absf(c.cross(d2))
+		if perp >= r:
+			continue
+		var hit := along - sqrt(r * r - perp * perp)
+		if hit < best:
+			best = maxf(hit, 0.0)
+	return best
+
+
 # Debug: nearest obstacle (static or dynamic) to a point: [distance, centre, radius, kind]
 func nearest_obstacle(pos: Vector3) -> Array:
 	var best := [INF, Vector3.ZERO, 0.0, "none"]

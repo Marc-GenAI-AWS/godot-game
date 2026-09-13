@@ -38,7 +38,8 @@ walls and pitched-roof houses, lamps, a stop sign, pedestrians in casual
 clothes, and a downtown skyline far off.
 
 Controls: **Up** accelerates, **Down** brakes / reverses, **Left / Right**
-steer (less lock at speed), drag to orbit. The road is endless.
+steer (less lock at speed), drag to orbit (the camera boom pulls in rather
+than clipping into parked cars). The road is endless.
 `&variant=walk` puts the on-foot player on the street instead.
 
 Segments added for it: `segments/vehicles/` (procedural cars: hatch, sedan,
@@ -116,7 +117,10 @@ only in variant files and under `worlds/beach/`.
 
 - Export: `godot --headless --path game --export-release Web docs/play/index.html`
   (GL Compatibility, single-threaded, so it runs on Pages without special headers).
-- Capture: `python3 shots/cdp_gpu.py <url> 8,16 out "6:ArrowUp,10:Space,12:Drag_-260_0"`.
+- Capture: `python3 shots/cdp_gpu.py <url> 8,16 out "6:ArrowUp~2.0,10:Space,12:Drag_-260_0"`
+  (`~s` holds a key; the harness clicks the canvas before each key so it has focus).
+- Export from the repo root with an absolute target path; a relative one is
+  resolved against `game/` and fails.
 - Characters: Quaternius Universal Base Characters + Universal Animation Library
   (CC0), retargeted at import via `segments/characters/assets/bonemap_*.tres`;
   outfits painted in UV space by `tools/paint_*.py`; MPFB bodies from

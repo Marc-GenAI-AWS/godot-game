@@ -51,16 +51,19 @@ func _gap_ahead(t: Dictionary) -> float:
 	var car: Node3D = t["node"]
 	var gp := car.global_position
 	var best := INF
+	var best_who := "none"
 	var candidates: Array = []
 	for o in traffic:
 		if o != t and absf(o["lane"] - t["lane"]) < 0.5:
-			candidates.append((o["node"] as Node3D).global_position)
+			candidates.append([(o["node"] as Node3D).global_position, "traffic"])
 	if ctx.player and absf(ctx.player.global_position.x - t["lane"]) < 1.6:
-		candidates.append(ctx.player.global_position)
+		candidates.append([ctx.player.global_position, "player"])
 	for c in candidates:
-		var d: float = (c.z - gp.z) * t["dir"]
+		var d: float = (c[0].z - gp.z) * t["dir"]
 		if d > 0.0 and d < best:
 			best = d
+			best_who = c[1]
+	t["_who"] = best_who
 	return best
 
 

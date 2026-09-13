@@ -64,6 +64,12 @@ func tick(delta: float) -> void:
 	var dir := Vector3(sin(a) * cos(pitch), sin(pitch), cos(a) * cos(pitch))
 	var focus := p + Vector3(0, float(prof["look"]), 0)
 	var target := focus + dir * dist
+	# Boom collision: when the eye would sit low enough to be inside a parked
+	# car, lounger or wall, pull it in along the boom instead of clipping.
+	if target.y - ctx.ground_height(target.x, target.z) < float(prof.get("clip_h", 1.7)):
+		var boom := ctx.free_distance(focus, dir, 0.35, dist)
+		if boom < dist:
+			target = focus + dir * maxf(boom, 1.2)
 	target.y = maxf(target.y, ctx.ground_height(target.x, target.z) + 0.5)
 	# Stabilised: follow the root smoothly with no step bob, sway or roll.
 	var k := 1.0 - exp(-delta * (9.0 if dragging else 4.5))

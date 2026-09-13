@@ -30,7 +30,7 @@ func build() -> void:
 	ctx.player = car
 	player = null
 	walking = false
-	ctx.camera_profile = {"dist": 7.0, "height": 2.4, "look": 0.8, "fov": 66.0, "lookahead": 3.0}
+	ctx.camera_profile = {"dist": 7.0, "height": 2.4, "look": 0.8, "fov": 66.0, "lookahead": 3.0, "clip_h": 2.6}
 
 
 func _unhandled_input(_event: InputEvent) -> void:
@@ -62,10 +62,20 @@ func tick(delta: float) -> void:
 	if absf(speed) > 0.05:
 		yaw += (speed / WHEELBASE) * tan(steer) * delta
 	yaw = wrapf(yaw, -PI, PI)
-	# move, keep on the road, avoid parked / moving cars
-	var p := car.position + forward() * speed * delta
-	# cars behind us never push us (they follow); drop them from this frame's list
+	# move: follow whatever is ahead (cap the step to the free distance), keep
+	# on the road, and let side contacts push us out
 	var fwd := forward()
+	var dir := fwd if speed >= 0.0 else -fwd
+	var wanted := absf(speed) * delta
+	var free := ctx.free_distance(car.position, dir, 0.9, 12.0)
+	var allowed := maxf(free - 0.6, 0.0)
+	if wanted > allowed:
+		wanted = allowed
+		speed = signf(speed) * allowed / delta * 0.95   # honest speed while held up
+		if absf(speed) < 0.2:
+			speed = 0.0
+	var p := car.position + dir * wanted
+	# cars behind us never push us (they follow); drop them from this frame's list
 	var keep: Array = []
 	for ob in ctx.dynamic_obstacles:
 		var rel: Vector3 = ob[0] - car.position
@@ -75,12 +85,6 @@ func tick(delta: float) -> void:
 	ctx.dynamic_obstacles = keep
 	p = ctx.resolve_obstacles(sc.constrain_vehicle(p), 0.95)
 	ctx.dynamic_obstacles = saved
-	var moved := p - car.position
-	var wanted := absf(speed) * delta
-	if wanted > 0.002 and moved.length() < wanted * 0.9:
-		# blocked or held up: our real speed is what actually happened this frame
-		speed = signf(speed) * moved.dot(fwd) * signf(speed) / delta
-		speed = clampf(speed, -REVERSE_MAX, MAX_SPEED)
 	car.position = p
 	car.rotation.y = yaw
 	# body lean and wheel motion
