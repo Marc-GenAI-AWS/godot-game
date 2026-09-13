@@ -84,7 +84,11 @@ def main():
             write_jsonl(out_dir / "candidates.jsonl", rows)
         elif a.revise:
             fails = [r for r in read_jsonl(a.revise) if not r.get("pass")]
-            rows = list(ex.map(lambda r: revise(r, out_dir, a.model, a.temperature), fails))
+            rows = []
+            for r in ex.map(lambda r: revise(r, out_dir, a.model, a.temperature), fails):
+                rows.append(r)
+                if len(rows) % 10 == 0:
+                    write_jsonl(out_dir / "revisions.jsonl", rows)   # checkpoint
             write_jsonl(out_dir / "revisions.jsonl", rows)
     print(f"{len(rows)} candidates -> {out_dir}")
 

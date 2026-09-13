@@ -61,7 +61,10 @@ def bedrock():
     global _client
     if _client is None:
         import boto3
-        _client = boto3.client("bedrock-runtime", region_name=REGION)
+        from botocore.config import Config
+        # long generations are fine, hung sockets are not: bounded read timeout, SDK retries off (we retry ourselves)
+        _client = boto3.client("bedrock-runtime", region_name=REGION,
+                               config=Config(connect_timeout=10, read_timeout=240, retries={"max_attempts": 1}))
     return _client
 
 
