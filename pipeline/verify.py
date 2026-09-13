@@ -76,7 +76,7 @@ def runtime_gate(world: str, swap: str) -> tuple:
 # --------------------------------------------------------------- capture ---
 
 def capture(world: str, swap: str, out_dir: Path, shots: str, script: str) -> dict:
-    display = os.environ.get("DISPLAY") or ":0"
+    display = os.environ.get("CAPTURE_DISPLAY") or os.environ.get("DISPLAY") or ":0"
     out_dir = Path(out_dir).resolve()          # Godot chdirs into the project; relative paths would land there
     out_dir.mkdir(parents=True, exist_ok=True)
     args = ["--resolution", "1280x720", "--", f"--world={world}", f"--capture={out_dir}", f"--shots={shots}"]

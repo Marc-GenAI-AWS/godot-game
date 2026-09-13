@@ -35,6 +35,12 @@ pipeline/
 - `WorldContext.overrides` + `ctx.layer("sky", SkyLayer)`: worlds ask the
   context for each segment, so `--swap=sky:res://segments/sky/candidates/x.gd`
   replaces one layer without editing the world. Works on the web build too.
+- The desktop window (only ever used for captures) is created unfocusable,
+  borderless and beyond the screen edge via `.linuxbsd` overrides in
+  `project.godot`, so captures on a shared desktop steal neither focus nor
+  screen space. A minimised window would stop rendering under GNOME. For a
+  box with root, `pipeline/xorg-headless.conf` starts a second GPU X server
+  with no monitor (`CAPTURE_DISPLAY=:2`).
 - `--capture=<dir> --shots=3,6,9 --script=4:Drag_0_-220,7:Drag_-320_0`:
   native capture. Saves the viewport at those seconds after `world ready`,
   injects the same key/drag script the browser harness uses, and writes

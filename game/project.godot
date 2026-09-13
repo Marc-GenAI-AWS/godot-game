@@ -14,6 +14,10 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
+window/size/initial_position_type.linuxbsd=0
+window/size/initial_position.linuxbsd=Vector2i(20000, 20000)
+window/size/borderless.linuxbsd=true
+window/size/no_focus.linuxbsd=true
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
