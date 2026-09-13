@@ -113,17 +113,18 @@ def capture(world: str, swap: str, out_dir: Path, shots: str, script: str) -> di
     return stats
 
 
-def baseline(world: str, shots: str, script: str) -> dict:
-    if world not in BASELINE:
-        d = PIPE / "runs" / "_baseline" / world
+def baseline(world: str, shots: str, script: str, segment: str = "") -> dict:
+    key = f"{world}_{segment}"
+    if key not in BASELINE:
+        d = PIPE / "runs" / "_baseline" / key
         p = d / "stats.json"
         if p.exists():
             st = json.loads(p.read_text())
             st["frames"] = sorted(str(x) for x in d.glob(f"{world}_*s.png"))
         else:
             st = capture(world, "", d, shots, script)
-        BASELINE[world] = st
-    return BASELINE[world]
+        BASELINE[key] = st
+    return BASELINE[key]
 
 
 # ---------------------------------------------------------------- checks ---
@@ -339,13 +340,13 @@ def verify_one(row: dict, out_dir: Path, do_judge=True) -> dict:
     cap_dir = out_dir / "captures" / cid
     try:
         with GPU_LOCK:
-            base = baseline(world, spec["shots"], spec["script"])
+            base = baseline(world, spec["shots"], spec["script"], segment)
             stats = capture(world, swap, cap_dir, spec["shots"], spec["script"])
     except Exception as e:
         res["gates"]["capture"] = [str(e)[:300]]
         res["evidence"] = "capture failed: " + str(e)[:300]
         return res
-    res["stats"] = {k: stats[k] for k in ("fps_avg", "draw_calls", "palette")}
+    res["stats"] = {k: stats[k] for k in ("fps_avg", "draw_calls", "palette", "obstacles", "probe") if k in stats}
     res["frames"] = stats["frames"]
     cscore, notes = CHECKS[segment](brief, stats, base)
     res["checks"] = {"score": cscore, "notes": notes}
@@ -382,6 +383,7 @@ def main():
     ap.add_argument("--name", default="verified.jsonl")
     ap.add_argument("--workers", type=int, default=3, help="candidates in flight (captures are still one at a time)")
     ap.add_argument("--resume", action="store_true", help="skip candidates already in the output file")
+    ap.add_argument("--rescore", action="store_true", help="recompute checks and pass from saved captures + judge (no GPU, no Bedrock); re-verify rows without them")
     a = ap.parse_args()
     out_dir = Path(a.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -395,6 +397,35 @@ def main():
     lock = threading.Lock()
 
     already = {}
+    if a.rescore and (out_dir / a.name).exists():
+        kept = []
+        for r0 in read_jsonl(out_dir / a.name):
+            cap = out_dir / "captures" / r0["candidate"] / "stats.json"
+            if r0.get("judge") and cap.exists():
+                stats = json.loads(cap.read_text())
+                stats["frames"] = sorted(str(p) for p in cap.parent.glob("*_*s.png"))
+                spec = SEGMENTS[r0["segment"]]
+                world = r0["brief"].get("world", spec["world"])
+                with GPU_LOCK:
+                    base = baseline(world, spec["shots"], spec["script"], r0["segment"])
+                cscore, notes = CHECKS[r0["segment"]](r0["brief"], stats, base)
+                j = r0["judge"]
+                r0["checks"] = {"score": cscore, "notes": notes}
+                r0["stats"] = {k: stats[k] for k in ("fps_avg", "draw_calls", "palette", "obstacles", "probe") if k in stats}
+                r0["score"] = 0.4 * cscore + 0.6 * float(j.get("overall", 0)) / 10.0
+                r0["pass"] = bool(j.get("pass")) and cscore >= 0.6
+                ev = ["checks: " + "; ".join(notes)] + [f"{k} {v.get('score')}/10: {v.get('evidence', '')}" for k, v in j.get("attributes", {}).items()]
+                if j.get("revision_notes"):
+                    ev.append("revise: " + j["revision_notes"])
+                r0["evidence"] = "\n".join(ev)
+                already[r0["candidate"]] = r0
+            elif r0["gates"].get("static") and any("must start with" in x for x in r0["gates"]["static"]):
+                # a nested code fence hid the extends line: strip fence lines and re-verify
+                p = Path(r0["path"])
+                p.write_text("\n".join(l for l in p.read_text().splitlines() if not l.strip().startswith("```")) + "\n")
+        results.extend(already.values())
+        rows = [r0 for r0 in rows if r0["candidate"] not in already]
+        print(f"rescore: {len(already)} rescored from disk, {len(rows)} to re-verify")
     if a.resume and (out_dir / a.name).exists():
         for r0 in read_jsonl(out_dir / a.name):
             already[r0["candidate"]] = r0
