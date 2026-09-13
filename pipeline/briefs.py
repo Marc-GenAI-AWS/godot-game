@@ -34,9 +34,10 @@ MOODS = ["postcard", "cinematic", "documentary", "dreamy", "gritty", "serene", "
 WORLDS = ["beach", "street"]
 
 
-def sample_sky(n: int, seed: int):
+def sample_sky(n: int, seed: int, times=None, weather=None):
     rng = random.Random(seed)
-    combos = list(itertools.product(TIMES.keys(), WEATHER.keys()))
+    combos = [(t, w) for t, w in itertools.product(TIMES.keys(), WEATHER.keys())
+              if (not times or t in times) and (not weather or w in weather)]
     rng.shuffle(combos)
     out = []
     for i in range(n):
@@ -80,8 +81,10 @@ def main():
     ap.add_argument("--n", type=int, default=24)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--times", help="comma list to restrict time of day, e.g. night,dusk")
+    ap.add_argument("--weather", help="comma list to restrict weather, e.g. overcast,broken clouds")
     a = ap.parse_args()
-    rows = SAMPLERS[a.segment](a.n, a.seed)
+    rows = SAMPLERS[a.segment](a.n, a.seed, a.times.split(",") if a.times else None, a.weather.split(",") if a.weather else None)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     write_jsonl(a.out, rows)
     print(f"wrote {len(rows)} {a.segment} briefs to {a.out}")

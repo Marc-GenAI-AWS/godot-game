@@ -65,8 +65,10 @@ Everything else in the context is another segment's business. Do not call
   (`light_angular_distance` does nothing). Soft light is therefore expressed
   by turning the sun's `shadow_enabled` off (overcast, heavy haze, night) or
   keeping its energy low relative to ambient, never by shadow softness.
-- Night briefs: the moon is the directional light (cool colour, energy 0.25
-  to 0.45, shadows off or energy under 0.3 so they stay faint), plus
+- Night briefs have a negative sun elevation (the sun is below the horizon);
+  place the moon, the directional light, 15 to 45 degrees above the horizon
+  at the brief's azimuth. The moon is the directional light (cool colour,
+  energy 0.25 to 0.45, shadows off or energy under 0.3 so they stay faint), plus
   `ambient_light_energy` of at least 0.35 and exposure 1.0 to 1.3 so the
   ground, props and people stay readable: never large regions crushed to
   black. Sky colours stay above about 0.03 per channel. Fog is cool and

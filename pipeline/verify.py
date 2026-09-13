@@ -115,10 +115,15 @@ def sky_checks(brief: dict, stats: dict, base: dict) -> tuple:
     sd = pal["sun_dir"]
     elev = math.degrees(math.asin(max(-1.0, min(1.0, -sd[1]))))
     want = brief.get("sun_elevation_deg", 45.0)
-    d = abs(elev - want)
-    s = max(0.0, 1.0 - d / 25.0)
-    scores.append(s)
-    notes.append(f"sun elevation {elev:.0f} deg vs brief {want:.0f} ({'ok' if d < 8 else 'off by %.0f' % d})")
+    if want < 0.0:
+        # sun below the horizon: the light is the moon / fill, anywhere 10-60 deg up
+        ok = 10.0 <= elev <= 60.0
+        scores.append(1.0 if ok else 0.4)
+        notes.append(f"night: light elevation {elev:.0f} deg ({'ok' if ok else 'outside 10-60'})")
+    else:
+        d = abs(elev - want)
+        scores.append(max(0.0, 1.0 - d / 25.0))
+        notes.append(f"sun elevation {elev:.0f} deg vs brief {want:.0f} ({'ok' if d < 8 else 'off by %.0f' % d})")
     # azimuth of the sun's position: 0 = towards -Z, 90 = +X (light travels the other way)
     az = (math.degrees(math.atan2(-sd[0], sd[2])) + 360.0) % 360.0
     want_az = brief.get("sun_azimuth_deg", 0.0)

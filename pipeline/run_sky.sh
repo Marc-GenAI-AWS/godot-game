@@ -6,7 +6,11 @@ RUN=${1:-sky1}; N=${2:-120}; K=${3:-2}
 PY=.venv/bin/python
 export DISPLAY=:0
 echo "== $(date) briefs"
-$PY briefs.py sky --n $N --seed 2 --out runs/$RUN/briefs.jsonl
+if [ ! -f runs/$RUN/briefs.jsonl ]; then
+  $PY briefs.py sky --n $N --seed 2 --out runs/$RUN/briefs.jsonl
+else
+  echo "using existing runs/$RUN/briefs.jsonl ($(wc -l < runs/$RUN/briefs.jsonl) briefs)"
+fi
 echo "== $(date) teacher (k=$K)"
 $PY teacher.py --briefs runs/$RUN/briefs.jsonl --out runs/$RUN --k $K --workers 6
 echo "== $(date) verify"
