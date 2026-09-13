@@ -24,9 +24,11 @@ SEGMENTS = {
     # segment -> (world used for verification, capture shots, capture script)
     # drags are held (~s) past the shot so the camera has not eased back yet
     "sky": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_0_-220~2.5,7:Drag_-320_0~2.5"},
-    # placement segments: default view, then the camera swung to each side
-    "vegetation": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-330_60~2.5,7:Drag_660_0~2.5"},
-    "props": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-330_60~2.5,7:Drag_660_0~2.5"},
+    # placement segments: default view, then the camera turned to the landward
+    # side (negative dx turns left; the beach's promenade and furniture are on
+    # the left) and slightly up so tall plants fit, then back along that side
+    "vegetation": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-330_-110~2.5,7:Drag_-200_-30~2.5"},
+    "props": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-300_-40~2.5,7:Drag_-230_20~2.5"},
     "ground": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_0_260~2.5,7:Drag_-330_-200~2.5"},
     "water": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_330_0~2.5,7:Drag_0_260~2.5"},
 }
