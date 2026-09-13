@@ -98,7 +98,9 @@ capacity in us-west-2 for 40 minutes on spot, on-demand or the smaller size,
 and `g5.12xlarge` was pending too; the same job started within two minutes in
 us-east-2 (`AWS_REGION=us-east-2 SAGEMAKER_BUCKET=<us-east-2 bucket>`). The
 epoch-end evaluation must use batch size 1: eight 6k-token logit tensors are
-one 16 GB allocation. Three epochs over 140 examples took 12.5 minutes on one
+one 16 GB allocation. Training-instance quotas are per region: us-east-2 has
+1 x `g6e.xlarge` and 1 x `g6e.2xlarge` for training, so at most two adapters
+train at once there. Three epochs over 140 examples took 12.5 minutes on one
 L40S, about $0.75 billable.
 
 ## The loop
