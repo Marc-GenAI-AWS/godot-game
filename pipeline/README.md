@@ -103,6 +103,18 @@ one 16 GB allocation. Training-instance quotas are per region: us-east-2 has
 train at once there. Three epochs over 140 examples took 12.5 minutes on one
 L40S, about $0.75 billable.
 
+### Results so far (sky)
+
+| Adapter | Data | One-shot pass (18 held-out) | After one self-revision | Teacher one-shot, same briefs |
+|---|---|---|---|---|
+| 7B LoRA, contract v1 data | 140 examples | 39% (6 gate fails) | 78% | 61% |
+
+The gap between the specialist and the teacher one-shot is entirely code that
+fails to load (duplicate `var` declarations, a hallucinated `aerial_perspective`
+property); judge quality on the candidates that ran was at parity (6.67 vs
+6.69). With the verifier's evidence fed back once, the specialist beats the
+teacher's one-shot rate, which is how the loop uses it.
+
 ## The loop
 
 ```
