@@ -110,6 +110,7 @@ L40S, about $0.75 billable.
 | 7B LoRA, contract v1 data | 140 examples | 18 | 39% (6 gate fails) | 78% | 61% |
 | 7B LoRA, contract v1.1 data | 293 examples | 30 | 60% (0 gate fails, judge 6.83 vs 6.64) | 77% | 60% |
 | 3B LoRA, contract v1.1 data | 293 examples | 30 | 77% (0 gate fails, judge 6.90) | 80% | 60% |
+| 1.5B LoRA, contract v1.1 data | 293 examples | 30 | 77% (0 gate fails, judge 6.93) | 80% | 60% |
 
 The gap between the specialist and the teacher one-shot is entirely code that
 fails to load (duplicate `var` declarations, a hallucinated `aerial_perspective`
@@ -117,10 +118,15 @@ property); judge quality on the candidates that ran was at parity (6.67 vs
 6.69). With the verifier's evidence fed back once, the specialist beats the
 teacher's one-shot rate, which is how the loop uses it. The second adapter,
 trained on data written under the same contract it is prompted with, reaches
-teacher parity one-shot with no gate failures at all, and the 3B adapter on
-the same data does better still while generating in half the time. Thirty
-briefs is a small sample (about +/-9 points), but the ordering 3B >= 7B >=
-teacher one-shot is the result the design predicted for an easy segment.
+teacher parity one-shot with no gate failures at all, and the 3B and 1.5B
+adapters on the same data do better still while generating in half and a
+third of the time. Thirty briefs is a small sample (about +/-9 points), and
+the three adapters pass overlapping but not identical briefs (15 pass under
+all three, 27 under at least one), but the ordering 1.5B ~ 3B >= 7B >= teacher
+one-shot is the result the design predicted for an easy segment: sky
+saturates early and the smallest model clears the bar. Where the adapters
+still fail is dusk (1 to 4 of 6) and noon "broken clouds" briefs, the same
+cloud-cover weakness the teacher has.
 
 ## The loop
 
