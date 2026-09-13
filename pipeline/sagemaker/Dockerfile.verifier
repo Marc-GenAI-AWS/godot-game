@@ -1,0 +1,34 @@
+# Verifier container for SageMaker Processing / RL environments (x86_64).
+# Godot headless for the gates plus native GL rendering under Xvfb for the
+# capture stage; the Python verifier calls Bedrock for the judge.
+#
+#   docker build -f pipeline/sagemaker/Dockerfile.verifier -t scene-verifier .
+#   docker run --gpus all -e AWS_REGION=us-west-2 scene-verifier \
+#       python3 pipeline/verify.py --candidates /opt/ml/processing/input/candidates.jsonl --out /opt/ml/processing/output
+#
+# Build this on an x86 host (or with buildx --platform linux/amd64); the arm64
+# dev box is the wrong architecture for a SageMaker image.
+FROM nvidia/opengl:1.2-glvnd-runtime-ubuntu22.04
+
+ARG GODOT_VERSION=4.7.2
+ENV DEBIAN_FRONTEND=noninteractive DISPLAY=:99 GODOT_BIN=/opt/godot/godot
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-pip unzip curl ca-certificates xvfb libxcursor1 libxinerama1 libxrandr2 libxi6 \
+        libgl1 libglu1-mesa libasound2 libpulse0 libfontconfig1 fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/godot && cd /opt/godot \
+    && curl -fsSL -o godot.zip https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip \
+    && unzip -q godot.zip && mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot && rm godot.zip
+
+RUN pip3 install --no-cache-dir boto3 pillow
+
+WORKDIR /work
+COPY game /work/game
+COPY pipeline/*.py pipeline/contract pipeline/rubrics /work/pipeline/
+# import once so class_name registration and .uid files exist in the image
+RUN /opt/godot/godot --headless --path /work/game --import >/dev/null 2>&1 || true
+
+COPY pipeline/sagemaker/entrypoint_verifier.sh /work/entrypoint.sh
+ENTRYPOINT ["/work/entrypoint.sh"]

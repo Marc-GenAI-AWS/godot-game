@@ -25,6 +25,21 @@ var inspect := false        # orbit the player up close (URL #inspect)
 var inspect_offset := Vector3.ZERO   # #inspect-crowd orbits the lounger rows instead
 var lite := false           # skip optional detail for A/B timing (URL #lite)
 var variant := "quaternius"  # which player body to use (URL #mpfb)
+# Segment overrides for the verifier: segment name -> script path. A world
+# asks ctx.layer("sky", SkyLayer) so a candidate layer can be swapped in
+# without editing the world (--swap=sky=res://segments/sky/candidates/x.gd).
+var overrides := {}
+
+
+func layer(segment: String, default_script: GDScript) -> SceneLayer:
+	if overrides.has(segment):
+		var s = load(str(overrides[segment]))
+		if s is GDScript:
+			var inst = s.new()
+			if inst is SceneLayer:
+				return inst
+		push_error("override for '%s' is not a SceneLayer script: %s" % [segment, overrides[segment]])
+	return default_script.new()
 
 # Palette published by the sky layer at build time; other layers read it.
 var sky_zenith := Color(0.1, 0.32, 0.82)

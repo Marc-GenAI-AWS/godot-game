@@ -8,3 +8,11 @@ examples/
 # raw asset downloads (large zips); project copies live in game/segments/characters/assets
 /assets/
 **/.godot/
+# pipeline virtualenv and run outputs
+pipeline/.venv/
+pipeline/runs/
+# verifier candidates (generated, never committed)
+game/segments/*/candidates/
+# layers accepted by the director loop (run artifacts; promote by copying to variants/)
+game/segments/*/generated/
+__pycache__/

@@ -1,0 +1,77 @@
+"""Launch the specialist SFT as a SageMaker training job.
+
+    pipeline/.venv/bin/python pipeline/sagemaker/launch_sft.py --data pipeline/runs/sky1/sft --segment sky
+    ... --dry-run   prints what would be launched, uploads nothing
+
+Uses the PyTorch DLC with requirements.txt (TRL/PEFT) so no custom image is
+needed. A 7B LoRA fits a single ml.g5.2xlarge (A10G 24 GB) at 6k tokens;
+ml.g6e.2xlarge (L40S 48 GB) is the comfortable choice. Spot is on by default.
+"""
+import argparse
+import os
+import time
+from pathlib import Path
+
+import boto3
+
+ROOT = Path(__file__).resolve().parents[2]
+REGION = os.environ.get("AWS_REGION", "us-west-2")
+ROLE = os.environ.get("SAGEMAKER_ROLE", "arn:aws:iam::605134472325:role/service-role/AmazonSageMaker-ExecutionRole-20260429T204999")
+BUCKET = os.environ.get("SAGEMAKER_BUCKET", "sagemaker-us-west-2-605134472325")
+PREFIX = "scene-studio"
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", required=True, help="dir with train.jsonl / val.jsonl from build_sft.py")
+    ap.add_argument("--segment", default="sky")
+    ap.add_argument("--model", default="Qwen/Qwen2.5-Coder-7B-Instruct")
+    ap.add_argument("--instance", default="ml.g6e.2xlarge")
+    ap.add_argument("--epochs", type=float, default=3.0)
+    ap.add_argument("--spot", type=int, default=1)
+    ap.add_argument("--max-hours", type=float, default=3.0)
+    ap.add_argument("--dry-run", action="store_true")
+    a = ap.parse_args()
+
+    stamp = time.strftime("%Y%m%d-%H%M")
+    job = f"scene-{a.segment}-sft-{stamp}"
+    s3_data = f"s3://{BUCKET}/{PREFIX}/{a.segment}/datasets/{stamp}"
+    s3_out = f"s3://{BUCKET}/{PREFIX}/{a.segment}/models"
+    hp = {"model": a.model, "epochs": a.epochs, "lr": 1.5e-4, "max-len": 6144, "lora-r": 32, "merge": 1}
+    print(f"job          {job}\ninstance     {a.instance} (spot={bool(a.spot)})\nbase model   {a.model}\n"
+          f"data         {a.data} -> {s3_data}\noutput       {s3_out}\nhyperparams  {hp}")
+    if a.dry_run:
+        print("dry run: nothing launched")
+        return
+
+    import sagemaker
+    from sagemaker.pytorch import PyTorch
+    sess = sagemaker.Session(boto3.Session(region_name=REGION))
+    data = Path(a.data)
+    train_uri = sess.upload_data(str(data / "train.jsonl"), bucket=BUCKET, key_prefix=f"{PREFIX}/{a.segment}/datasets/{stamp}/train")
+    val_uri = sess.upload_data(str(data / "val.jsonl"), bucket=BUCKET, key_prefix=f"{PREFIX}/{a.segment}/datasets/{stamp}/val")
+    est = PyTorch(
+        entry_point="train_sft.py",
+        source_dir=str(Path(__file__).parent),
+        role=ROLE,
+        framework_version="2.6",
+        py_version="py312",
+        instance_type=a.instance,
+        instance_count=1,
+        hyperparameters=hp,
+        output_path=s3_out,
+        base_job_name=job,
+        use_spot_instances=bool(a.spot),
+        max_run=int(a.max_hours * 3600),
+        max_wait=int(a.max_hours * 3600) if a.spot else None,
+        environment={"HF_HOME": "/tmp/hf", "TOKENIZERS_PARALLELISM": "false"},
+        sagemaker_session=sess,
+        disable_profiler=True,
+    )
+    est.fit({"train": train_uri.rsplit("/", 1)[0], "val": val_uri.rsplit("/", 1)[0]}, job_name=job, wait=False)
+    print(f"launched {job}; model artifact will land under {s3_out}/{job}/output/model.tar.gz")
+    print(f"follow:  aws sagemaker describe-training-job --training-job-name {job} --query TrainingJobStatus")
+
+
+if __name__ == "__main__":
+    main()

@@ -10,18 +10,18 @@ static func make_context() -> WorldContext:
 
 
 static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
-	var sky := SkyLayer.new()
-	var ocean := BeachWater.new()
-	var sand := BeachGround.new()
-	var tracks := TracksLayer.new()
-	var architecture := BeachArchitecture.new()
-	var vegetation := BeachVegetation.new()
-	var furniture := BeachProps.new()
-	var crowd := BeachCrowd.new()
-	var fauna := BeachFauna.new()
-	var player: PlayerLayer = MpfbPlayerLayer.new() if ctx.variant == "mpfb" else SkinnedPlayerLayer.new()
-	var camera := CameraLayer.new()
-	var hud := HudLayer.new()
+	var sky := ctx.layer("sky", SkyLayer)
+	var ocean := ctx.layer("water", BeachWater)
+	var sand := ctx.layer("ground", BeachGround)
+	var tracks := ctx.layer("tracks", TracksLayer)
+	var architecture := ctx.layer("architecture", BeachArchitecture)
+	var vegetation := ctx.layer("vegetation", BeachVegetation)
+	var furniture: BeachProps = ctx.layer("props", BeachProps)
+	var crowd: BeachCrowd = ctx.layer("crowd", BeachCrowd)
+	var fauna := ctx.layer("fauna", BeachFauna)
+	var player: PlayerLayer = ctx.layer("player", MpfbPlayerLayer if ctx.variant == "mpfb" else SkinnedPlayerLayer)
+	var camera: CameraLayer = ctx.layer("camera", CameraLayer)
+	var hud := ctx.layer("hud", HudLayer)
 	crowd.furniture = furniture
 	camera.player_layer = player
 	var out: Array[SceneLayer] = [sky, ocean, sand, tracks, architecture, vegetation, furniture, crowd, player, fauna, camera, hud]

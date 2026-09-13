@@ -7,7 +7,11 @@ and served by GitHub Pages.
 Beach Walk: https://mlobree.github.io/boulder-hill/play/#world=beach
 
 Design note: [Specialised models for building game scenes](design/specialist-models.md)
-describes how the layered scenes become a training and agentic pipeline.
+describes how the layered scenes become a training and agentic pipeline;
+[`pipeline/`](pipeline/README.md) is that pipeline, runnable: brief sampler,
+Claude teacher on Bedrock, the verifier (native GPU capture + Claude judge),
+SFT dataset builder, SageMaker training and pipeline definitions, and the
+director loop. First specialist: sky.
 
 ## Worlds
 
