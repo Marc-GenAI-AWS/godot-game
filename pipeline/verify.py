@@ -18,7 +18,9 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from common import (GAME, GODOT, JUDGE_MODEL, PIPE, SEGMENTS, converse, image_block, parse_json, read,
@@ -27,6 +29,7 @@ from common import (GAME, GODOT, JUDGE_MODEL, PIPE, SEGMENTS, converse, image_bl
 FORBIDDEN = ["OS.", "FileAccess", "DirAccess", "HTTPRequest", "JavaScriptBridge", "get_tree().quit",
              "load(", "preload(", "class_name "]
 BASELINE = {}   # world -> stats without overrides
+GPU_LOCK = threading.RLock()   # one native capture at a time; gates and judge calls overlap
 
 
 # ---------------------------------------------------------------- gates ---
@@ -211,8 +214,9 @@ def verify_one(row: dict, out_dir: Path, do_judge=True) -> dict:
         return res
     cap_dir = out_dir / "captures" / cid
     try:
-        base = baseline(world, spec["shots"], spec["script"])
-        stats = capture(world, swap, cap_dir, spec["shots"], spec["script"])
+        with GPU_LOCK:
+            base = baseline(world, spec["shots"], spec["script"])
+            stats = capture(world, swap, cap_dir, spec["shots"], spec["script"])
     except Exception as e:
         res["gates"]["capture"] = [str(e)[:300]]
         res["evidence"] = "capture failed: " + str(e)[:300]
@@ -252,6 +256,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--no-judge", action="store_true")
     ap.add_argument("--name", default="verified.jsonl")
+    ap.add_argument("--workers", type=int, default=3, help="candidates in flight (captures are still one at a time)")
     a = ap.parse_args()
     out_dir = Path(a.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -261,14 +266,27 @@ def main():
     else:
         rows = read_jsonl(a.candidates)
     results = []
-    for i, row in enumerate(rows):
+    done = 0
+    lock = threading.Lock()
+
+    def work(row):
+        nonlocal done
         r = verify_one(row, out_dir, do_judge=not a.no_judge)
-        results.append(r)
-        j = r.get("judge", {})
-        print(f"[{i + 1}/{len(rows)}] {r['candidate']}: {'PASS' if r['pass'] else 'fail'} score {r['score']:.2f} "
-              f"checks {r['checks'].get('score', 0):.2f} judge {j.get('overall', '-')} ({r.get('seconds', 0)}s)")
-        if not r["pass"]:
-            print("      " + r["evidence"].splitlines()[0][:160])
+        with lock:
+            done += 1
+            results.append(r)
+            j = r.get("judge", {})
+            print(f"[{done}/{len(rows)}] {r['candidate']}: {'PASS' if r['pass'] else 'fail'} score {r['score']:.2f} "
+                  f"checks {r['checks'].get('score', 0):.2f} judge {j.get('overall', '-')} ({r.get('seconds', 0)}s)", flush=True)
+            if not r["pass"]:
+                print("      " + r["evidence"].splitlines()[0][:160], flush=True)
+            if done % 10 == 0:
+                write_jsonl(out_dir / a.name, results)   # checkpoint
+        return r
+
+    with ThreadPoolExecutor(max(1, a.workers)) as ex:
+        list(ex.map(work, rows))
+    results.sort(key=lambda r: r["candidate"])
     write_jsonl(out_dir / a.name, results)
     n_pass = sum(1 for r in results if r["pass"])
     print(f"{n_pass}/{len(results)} passed -> {out_dir / a.name}")

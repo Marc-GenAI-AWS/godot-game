@@ -1,0 +1,96 @@
+// Specialist pipeline: stages and milestones. Render with
+//   dot -Tpng design/pipeline.dot -o design/pipeline.png
+digraph pipeline {
+  rankdir=TB;
+  fontname="Helvetica";
+  fontsize=12;
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, margin="0.18,0.08", color="#444444"];
+  edge [color="#555555", arrowsize=0.8, fontname="Helvetica", fontsize=9];
+  compound=true;
+  nodesep=0.35;
+  ranksep=0.7;
+
+  // status palette
+  // done = green, running = amber, next = blue, later = grey
+
+  subgraph cluster_m0 {
+    label="M0  Gold scenes  (done)"; style="rounded,filled"; fillcolor="#eef7ee"; color="#7bb07b";
+    m0a [label="Beach Walk + Street Drive\nsegment-first layers, worlds, briefs", fillcolor="#cfe9cf"];
+    m0b [label="Reference clips\nexamples/ study sheets", fillcolor="#cfe9cf"];
+    m0c [label="World contract\nSceneLayer, WorldContext, swap hook", fillcolor="#cfe9cf"];
+    m0b -> m0a -> m0c [style=invis];
+    {rank=same; m0b; m0a; m0c;}
+  }
+
+  subgraph cluster_m1 {
+    label="M1  Verifier  (done for sky)"; style="rounded,filled"; fillcolor="#eef7ee"; color="#7bb07b";
+    v1 [label="Static gate\nextends SceneLayer, no forbidden APIs", fillcolor="#cfe9cf"];
+    v2 [label="Runtime gate\nheadless boot, no script errors", fillcolor="#cfe9cf"];
+    v3 [label="Native capture\nGPU, 3 views, stats.json", fillcolor="#cfe9cf"];
+    v4 [label="Checks\nsun angles, palette, budget, brightness", fillcolor="#cfe9cf"];
+    v5 [label="Judge\nClaude Fable 5.1 + rubric -> scores, evidence", fillcolor="#cfe9cf"];
+    v6 [label="Aggregate\nscore, pass, revision brief", fillcolor="#cfe9cf"];
+    v1 -> v2 -> v3 -> v4 -> v5 -> v6;
+    {rank=same; v1; v2; v3; v4; v5; v6;}
+  }
+
+  subgraph cluster_m2 {
+    label="M2  Data generation  (running: 120 sky briefs)"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
+    d1 [label="Brief sampler\ntime of day x weather x palette", fillcolor="#ffe3b0"];
+    d2 [label="Teacher\nClaude Sonnet 5 writes 2 candidates / brief", fillcolor="#ffe3b0"];
+    d3 [label="Verify\npass -> example, fail -> evidence", fillcolor="#ffe3b0"];
+    d4 [label="Revise\nteacher fixes fails from evidence", fillcolor="#ffe3b0"];
+    d5 [label="SFT dataset\ntrain / val / preferences / held-out briefs", fillcolor="#ffe3b0"];
+    d1 -> d2 -> d3 -> d4 -> d5;
+    d4 -> d3 [constraint=false, label="re-verify", style=dashed];
+    {rank=same; d1; d2; d3; d4; d5;}
+  }
+
+  subgraph cluster_m3 {
+    label="M3  Fine-tune specialists  (next, SageMaker)"; style="rounded,filled"; fillcolor="#e9f0fb"; color="#5b8dd6";
+    t1 [label="SFT training job\nQwen2.5-Coder-7B + LoRA per segment", fillcolor="#cfdcf5"];
+    t2 [label="Bake-off\n1.5B / 3B / 7B on held-out briefs", fillcolor="#cfdcf5"];
+    t3 [label="Evaluate\nverifier pass rate vs teacher", fillcolor="#cfdcf5"];
+    t4 [label="Model Registry\napproval gated on pass rate", fillcolor="#cfdcf5"];
+    t1 -> t2 -> t3 -> t4;
+    {rank=same; t1; t2; t3; t4;}
+  }
+
+  subgraph cluster_m4 {
+    label="M4  Agentic loop  (built; runs with the teacher today)"; style="rounded,filled"; fillcolor="#e9f0fb"; color="#5b8dd6";
+    l1 [label="Director\nClaude Fable 5.1: scene brief -> segment briefs", fillcolor="#cfdcf5"];
+    l2 [label="Specialists\nSageMaker endpoint / local vLLM", fillcolor="#cfdcf5"];
+    l3 [label="Verifier\nper layer + composite", fillcolor="#cfdcf5"];
+    l4 [label="Revise\nup to 3 rounds from evidence", fillcolor="#cfdcf5"];
+    l5 [label="Publish\ninstall layer, export, GitHub Pages", fillcolor="#cfdcf5"];
+    l1 -> l2 -> l3 -> l4 -> l5;
+    l4 -> l2 [constraint=false, label="revision brief", style=dashed];
+    {rank=same; l1; l2; l3; l4; l5;}
+  }
+
+  subgraph cluster_m5 {
+    label="M5  RL with verifiable rewards  (later)"; style="rounded,filled"; fillcolor="#f3f3f3"; color="#999999";
+    r1 [label="GRPO episodes\nverifier as the environment", fillcolor="#e0e0e0"];
+    r2 [label="Anchor set + human review\nguard against reward hacking", fillcolor="#e0e0e0"];
+    r1 -> r2;
+    {rank=same; r1; r2;}
+  }
+
+  subgraph cluster_m6 {
+    label="M6  More segments  (later)"; style="rounded,filled"; fillcolor="#f3f3f3"; color="#999999";
+    s1 [label="ground / water, camera, fauna, props", fillcolor="#e0e0e0"];
+    s2 [label="vegetation, architecture, crowd", fillcolor="#e0e0e0"];
+    s3 [label="character body + motion (SFT with cached assets)", fillcolor="#e0e0e0"];
+    s1 -> s2 -> s3;
+    {rank=same; s1; s2; s3;}
+  }
+
+  // milestone flow (top to bottom, one row per milestone)
+  m0c -> v1 [ltail=cluster_m0, lhead=cluster_m1, label="  contract + capture recipe"];
+  v1 -> d1 [ltail=cluster_m1, lhead=cluster_m2, label="  the same verifier filters the data"];
+  d1 -> t1 [ltail=cluster_m2, lhead=cluster_m3, label="  dataset to S3"];
+  t1 -> l1 [ltail=cluster_m3, lhead=cluster_m4, label="  deploy the adapter"];
+  t4 -> r1 [ltail=cluster_m3, lhead=cluster_m5, label="  where SFT plateaus", style=dashed];
+  l1 -> s1 [ltail=cluster_m4, lhead=cluster_m6, label="  repeat M1 to M4 per segment", style=dashed];
+  v6 -> l3 [style=dashed, color="#7bb07b", label="  the same verifier accepts in the loop", constraint=false];
+}
