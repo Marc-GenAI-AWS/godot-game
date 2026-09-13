@@ -55,6 +55,13 @@ var dynamic_obstacles: Array = []   # [Vector3, radius], rebuilt each frame
 const OB_BUCKET := 8.0
 
 
+func obstacle_count() -> int:
+	var n := 0
+	for b in _obstacles:
+		n += (_obstacles[b] as Array).size()
+	return n
+
+
 func add_obstacle(pos: Vector3, radius: float) -> void:
 	var b := int(floor(pos.z / OB_BUCKET))
 	if not _obstacles.has(b):

@@ -16,3 +16,4 @@ game/segments/*/candidates/
 # layers accepted by the director loop (run artifacts; promote by copying to variants/)
 game/segments/*/generated/
 __pycache__/
+pipeline/.venv-train/

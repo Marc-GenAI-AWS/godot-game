@@ -214,9 +214,24 @@ func _write_stats() -> void:
 	for f in _fps_samples:
 		fps += f
 	fps = fps / maxf(_fps_samples.size(), 1.0)
+	# probe of the swapped-in layers: what they placed (chunk 1 for chunked
+	# layers) and how many obstacles the scene has, for the verifier's checks
+	var probe := {}
+	for seg in ctx.overrides:
+		for l in layers:
+			if str(l.get_script().resource_path) == str(ctx.overrides[seg]):
+				var root: Node = l
+				if l is ChunkedLayer and (l as ChunkedLayer).chunks.size() > 1:
+					root = (l as ChunkedLayer).chunks[1]
+				var nodes := []
+				for c in root.get_children():
+					if c is Node3D:
+						var p3: Vector3 = (c as Node3D).position
+						nodes.append([c.name, c.get_class(), snappedf(p3.x, 0.01), snappedf(p3.y, 0.01), snappedf(p3.z, 0.01), c.get_child_count()])
+				probe[seg] = {"nodes": nodes, "spots": (l.get("spots") as Array).size() if l.get("spots") != null else -1}
 	var stats := {
 		"world": world_name, "fps_avg": fps, "draw_calls": _draw_calls,
-		"overrides": ctx.overrides,
+		"overrides": ctx.overrides, "obstacles": ctx.obstacle_count(), "probe": probe,
 		"palette": {"sky_zenith": [ctx.sky_zenith.r, ctx.sky_zenith.g, ctx.sky_zenith.b],
 			"sky_horizon": [ctx.sky_horizon.r, ctx.sky_horizon.g, ctx.sky_horizon.b],
 			"sun_dir": [ctx.sun_dir.x, ctx.sun_dir.y, ctx.sun_dir.z],

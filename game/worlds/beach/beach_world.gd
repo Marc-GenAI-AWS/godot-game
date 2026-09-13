@@ -16,7 +16,7 @@ static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
 	var tracks := ctx.layer("tracks", TracksLayer)
 	var architecture := ctx.layer("architecture", BeachArchitecture)
 	var vegetation := ctx.layer("vegetation", BeachVegetation)
-	var furniture: BeachProps = ctx.layer("props", BeachProps)
+	var furniture: SceneLayer = ctx.layer("props", BeachProps)   # any layer exposing `spots`
 	var crowd: BeachCrowd = ctx.layer("crowd", BeachCrowd)
 	var fauna := ctx.layer("fauna", BeachFauna)
 	var player: PlayerLayer = ctx.layer("player", MpfbPlayerLayer if ctx.variant == "mpfb" else SkinnedPlayerLayer)

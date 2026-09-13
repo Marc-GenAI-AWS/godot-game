@@ -72,7 +72,61 @@ def sample_sky(n: int, seed: int, times=None, weather=None):
     return out
 
 
-SAMPLERS = {"sky": sample_sky}
+DENSITY = ["sparse", "normal", "dense"]
+VEG_MIX = {"beach": ["tall fan palms only", "mostly tall fan palms with a few coconut palms", "coconut palms dominant", "palms with dense hedges behind the deck"],
+           "street": ["leafy trees only", "mostly leafy trees with some fan palms", "half palms half leafy trees", "palm-lined with sparse trees", "leafy trees with continuous hedges"]}
+VEG_SIZE = ["young", "mature", "giant"]
+VEG_WORDS = ["lush", "dry and sun-bleached", "manicured", "wild and overgrown", "tidy municipal planting", "resort planting"]
+
+
+def sample_vegetation(n: int, seed: int, times=None, weather=None):
+    rng = random.Random(seed + 100)
+    out = []
+    for i in range(n):
+        world = WORLDS[i % 2]
+        density = DENSITY[(i // 2) % 3]
+        mix = rng.choice(VEG_MIX[world])
+        size = rng.choice(VEG_SIZE)
+        hedges = rng.choice(["no hedges", "some hedges", "continuous hedges"])
+        word = rng.choice(VEG_WORDS)
+        out.append({"id": f"veg-{seed:02d}-{i:03d}", "segment": "vegetation", "contract": CONTRACT_VERSION, "world": world,
+                    "density": density, "species_mix": mix, "size": size, "hedges": hedges, "look": word,
+                    "text": f"{word.capitalize()} vegetation on the {world}: {density} density, {mix}, {size} plants, {hedges}."})
+    return out
+
+
+PROPS_BEACH_PALETTES = ["white frames with blue and teal fabrics, pastel umbrellas", "white frames with red and yellow fabrics, striped umbrellas",
+                        "natural wood frames with cream fabrics, plain white umbrellas", "mixed bright fabrics, rainbow umbrellas"]
+PROPS_STREET_PALETTES = ["grey lamps, dark green bins, red hydrants", "black lamps, blue bins, yellow hydrants", "weathered wooden poles, grey bins, red hydrants"]
+
+
+def sample_props(n: int, seed: int, times=None, weather=None):
+    rng = random.Random(seed + 200)
+    out = []
+    for i in range(n):
+        world = WORLDS[i % 2]
+        density = DENSITY[(i // 2) % 3]
+        if world == "beach":
+            umbrellas = rng.choice(["few umbrellas", "umbrellas on about a third of the loungers", "umbrellas on most loungers"])
+            clutter = rng.choice(["little clutter", "some clutter (buckets, coolers, balls, bags)", "lots of clutter"])
+            towels = rng.choice(["mostly loungers", "loungers with some towels", "many towels among the loungers"])
+            palette = rng.choice(PROPS_BEACH_PALETTES)
+            text = f"Beach furniture, {density} density: {towels}, {umbrellas}, {clutter}; {palette}."
+            b = {"umbrellas": umbrellas, "clutter": clutter, "towels": towels}
+        else:
+            extras = rng.choice(["lamps and bins only", "lamps, bins and hydrants", "lamps, bins, hydrants, a bench and a mailbox", "lamps, power poles with wires, bins, hydrants, a stop sign"])
+            spacing = rng.choice(["lamps every 12 m", "lamps every 18 m", "lamps every 24 m"])
+            palette = rng.choice(PROPS_STREET_PALETTES)
+            text = f"Street furniture, {density} density: {extras}, {spacing}; {palette}."
+            b = {"items": extras, "spacing": spacing}
+        row = {"id": f"props-{seed:02d}-{i:03d}", "segment": "props", "contract": CONTRACT_VERSION, "world": world,
+               "density": density, "palette": palette, "text": text}
+        row.update(b)
+        out.append(row)
+    return out
+
+
+SAMPLERS = {"sky": sample_sky, "vegetation": sample_vegetation, "props": sample_props}
 
 
 def main():

@@ -6,7 +6,7 @@ extends ChunkedLayer
 # staggered walk cycles; sunbathers, sitters, waders and swimmers are posed
 # from clips, skinned once on the CPU, and batched per material.
 
-var furniture: BeachProps
+var furniture: SceneLayer   # the props layer; read through get("spots") so any variant can stand in
 var walkers: Array = []     # [root, speed, dir, anim]
 var swimmers: Array = []    # [node, base_y, phase]
 var _batches := {}          # chunk-local: material key -> MeshBatch
@@ -70,8 +70,9 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 	var sit_ts := [0.2, 1.1, 2.0]
 	var idle_ts := [0.0, 0.8, 1.7]
 	# Sunbathers / sitters on furniture spots
-	if furniture and ci < furniture.spots.size():
-		for spot in furniture.spots[ci]:
+	var all_spots: Array = furniture.get("spots") if furniture else []
+	if ci < all_spots.size():
+		for spot in all_spots[ci]:
 			if rng.randf() > 0.6:
 				continue
 			var p := _person(rng)

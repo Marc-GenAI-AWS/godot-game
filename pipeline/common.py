@@ -24,6 +24,9 @@ SEGMENTS = {
     # segment -> (world used for verification, capture shots, capture script)
     # drags are held (~s) past the shot so the camera has not eased back yet
     "sky": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_0_-220~2.5,7:Drag_-320_0~2.5"},
+    # placement segments: default view, then the camera swung to each side
+    "vegetation": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-330_60~2.5,7:Drag_660_0~2.5"},
+    "props": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-330_60~2.5,7:Drag_660_0~2.5"},
 }
 
 

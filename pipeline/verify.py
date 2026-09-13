@@ -36,9 +36,12 @@ GPU_LOCK = threading.RLock()   # one native capture at a time; gates and judge c
 
 def static_gate(code: str) -> list:
     problems = []
-    if not code.lstrip().startswith("extends SceneLayer"):
-        problems.append("file must start with 'extends SceneLayer'")
-    if "func build(" not in code:
+    head = code.lstrip()
+    if not (head.startswith("extends SceneLayer") or head.startswith("extends ChunkedLayer")):
+        problems.append("file must start with 'extends SceneLayer' or 'extends ChunkedLayer'")
+    if head.startswith("extends ChunkedLayer") and "func build_chunk(" not in code:
+        problems.append("a ChunkedLayer must implement build_chunk(chunk, rng)")
+    if "func build(" not in code and "func build_chunk(" not in code:
         problems.append("no build() function")
     for tok in FORBIDDEN:
         if tok in code:
@@ -70,7 +73,21 @@ def runtime_gate(world: str, swap: str) -> tuple:
     ready = "world ready" in out
     if not ready and not errors:
         errors.append("scene never reported 'world ready'")
+    LAST_GATE_OUTPUT[0] = out
     return (len(errors) == 0, errors[:6])
+
+
+LAST_GATE_OUTPUT = [""]
+
+
+def contact_lines(out: str) -> dict:
+    """Parse the crowd contact validator lines printed by the headless run."""
+    res = {}
+    for l in out.splitlines():
+        m = re.match(r"contacts (\w+)\s+n=\s*(\d+)\s+max penetration ([\d.]+) cm\s+max hover ([\d.]+) cm\s+(OK|FAIL)", l.strip())
+        if m:
+            res[m.group(1)] = {"n": int(m.group(2)), "pen_cm": float(m.group(3)), "hover_cm": float(m.group(4)), "ok": m.group(5) == "OK"}
+    return res
 
 
 # --------------------------------------------------------------- capture ---
@@ -164,7 +181,87 @@ def sky_checks(brief: dict, stats: dict, base: dict) -> tuple:
     return sum(scores) / len(scores), notes
 
 
-CHECKS = {"sky": sky_checks}
+def _zone_ok(world: str, x: float, kind: str) -> bool:
+    if world == "beach":
+        return x < -12.0 if kind == "vegetation" else (-38.0 < x < -11.0)
+    ax = abs(x)
+    if kind == "vegetation":
+        return 9.3 <= ax <= 13.4
+    return 6.2 <= ax <= 12.9
+
+
+def _plants(probe: dict) -> list:
+    """Node3D groups (trees, palms, item groups) in chunk 1: [name, class, x, y, z, children]."""
+    return [n for n in probe.get("nodes", []) if n[1] == "Node3D"]
+
+
+def vegetation_checks(brief: dict, stats: dict, base: dict) -> tuple:
+    notes, scores = [], []
+    world = brief.get("world", "beach")
+    pr = stats.get("probe", {}).get("vegetation", {})
+    plants = _plants(pr)
+    n = len(plants)
+    lo, hi = {"sparse": (6, 24), "normal": (12, 44), "dense": (22, 80)}.get(brief.get("density", "normal"), (6, 80))
+    in_band = lo <= n <= hi
+    scores.append(1.0 if in_band else max(0.0, 1.0 - min(abs(n - lo), abs(n - hi)) / 20.0))
+    notes.append(f"{n} plant groups per chunk ({'in' if in_band else 'outside'} the {brief.get('density')} band {lo}-{hi})")
+    if n:
+        ok = sum(1 for p in plants if _zone_ok(world, p[2], "vegetation"))
+        frac = ok / n
+        scores.append(frac)
+        notes.append(f"{ok}/{n} plants inside the allowed zones")
+    added = stats.get("obstacles", 0) - base.get("obstacles", 0)
+    scores.append(1.0 if added >= 0.7 * n else 0.5)
+    notes.append(f"obstacles registered: {added:+d} vs the shipped layer")
+    dc = stats["draw_calls"] - base["draw_calls"]
+    scores.append(1.0 if dc <= 150 else max(0.0, 1.0 - (dc - 150) / 200.0))
+    notes.append(f"draw calls {dc:+d} vs the shipped layer (budget +150), fps {stats['fps_avg']:.0f}")
+    if stats["fps_avg"] < 60:
+        scores.append(0.3); notes.append("below 60 fps")
+    return sum(scores) / len(scores), notes
+
+
+def props_checks(brief: dict, stats: dict, base: dict) -> tuple:
+    notes, scores = [], []
+    world = brief.get("world", "beach")
+    pr = stats.get("probe", {}).get("props", {})
+    groups = _plants(pr)
+    n = len(groups)
+    if world == "beach":
+        spots = pr.get("spots", -1)
+        lo, hi = {"sparse": (80, 150), "normal": (130, 230), "dense": (190, 320)}.get(brief.get("density", "normal"), (80, 320))
+        # spots is per-chunk lists appended per chunk; the probe reports the count of chunk lists, so use group count
+        in_band = lo <= n <= hi
+        scores.append(1.0 if in_band else max(0.0, 1.0 - min(abs(n - lo), abs(n - hi)) / 60.0))
+        notes.append(f"{n} furniture groups per chunk ({'in' if in_band else 'outside'} the {brief.get('density')} band {lo}-{hi}); spots lists {spots}")
+        scores.append(1.0 if spots == 3 else 0.2)
+        if spots != 3:
+            notes.append("spots must have one list per chunk (3)")
+        contacts = contact_lines(LAST_GATE_OUTPUT[0])
+        if contacts:
+            worst = max(max(v["pen_cm"], v["hover_cm"]) for v in contacts.values())
+            scores.append(1.0 if all(v["ok"] for v in contacts.values()) else max(0.0, 1.0 - worst / 10.0))
+            notes.append("crowd contacts: " + ", ".join(f"{k} n={v['n']} pen {v['pen_cm']}cm hover {v['hover_cm']}cm {'OK' if v['ok'] else 'FAIL'}" for k, v in contacts.items()))
+        else:
+            scores.append(0.3); notes.append("no crowd contact report (nobody could be seated)")
+    else:
+        lo, hi = {"sparse": (10, 40), "normal": (20, 70), "dense": (40, 120)}.get(brief.get("density", "normal"), (10, 120))
+        added_ob = stats.get("obstacles", 0) - base.get("obstacles", 0)
+        notes.append(f"{n} node groups per chunk, obstacles {added_ob:+d} vs the shipped layer")
+        scores.append(1.0 if added_ob >= -20 else 0.5)
+    if n:
+        ok = sum(1 for g in groups if _zone_ok(world, g[2], "props"))
+        scores.append(ok / n)
+        notes.append(f"{ok}/{n} groups inside the allowed zones")
+    dc = stats["draw_calls"] - base["draw_calls"]
+    scores.append(1.0 if dc <= 40 else max(0.0, 1.0 - (dc - 40) / 100.0))
+    notes.append(f"draw calls {dc:+d} vs the shipped layer (budget +40), fps {stats['fps_avg']:.0f}")
+    if stats["fps_avg"] < 60:
+        scores.append(0.3); notes.append("below 60 fps")
+    return sum(scores) / len(scores), notes
+
+
+CHECKS = {"sky": sky_checks, "vegetation": vegetation_checks, "props": props_checks}
 
 
 # ----------------------------------------------------------------- judge ---
@@ -173,7 +270,8 @@ def judge(segment: str, brief: dict, frames: list) -> dict:
     rubric = read(PIPE / "rubrics" / f"{segment}.md")
     blocks = [{"text": "Brief:\n" + json.dumps({k: v for k, v in brief.items() if k != "id"}, indent=2)}]
     for i, f in enumerate(frames):
-        blocks.append({"text": f"Frame {i + 1} ({['default view', 'tilted up', 'side view'][i] if i < 3 else 'extra'}):"})
+        labels = ['default view', 'tilted up', 'side view'] if segment == "sky" else ['default view', 'turned to one side', 'turned to the other side']
+        blocks.append({"text": f"Frame {i + 1} ({labels[i] if i < 3 else 'extra'}):"})
         blocks.append(image_block(f))
     blocks.append({"text": "Score the frames against the brief. JSON only."})
     text, usage = converse(JUDGE_MODEL, rubric, blocks, max_tokens=3000)
