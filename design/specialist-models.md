@@ -484,11 +484,16 @@ game scene, and that is a custom container on any cloud.
   anchor sets are yours to write regardless of platform, and are most of
   the intellectual work in this document.
 
-**Status (2026-09-12).** `pipeline/` implements the local form of every
-stage for the sky segment and the SageMaker launchers: see
-`pipeline/README.md`. Verified on the dev box: teacher candidates in ~30 s,
-a verifier episode in ~25 s (native GPU capture, judge on Bedrock), and the
-director loop accepting a revised sky in two rounds.
+**Status (2026-09-13).** `pipeline/` implements every stage for the sky
+segment; see `pipeline/README.md` for the numbers. Two data runs produced 293
+verified sky examples; the verifier's evidence drove a contract revision
+(v1.1) that lifted the hard briefs from 11-25% to 44-62% pass; three LoRA
+adapters (7B, 3B, 1.5B, SageMaker training jobs, about $5 in total) were
+evaluated through the same verifier, and the 1.5B and 3B adapters pass 77% of
+held-out briefs one-shot against the teacher's 60%, 80% after one
+self-revision. The director loop accepted three scene briefs end to end with
+the 3B specialist standing in for Claude. Next: composite verifier, then the
+next segments (ground / water, camera, fauna, props).
 
 **First milestone.** One SageMaker Pipeline that takes a batch of sky briefs,
 generates layers with Claude on Bedrock, runs the verifier container, writes

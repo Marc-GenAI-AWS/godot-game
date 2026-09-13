@@ -44,9 +44,9 @@ flowchart TB
 |---|---|---|
 | M0 Gold scenes | done | two worlds under one contract, published |
 | M1 Verifier | done for sky | gates veto, checks + judge agree with a human anchor set |
-| M2 Data generation | running | ~100 verified sky examples across the brief space, held-out slice kept |
-| M3 Fine-tune | next | a specialist whose held-out pass rate is within reach of the teacher's, registered |
-| M4 Agentic loop | built for one segment | composite verifier added; a new scene brief rendered and accepted with trained specialists, no hand edits |
+| M2 Data generation | done for sky | 293 verified examples over 200 briefs (two runs, contract v1.1), 30 held-out briefs, 165 preference pairs |
+| M3 Fine-tune | done for sky | 7B / 3B / 1.5B LoRA adapters; 1.5B and 3B pass 77% of held-out briefs one-shot vs the teacher's 60%; registry step not yet run |
+| M4 Agentic loop | runs with a trained specialist | three scene briefs accepted end to end with the 3B sky specialist (one first try, two after one revision); composite verifier still to build |
 | M5 Segments | sky only | each segment has a contract, rubric, sampler, checks and capture recipe, and a specialist through M1 to M4, in the order shown |
 | M6 RL | later | pass rate above SFT on the same held-out briefs, anchor agreement unchanged |
 | M7 Holistic generation | later | one brief in, a playable scene out: the director writes the world assembly, every layer comes from a specialist, the composite verifier accepts |
