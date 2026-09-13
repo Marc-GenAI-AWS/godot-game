@@ -82,6 +82,25 @@ The same `train_sft.py` runs on the dev box (GB10, 121 GB unified memory) with
 the local data paths, and `vllm serve <model_dir>` exposes the result to
 `loop/specialist.py --backend local:http://127.0.0.1:8000/v1`.
 
+## Evaluating a specialist
+
+```
+pipeline/eval_specialist.sh s3://.../model.tar.gz eval-sky-sft1            # or a local model dir
+```
+
+Downloads and extracts the merged model, generates one layer per held-out
+brief with transformers on the local GPU (`loop/specialist.py --backend
+hf:<dir>`, batched), verifies them, and prints the specialist's pass rate and
+judge mean next to the teacher's on the same briefs (`runs/<run>/eval.json`).
+
+Lessons from the first job (2026-09-12): the L40S family (`g6e`) had no
+capacity in us-west-2 for 40 minutes on spot, on-demand or the smaller size,
+and `g5.12xlarge` was pending too; the same job started within two minutes in
+us-east-2 (`AWS_REGION=us-east-2 SAGEMAKER_BUCKET=<us-east-2 bucket>`). The
+epoch-end evaluation must use batch size 1: eight 6k-token logit tensors are
+one 16 GB allocation. Three epochs over 140 examples took 12.5 minutes on one
+L40S, about $0.75 billable.
+
 ## The loop
 
 ```
