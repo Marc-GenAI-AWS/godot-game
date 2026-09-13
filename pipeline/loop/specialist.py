@@ -40,6 +40,8 @@ class Specialist:
             req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
             with urllib.request.urlopen(req, timeout=600) as r:
                 return json.load(r)["choices"][0]["message"]["content"]
+        if self.backend.startswith("hf:"):
+            return self._hf_generate([prompt])[0]
         if self.backend.startswith("endpoint:"):
             import boto3
             name = self.backend[len("endpoint:"):]
@@ -52,6 +54,46 @@ class Specialist:
                 return out["choices"][0]["message"]["content"]
             return out.get("generated_text", json.dumps(out))
         raise ValueError("unknown backend " + self.backend)
+
+    # transformers generation on a local GPU (no vLLM needed); batched for eval
+    _hf = None
+
+    def _hf_load(self):
+        if self._hf is None:
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            path = self.backend[len("hf:"):]
+            tok = AutoTokenizer.from_pretrained(path)
+            tok.padding_side = "left"
+            tok.pad_token = tok.pad_token or tok.eos_token
+            model = AutoModelForCausalLM.from_pretrained(path, torch_dtype=torch.bfloat16, device_map="cuda")
+            model.eval()
+            self._hf = (tok, model)
+        return self._hf
+
+    def _hf_generate(self, prompts: list, max_new_tokens=3000) -> list:
+        import torch
+        tok, model = self._hf_load()
+        texts = [tok.apply_chat_template([{"role": "system", "content": self.system}, {"role": "user", "content": p}],
+                                         tokenize=False, add_generation_prompt=True) for p in prompts]
+        enc = tok(texts, return_tensors="pt", padding=True).to("cuda")
+        with torch.no_grad():
+            out = model.generate(**enc, max_new_tokens=max_new_tokens, do_sample=True, temperature=0.4, top_p=0.95,
+                                 pad_token_id=tok.pad_token_id)
+        return [tok.decode(o[enc["input_ids"].shape[1]:], skip_special_tokens=True) for o in out]
+
+    def write_many(self, briefs: list, batch=8) -> list:
+        """Batched write for the hf backend; falls back to one call per brief otherwise."""
+        if not self.backend.startswith("hf:"):
+            return [self.write(b) for b in briefs]
+        outs = []
+        for i in range(0, len(briefs), batch):
+            chunk = briefs[i:i + batch]
+            prompts = [user_prompt(b) for b in chunk]
+            for text, prompt in zip(self._hf_generate(prompts), prompts):
+                outs.append((extract_code(text), prompt))
+            print(f"  generated {len(outs)}/{len(briefs)}", flush=True)
+        return outs
 
     def write(self, brief: dict) -> tuple:
         prompt = user_prompt(brief)
@@ -74,8 +116,8 @@ def main():
     (out / "candidates").mkdir(parents=True, exist_ok=True)
     sp = Specialist(a.segment, a.backend, a.model)
     rows = []
-    for b in read_jsonl(a.briefs):
-        code, prompt = sp.write(b)
+    briefs = read_jsonl(a.briefs)
+    for b, (code, prompt) in zip(briefs, sp.write_many(briefs)):
         cid = b["id"] + "_s"
         p = out / "candidates" / f"{cid}.gd"
         p.write_text(code)
