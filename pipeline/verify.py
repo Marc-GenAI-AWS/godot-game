@@ -38,7 +38,8 @@ def static_gate(code: str, segment: str = "") -> list:
     problems = []
     for path in ALLOWED_LOADS.get(segment, []):
         code = code.replace(f'load("{path}")', "ALLOWED_LOAD")
-    head = code.lstrip()
+    # leading comments and blank lines are fine before `extends`
+    head = "\n".join(l for l in code.splitlines() if l.strip() and not l.strip().startswith("#")).lstrip()
     if not (head.startswith("extends SceneLayer") or head.startswith("extends ChunkedLayer")):
         problems.append("file must start with 'extends SceneLayer' or 'extends ChunkedLayer'")
     if head.startswith("extends ChunkedLayer") and "func build_chunk(" not in code:
