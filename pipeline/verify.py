@@ -381,6 +381,7 @@ def main():
     ap.add_argument("--no-judge", action="store_true")
     ap.add_argument("--name", default="verified.jsonl")
     ap.add_argument("--workers", type=int, default=3, help="candidates in flight (captures are still one at a time)")
+    ap.add_argument("--resume", action="store_true", help="skip candidates already in the output file")
     a = ap.parse_args()
     out_dir = Path(a.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -393,9 +394,29 @@ def main():
     done = 0
     lock = threading.Lock()
 
+    already = {}
+    if a.resume and (out_dir / a.name).exists():
+        for r0 in read_jsonl(out_dir / a.name):
+            already[r0["candidate"]] = r0
+        results.extend(already.values())
+        rows = [r0 for r0 in rows if r0["candidate"] not in already]
+        print(f"resume: {len(already)} already verified, {len(rows)} to go")
+
     def work(row):
         nonlocal done
-        r = verify_one(row, out_dir, do_judge=not a.no_judge)
+        try:
+            r = verify_one(row, out_dir, do_judge=not a.no_judge)
+        except subprocess.TimeoutExpired as e:
+            r = {"candidate": row["candidate"], "brief_id": row["brief"]["id"], "segment": row["segment"], "brief": row["brief"],
+                 "path": row["path"], "mode": row.get("mode", "write"), "prompt": row.get("prompt", ""),
+                 "gates": {"runtime": ["timed out: the scene never finished building (an endless loop?)"]},
+                 "score": 0.0, "pass": False, "evidence": "runtime gate: timed out after %ss; the scene never finished building" % e.timeout,
+                 "checks": {}, "judge": {}}
+        except Exception as e:   # never let one candidate take the run down
+            r = {"candidate": row["candidate"], "brief_id": row["brief"]["id"], "segment": row["segment"], "brief": row["brief"],
+                 "path": row["path"], "mode": row.get("mode", "write"), "prompt": row.get("prompt", ""),
+                 "gates": {"capture": [str(e)[:300]]}, "score": 0.0, "pass": False,
+                 "evidence": "verifier error: " + str(e)[:300], "checks": {}, "judge": {}}
         with lock:
             done += 1
             results.append(r)
