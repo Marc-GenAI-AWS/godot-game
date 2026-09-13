@@ -126,7 +126,51 @@ def sample_props(n: int, seed: int, times=None, weather=None):
     return out
 
 
-SAMPLERS = {"sky": sample_sky, "vegetation": sample_vegetation, "props": sample_props}
+SAND_TONES = ["dark warm tan", "golden", "pale white coral sand", "grey volcanic", "pinkish shell sand"]
+ROAD_TONES = ["fresh black asphalt", "worn grey asphalt", "brownish sun-baked asphalt", "patched and faded asphalt"]
+
+
+def sample_ground(n: int, seed: int, times=None, weather=None):
+    rng = random.Random(seed + 300)
+    out = []
+    for i in range(n):
+        world = WORLDS[i % 2]
+        if world == "beach":
+            tone = rng.choice(SAND_TONES)
+            wet = rng.choice(["narrow wet band", "wide wet band", "wide wet band with a strong mirror sheet"])
+            shells = rng.choice(["few shells", "shells and pebbles along the tide line", "dense shell drift"])
+            grain = rng.choice(["fine grain", "coarse grain with ripples", "smooth packed sand"])
+            text = f"Beach sand: {tone}, {grain}, {wet}, {shells}."
+            b = {"tone": tone, "wet_band": wet, "shells": shells, "grain": grain}
+        else:
+            tone = rng.choice(ROAD_TONES)
+            markings = rng.choice(["double yellow centre line and white edge lines", "single dashed white centre line", "no centre line, white edge lines only"])
+            kerb = rng.choice(["plain concrete kerbs", "red-painted kerbs by the crossing", "granite grey kerbs"])
+            walk = rng.choice(["short sidewalk slabs with cracks", "long clean slabs", "weathered slabs with many joints"])
+            lawn = rng.choice(["lush green lawns", "dry yellow-green lawns", "dark mown lawns with stripes"])
+            text = f"Street ground: {tone}, {markings}, {kerb}, {walk}, {lawn}."
+            b = {"tone": tone, "markings": markings, "kerb": kerb, "sidewalk": walk, "lawn": lawn}
+        row = {"id": f"ground-{seed:02d}-{i:03d}", "segment": "ground", "contract": CONTRACT_VERSION, "world": world, "text": text}
+        row.update(b)
+        out.append(row)
+    return out
+
+
+def sample_water(n: int, seed: int, times=None, weather=None):
+    rng = random.Random(seed + 400)
+    out = []
+    for i in range(n):
+        state = ["calm", "gentle", "choppy"][i % 3]
+        colour = rng.choice(["turquoise tropical", "deep navy", "grey-green temperate", "milky jade", "clear aquamarine"])
+        foam = rng.choice(["little foam", "lacy foam band at the edge", "heavy foam and breakers"])
+        clarity = rng.choice(["sand visible far out", "sand visible only at the edge", "murky"])
+        out.append({"id": f"water-{seed:02d}-{i:03d}", "segment": "water", "contract": CONTRACT_VERSION, "world": "beach",
+                    "sea_state": state, "colour": colour, "foam": foam, "clarity": clarity,
+                    "text": f"The sea: {state}, {colour} water, {foam}, {clarity}."})
+    return out
+
+
+SAMPLERS = {"sky": sample_sky, "vegetation": sample_vegetation, "props": sample_props, "ground": sample_ground, "water": sample_water}
 
 
 def main():

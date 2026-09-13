@@ -23,7 +23,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from common import (GAME, GODOT, JUDGE_MODEL, PIPE, SEGMENTS, converse, image_block, parse_json, read,
+from common import (ALLOWED_LOADS, GAME, GODOT, JUDGE_MODEL, PIPE, SEGMENTS, converse, image_block, parse_json, read,
                     read_jsonl, write_jsonl)
 
 FORBIDDEN = ["OS.", "FileAccess", "DirAccess", "HTTPRequest", "JavaScriptBridge", "get_tree().quit",
@@ -34,8 +34,10 @@ GPU_LOCK = threading.RLock()   # one native capture at a time; gates and judge c
 
 # ---------------------------------------------------------------- gates ---
 
-def static_gate(code: str) -> list:
+def static_gate(code: str, segment: str = "") -> list:
     problems = []
+    for path in ALLOWED_LOADS.get(segment, []):
+        code = code.replace(f'load("{path}")', "ALLOWED_LOAD")
     head = code.lstrip()
     if not (head.startswith("extends SceneLayer") or head.startswith("extends ChunkedLayer")):
         problems.append("file must start with 'extends SceneLayer' or 'extends ChunkedLayer'")
@@ -261,7 +263,24 @@ def props_checks(brief: dict, stats: dict, base: dict) -> tuple:
     return sum(scores) / len(scores), notes
 
 
-CHECKS = {"sky": sky_checks, "vegetation": vegetation_checks, "props": props_checks}
+def surface_checks(brief: dict, stats: dict, base: dict) -> tuple:
+    """Ground / water: a mesh must exist, and the budget must hold; the look is the judge's."""
+    notes, scores = [], []
+    seg = brief.get("segment", "ground")
+    pr = stats.get("probe", {}).get(seg, {})
+    meshes = [n for n in pr.get("nodes", []) if n[1] in ("MeshInstance3D", "MultiMeshInstance3D")]
+    scores.append(1.0 if meshes else 0.0)
+    notes.append(f"{len(meshes)} mesh nodes placed" if meshes else "no mesh placed by the layer")
+    dc = stats["draw_calls"] - base["draw_calls"]
+    budget = 10 if seg == "ground" else 3
+    scores.append(1.0 if dc <= budget else max(0.0, 1.0 - (dc - budget) / 30.0))
+    notes.append(f"draw calls {dc:+d} vs the shipped layer (budget +{budget}), fps {stats['fps_avg']:.0f}")
+    if stats["fps_avg"] < 60:
+        scores.append(0.3); notes.append("below 60 fps")
+    return sum(scores) / len(scores), notes
+
+
+CHECKS = {"sky": sky_checks, "vegetation": vegetation_checks, "props": props_checks, "ground": surface_checks, "water": surface_checks}
 
 
 # ----------------------------------------------------------------- judge ---
@@ -270,7 +289,8 @@ def judge(segment: str, brief: dict, frames: list) -> dict:
     rubric = read(PIPE / "rubrics" / f"{segment}.md")
     blocks = [{"text": "Brief:\n" + json.dumps({k: v for k, v in brief.items() if k != "id"}, indent=2)}]
     for i, f in enumerate(frames):
-        labels = ['default view', 'tilted up', 'side view'] if segment == "sky" else ['default view', 'turned to one side', 'turned to the other side']
+        labels = {"sky": ['default view', 'tilted up', 'side view'], "ground": ['default view', 'tilted down at the ground', 'side view'],
+                  "water": ['default view', 'turned toward the sea', 'tilted down']}.get(segment, ['default view', 'turned to one side', 'turned to the other side'])
         blocks.append({"text": f"Frame {i + 1} ({labels[i] if i < 3 else 'extra'}):"})
         blocks.append(image_block(f))
     blocks.append({"text": "Score the frames against the brief. JSON only."})
@@ -304,7 +324,7 @@ def verify_one(row: dict, out_dir: Path, do_judge=True) -> dict:
            "mode": row.get("mode", "write"), "prompt": row.get("prompt", ""), "gates": {}, "score": 0.0,
            "pass": False, "evidence": "", "checks": {}, "judge": {}}
     t0 = time.time()
-    problems = static_gate(code)
+    problems = static_gate(code, segment)
     res["gates"]["static"] = problems
     if problems:
         res["evidence"] = "static gate: " + "; ".join(problems)

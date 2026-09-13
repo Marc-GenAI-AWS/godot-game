@@ -27,6 +27,13 @@ SEGMENTS = {
     # placement segments: default view, then the camera swung to each side
     "vegetation": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-330_60~2.5,7:Drag_660_0~2.5"},
     "props": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-330_60~2.5,7:Drag_660_0~2.5"},
+    "ground": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_0_260~2.5,7:Drag_-330_-200~2.5"},
+    "water": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_330_0~2.5,7:Drag_0_260~2.5"},
+}
+# load() paths a segment's candidates may use (everything else is forbidden)
+ALLOWED_LOADS = {
+    "ground": ["res://segments/ground/shaders/sand.gdshader", "res://segments/ground/shaders/asphalt.gdshader"],
+    "water": ["res://segments/water/shaders/water.gdshader"],
 }
 
 
