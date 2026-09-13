@@ -21,7 +21,7 @@ else
 fi
 ls "$DIR" | head -20
 echo "== $(date +%T) specialist (transformers on the local GPU) writes $(wc -l < $BRIEFS) held-out layers"
-PYTHONPATH=. python3.11 loop/specialist.py --segment sky --briefs "$BRIEFS" --out runs/$RUN --backend "hf:$DIR"
+PYTHONPATH=. .venv-train/bin/python loop/specialist.py --segment sky --briefs "$BRIEFS" --out runs/$RUN --backend "hf:$DIR"
 echo "== $(date +%T) verifying"
 DISPLAY=:0 .venv/bin/python verify.py --candidates runs/$RUN/candidates.jsonl --out runs/$RUN --workers 3
 .venv/bin/python - "$RUN" "$BRIEFS" <<'EOF'

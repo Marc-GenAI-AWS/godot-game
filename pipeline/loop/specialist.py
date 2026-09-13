@@ -107,7 +107,8 @@ class Specialist:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--segment", default="sky")
-    ap.add_argument("--briefs", required=True)
+    ap.add_argument("--briefs")
+    ap.add_argument("--revise", help="verified.jsonl: the specialist revises its own fails from the evidence")
     ap.add_argument("--out", required=True)
     ap.add_argument("--backend", default="teacher")
     ap.add_argument("--model")
@@ -116,6 +117,24 @@ def main():
     (out / "candidates").mkdir(parents=True, exist_ok=True)
     sp = Specialist(a.segment, a.backend, a.model)
     rows = []
+    if a.revise:
+        fails = [r for r in read_jsonl(a.revise) if not r.get("pass")]
+        prompts = [revise_prompt(r["brief"], read(r["path"]), r.get("evidence", "")) for r in fails]
+        if a.backend.startswith("hf:"):
+            texts = []
+            for i in range(0, len(prompts), 8):
+                texts += sp._hf_generate(prompts[i:i + 8])
+                print(f"  revised {len(texts)}/{len(prompts)}", flush=True)
+        else:
+            texts = [sp._chat(p) for p in prompts]
+        for r, prompt, text in zip(fails, prompts, texts):
+            cid = r["candidate"] + "r"
+            p = out / "candidates" / f"{cid}.gd"
+            p.write_text(extract_code(text))
+            rows.append({"candidate": cid, "brief_id": r["brief_id"], "brief": r["brief"], "segment": a.segment,
+                         "mode": "revise", "prompt": prompt, "path": str(p), "backend": a.backend, "parent": r["candidate"]})
+        write_jsonl(out / "revisions.jsonl", rows)
+        return
     briefs = read_jsonl(a.briefs)
     for b, (code, prompt) in zip(briefs, sp.write_many(briefs)):
         cid = b["id"] + "_s"
