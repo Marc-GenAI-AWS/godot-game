@@ -132,6 +132,7 @@ static func _push_out(pos: Vector3, centre: Vector3, r: float) -> Vector3:
 var noise_tex: ImageTexture
 var sand_normal_tex: ImageTexture
 var cloud_tex: ImageTexture
+var cloud_cover_tex: ImageTexture   # equirectangular cloud sheet with alpha, for ProceduralSkyMaterial.sky_cover
 var window_tex: ImageTexture
 var frond_tex: ImageTexture
 var soft_disc_tex: ImageTexture
@@ -214,6 +215,32 @@ func make_textures() -> void:
 			var shade := clampf(1.02 - maxf(v + 0.15, 0.0) * 0.45 - (0.5 - m) * 0.2, 0.62, 1.0)
 			cimg.set_pixel(x, y, Color(shade, shade, shade + 0.03, a))
 	cloud_tex = ImageTexture.create_from_image(cimg)
+	# Cloud-cover panorama: soft cloud masses with gaps, denser toward the
+	# horizon rows, tileable across the seam; the sky material multiplies its
+	# alpha by sky_cover_modulate.a so one texture serves broken to overcast.
+	var pw := 512
+	var ph := 256
+	var pn := FastNoiseLite.new()
+	pn.seed = 21
+	pn.frequency = 0.9
+	pn.fractal_octaves = 5
+	pn.fractal_lacunarity = 2.1
+	var pimg := Image.create(pw, ph, false, Image.FORMAT_RGBA8)
+	for y in ph:
+		var lat := 1.0 - float(y) / (ph - 1)          # 1 at the zenith row, 0.5 at the horizon, 0 at the nadir
+		var above := clampf((lat - 0.53) / 0.1, 0.0, 1.0)   # nothing at or below the horizon; fade in just above it
+		above = above * above * (3.0 - 2.0 * above)
+		# isotropic in angle: the cylinder's circumference (2*pi*r) covers 360
+		# degrees and one lat unit covers 180, so r = lat_scale / pi
+		for x in pw:
+			var ang := TAU * float(x) / pw
+			var m := pn.get_noise_3d(cos(ang) * 2.55, lat * 8.0 + 3.0, sin(ang) * 2.55) * 0.5 + 0.5
+			var d := pn.get_noise_3d(cos(ang) * 6.4 + 40.0, lat * 20.0, sin(ang) * 6.4) * 0.5 + 0.5
+			var a := clampf((m - 0.4) * 3.2, 0.0, 1.0)
+			a = a * a * (3.0 - 2.0 * a) * above
+			var shade := clampf(0.8 + (d - 0.5) * 0.3 + (m - 0.5) * 0.15, 0.6, 1.0)
+			pimg.set_pixel(x, y, Color(shade, shade, shade, a))
+	cloud_cover_tex = ImageTexture.create_from_image(pimg)
 
 	# Palm frond: serrated leaflets either side of a rib, alpha-cut.
 	var fw := 256

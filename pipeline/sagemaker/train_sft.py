@@ -28,17 +28,30 @@ def main():
     ap.add_argument("--batch", type=int, default=1)
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--merge", type=int, default=1)
+    ap.add_argument("--max-steps", type=int, default=-1, help="smoke tests: stop after N steps")
     a = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(a.model)
     tok.pad_token = tok.pad_token or tok.eos_token
-    model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.bfloat16, attn_implementation="sdpa")
+    gpu = torch.cuda.is_available()
+    model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.bfloat16 if gpu else torch.float32,
+                                                 attn_implementation="sdpa")
     model.gradient_checkpointing_enable()
 
     ds = load_dataset("json", data_files={"train": a.train, "val": a.val} if os.path.exists(a.val) else {"train": a.train})
+
+    # prompt/completion form: TRL puts the loss on the completion only, with no
+    # dependence on the chat template having generation markers
+    def split(ex):
+        msgs = ex["messages"]
+        return {"prompt": msgs[:-1], "completion": msgs[-1:]}
+
+    ds = ds.map(split, remove_columns=[c for c in ds["train"].column_names if c != "messages"])
+    ds = ds.remove_columns(["messages"])
     cfg = SFTConfig(
         output_dir=a.out + "/checkpoints",
         num_train_epochs=a.epochs,
+        max_steps=a.max_steps,
         per_device_train_batch_size=a.batch,
         gradient_accumulation_steps=a.grad_accum,
         learning_rate=a.lr,
@@ -46,9 +59,9 @@ def main():
         warmup_ratio=0.05,
         logging_steps=5,
         save_strategy="no",
-        bf16=True,
+        bf16=gpu,                      # CPU smoke tests run in fp32
         max_length=a.max_len,
-        assistant_only_loss=True,      # loss on the layer file, not the contract
+        completion_only_loss=True,     # loss on the layer file, not the contract
         packing=False,
         report_to=[],
         eval_strategy="epoch" if "val" in ds else "no",

@@ -1,4 +1,4 @@
-# Sky specialist contract (v1)
+# Sky specialist contract (v1.1)
 
 You write ONE file: the sky layer of a procedural Godot 4 scene. It owns the
 sky dome, the sun (the scene's only directional light), ambient light, fog,
@@ -36,7 +36,9 @@ Your file must start exactly with `extends SceneLayer` and must NOT declare
 Read:
 - `ctx.time: float` seconds since start, `ctx.wind: Vector2` (x is the drift
   direction along world X), `ctx.cloud_tex: ImageTexture` (a soft white
-  cloud sprite, 256x256, alpha), `ctx.mat(color, roughness)` material cache.
+  cloud sprite, 256x256, alpha), `ctx.cloud_cover_tex: ImageTexture` (a
+  1024x512 equirectangular panorama of white cloud shapes with alpha, made
+  for `ProceduralSkyMaterial.sky_cover`), `ctx.mat(color, roughness)`.
 
 Write (the palette; set them in `build()` before creating nodes, other layers
 read them during their own build):
@@ -59,15 +61,44 @@ Everything else in the context is another segment's business. Do not call
   light with `azimuth_yaw = 180 - azimuth` gives a light travelling towards
   the scene; compute `ctx.sun_dir` from the light's basis after adding it to
   the tree (`-basis.z`), with a hand-computed fallback.
-- Night briefs: keep a faint fill (moon as the directional light, cool
-  colour, low energy), never a black scene.
-- Fog is distance fog with `fog_density` in the 0.0003 to 0.004 range for
-  haze levels 0 to 1; the fog colour follows the horizon colour.
-- Use `Environment.TONE_MAPPER_FILMIC` and a modest exposure (0.7 to 1.0).
-- Clouds: `Sprite3D` with `ctx.cloud_tex`, billboard, unshaded, placed on a
-  ring 500 to 950 m away at 70 to 190 m height, drifting with `ctx.wind`
-  and wrapping at +/-950 m. Cover level 0 to 1 maps to 0 to about 40
-  sprites; overcast should also darken and grey the zenith and horizon.
+- Shadows in the Compatibility renderer are always hard-edged
+  (`light_angular_distance` does nothing). Soft light is therefore expressed
+  by turning the sun's `shadow_enabled` off (overcast, heavy haze, night) or
+  keeping its energy low relative to ambient, never by shadow softness.
+- Night briefs: the moon is the directional light (cool colour, energy 0.25
+  to 0.45, shadows off or energy under 0.3 so they stay faint), plus
+  `ambient_light_energy` of at least 0.35 and exposure 1.0 to 1.3 so the
+  ground, props and people stay readable: never large regions crushed to
+  black. Sky colours stay above about 0.03 per channel. Fog is cool and
+  visible.
+- Dusk and dawn briefs: the sun sits at or just under the horizon. Give the
+  sky a distinct band: a saturated orange/magenta `sky_horizon_color`, an
+  indigo or violet `sky_top_color`, a low `sky_curve` (0.03 to 0.06) so the
+  band stays thin, and a visible sun disc (`sun_angle_max` 4 to 10 degrees
+  with `sun_curve` 0.05 to 0.2). Light energy 0.4 to 0.8, long soft shadows.
+- Haze: distance fog with `fog_density` scaled with the brief's haze, about
+  0.0003 at haze 0 up to 0.006 at haze 1 (distant buildings must visibly
+  soften above haze 0.5), `fog_sky_affect` 0.1 to 0.5, fog colour close to
+  the horizon colour. `fog_aerial_perspective` 0.3 to 0.7 helps at high haze.
+- Use `Environment.TONE_MAPPER_FILMIC` and a modest exposure (0.7 to 1.0 by
+  day, higher at night as above).
+- Clouds come in two techniques, chosen by cover:
+  - Cover below about 0.5: distinct cumulus as `Sprite3D` billboards with
+    `ctx.cloud_tex`, unshaded, on a ring 500 to 950 m away at 70 to 190 m
+    height, drifting with `ctx.wind` and wrapping at +/-950 m. Roughly 40
+    sprites per unit of cover, tinted by the sun colour (warm at golden hour,
+    grey-blue at night). Scale and alpha vary per sprite.
+  - Cover 0.5 and above: a textured cloud sheet on the sky itself:
+    `sky_mat.sky_cover = ctx.cloud_cover_tex` and
+    `sky_mat.sky_cover_modulate = Color(r, g, b, cover)` where the RGB is the
+    cloud colour (light grey by day, sun-tinted at the edges of the day, dark
+    blue-grey at night). The sheet is a panorama of soft cloud shapes with
+    alpha, so at 0.6 it reads as broken cloud with gaps and at 0.95 as a
+    near-solid overcast with visible texture. Also flatten and grey the
+    zenith and horizon colours, lower the sun energy (overcast: 0.3 to 0.5
+    with `shadow_enabled = false`; broken: 0.6 to 0.9 with shadows) and
+    raise `ambient_light_energy` to 0.8 to 1.1. Add a few sprites too so the cover has depth. A plain flat grey
+    sky with no cloud texture is a failure.
 - Deterministic: seed any RandomNumberGenerator.
 - The project treats GDScript warnings as errors: give every variable an
   explicit type or a typed initialiser (`var n := 3`, `var c: Color = ...`),
