@@ -94,6 +94,16 @@ static func build(parent: Node3D, pos: Vector3, rng: RandomNumberGenerator, ctx:
 		sh.material_override = ctx.mat(Color(0.45, 0.36, 0.2), 0.95)
 		sh.position.y = -1.0
 		crown.add_child(sh)
+	else:
+		var nuts := MeshBatch.new()
+		var sm := SphereMesh.new()
+		sm.radius = 0.14
+		sm.height = 0.28
+		sm.radial_segments = 8
+		sm.rings = 4
+		for i in 4:
+			nuts.add(sm, Transform3D(Basis.IDENTITY, Vector3(rng.randf_range(-0.25, 0.25), -0.25, rng.randf_range(-0.25, 0.25))), Color(0.35, 0.28, 0.15))
+		nuts.instance(crown, "Coconuts")
 	return crown
 
 

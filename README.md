@@ -49,8 +49,9 @@ cars. The road is endless. `&variant=walk` is on foot only, `&variant=drive`
 is the car only (each isolates one player mode for its specialist).
 
 Segments added for it: `segments/vehicles/` (procedural cars: hatch, sedan,
-suv, pickup, each with a hinged driver's door; parked + traffic layer with
-car-following) and three player modes in `segments/player/`: the on-foot
+suv, pickup, each an open glasshouse with a hinged driver's door so the
+driver is visible inside; parked + traffic layer with car-following and a
+baked seated driver in every moving car) and three player modes in `segments/player/`: the on-foot
 street walker, the vehicle mode, and `driver_layer.gd` which composes the two
 and scripts the get-in / get-out transition. Shared palm and tree generators
 live in `segments/vegetation/species/`.
@@ -76,7 +77,7 @@ game/
     ground/                    terrain surface; variants/beach.gd + shaders/sand.gdshader
     water/                     variants/beach.gd + shaders/water.gdshader
     architecture/              variants/beach.gd (hotels, promenade, lifeguard huts)
-    vegetation/                species/palm.gd (palms, leafy trees); variants/beach.gd, street.gd
+    vegetation/                species/palm.gd, species/leafy_tree.gd; variants/beach.gd, street.gd
     props/                     variants/beach.gd (loungers, umbrellas, clutter; exposes spots)
     characters/                humanoid rig, body/texture generators, hair ribbons,
                                SkinnedPeople (live characters, CPU pose baking, builds,

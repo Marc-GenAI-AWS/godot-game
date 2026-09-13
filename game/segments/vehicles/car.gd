@@ -36,7 +36,7 @@ static func _mats() -> void:
 	_glass_mat = StandardMaterial3D.new()
 	_glass_mat.vertex_color_use_as_albedo = true
 	_glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_glass_mat.albedo_color = Color(1, 1, 1, 0.72)
+	_glass_mat.albedo_color = Color(1, 1, 1, 0.5)
 	_glass_mat.roughness = 0.06
 	_glass_mat.metallic = 0.3
 	_glass_mat.metallic_specular = 0.9
@@ -115,32 +115,44 @@ static func build(kind: String, paint: Color, roof: Color = Color(-1, 0, 0), pla
 	pb.add_box_at(Vector3(W * 0.99, 0.2, 0.32), paint, Vector3(0, ground + 0.43, L * 0.5 + 0.02))
 	tb.add_box_at(Vector3(W * 0.55, 0.1, 0.06), trim, Vector3(0, ground + 0.2, L * 0.5 + 0.2))      # rear bumper insert
 	tb.add_box_at(Vector3(W * 0.55, 0.14, 0.06), trim, Vector3(0, ground + 0.24, -L * 0.5 - 0.2))   # grille
-	# cabin: pillars in roof colour, glass panels, thin chrome window trim
+	# cabin: an open glasshouse - roof slab, pillars, thin glass panels and a
+	# dark interior, so a driver in the seat is visible from outside
 	var cab_l: float = k["cab_l"]
 	var cab_h: float = k["cab_h"]
 	var cz: float = k["cab_off"]
-	var cy := ground + bh + cab_h * 0.5
-	_soft_box(pb, Vector3(W * 0.9, cab_h, cab_l), roof_c, Vector3(0, cy + cab_h * 0.18, cz), 0.1)   # roof block
-	# knock out the glass band by drawing glass slightly proud of the pillars
-	var gh := cab_h * 0.62
-	var gy := cy - cab_h * 0.08
-	gb.add_box_at(Vector3(W * 0.93, gh, cab_l * 0.92), glass, Vector3(0, gy, cz))
-	gb.add_box(Vector3(W * 0.84, 0.04, cab_h * 1.05), glass, Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, 0.6), Vector3(0, ground + bh + cab_h * 0.32, cz - cab_l * 0.5 - 0.2)))
-	gb.add_box(Vector3(W * 0.84, 0.04, cab_h * 0.9), glass, Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, -0.75), Vector3(0, ground + bh + cab_h * 0.36, cz + cab_l * 0.5 + 0.12)))
-	cb.add_box_at(Vector3(W * 0.935, 0.02, cab_l * 0.92), Color(0.85, 0.85, 0.88), Vector3(0, gy + gh * 0.5, cz))
-	cb.add_box_at(Vector3(W * 0.935, 0.02, cab_l * 0.92), Color(0.85, 0.85, 0.88), Vector3(0, gy - gh * 0.5, cz))
-	# pillars (A/B/C) as thin roof-coloured posts inside the glass band
-	for pz: float in [-0.48, 0.0, 0.48]:
-		for sx: float in [-1.0, 1.0]:
-			pb.add_box_at(Vector3(0.05, gh, 0.09), roof_c, Vector3(sx * W * 0.455, gy, cz + pz * cab_l))
-	# interior: two front seats with headrests, dark dashboard, steering wheel
+	var belt := ground + bh                       # beltline: top of the lower body
+	var roof_top := belt + cab_h * 1.18
+	var roof_under := roof_top - 0.09
+	var gh := roof_under - belt                   # glass band height
+	var gy := belt + gh * 0.5
+	_soft_box(pb, Vector3(W * 0.9, 0.09, cab_l * 0.95), roof_c, Vector3(0, roof_top - 0.045, cz), 0.04)
+	cb.add_box_at(Vector3(W * 0.935, 0.02, cab_l * 0.92), Color(0.85, 0.85, 0.88), Vector3(0, belt + 0.01, cz))   # sill trim
+	# side glass and pillars (A/B/C) in roof colour
+	for sx: float in [-1.0, 1.0]:
+		gb.add_box_at(Vector3(0.02, gh - 0.02, cab_l * 0.92), glass, Vector3(sx * W * 0.45, gy, cz))
+		for pz: float in [-0.47, 0.0, 0.47]:
+			pb.add_box_at(Vector3(0.06, gh, 0.09), roof_c, Vector3(sx * W * 0.455, gy, cz + pz * cab_l))
+	# windscreen and rear glass: raked panels sealing the roof edges to the body
+	var zf_roof := cz - cab_l * 0.475
+	var zr_roof := cz + cab_l * 0.475
+	var ws_run := 0.5
+	var rw_run := 0.12 if kind == "pickup" else 0.35
+	var ws_len := sqrt(gh * gh + ws_run * ws_run)
+	var rw_len := sqrt(gh * gh + rw_run * rw_run)
+	gb.add_box(Vector3(W * 0.86, 0.025, ws_len), glass, Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, -atan2(ws_run, gh)), Vector3(0, gy, zf_roof - ws_run * 0.5)))
+	gb.add_box(Vector3(W * 0.86, 0.025, rw_len), glass, Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, atan2(rw_run, gh)), Vector3(0, gy, zr_roof + rw_run * 0.5)))
+	pb.add_box_at(Vector3(W * 0.9, 0.05, ws_run + 0.1), paint, Vector3(0, belt - 0.02, zf_roof - ws_run * 0.5))   # cowl
+	pb.add_box_at(Vector3(W * 0.9, 0.05, rw_run + 0.1), paint, Vector3(0, belt - 0.02, zr_roof + rw_run * 0.5))   # rear deck
+	# interior: dark floor pan at the beltline, two seats with backrests and
+	# headrests rising into the glass band, dashboard, steering wheel
 	var seat := Color(0.16, 0.14, 0.12)
+	tb.add_box_at(Vector3(W * 0.88, 0.02, cab_l * 0.9), Color(0.08, 0.08, 0.09), Vector3(0, belt + 0.005, cz))
 	for sx: float in [-0.32, 0.32]:
-		tb.add_box_at(Vector3(0.44, 0.3, 0.5), seat, Vector3(sx, ground + bh + 0.1, cz - 0.1))
-		tb.add_box_at(Vector3(0.44, 0.55, 0.12), seat, Vector3(sx, ground + bh + 0.33, cz + 0.15))
-		tb.add_box_at(Vector3(0.24, 0.16, 0.1), seat, Vector3(sx, ground + bh + 0.66, cz + 0.16))
-	tb.add_box_at(Vector3(W * 0.8, 0.22, 0.4), Color(0.1, 0.1, 0.11), Vector3(0, ground + bh + 0.12, cz - cab_l * 0.5 + 0.2))
-	cb.add_cylinder(0.17, 0.17, 0.03, Color(0.2, 0.2, 0.22), Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, PI * 0.4), Vector3(-0.32, ground + bh + 0.42, cz - cab_l * 0.5 + 0.45)), 12)
+		tb.add_box_at(Vector3(0.44, 0.06, 0.5), seat, Vector3(sx, belt + 0.03, cz - 0.1))
+		tb.add_box_at(Vector3(0.44, gh * 0.62, 0.12), seat, Vector3(sx, belt + gh * 0.31, cz + 0.15))
+		tb.add_box_at(Vector3(0.24, 0.14, 0.1), seat, Vector3(sx, belt + gh * 0.62 + 0.07, cz + 0.16))
+	tb.add_box_at(Vector3(W * 0.8, 0.1, 0.4), Color(0.1, 0.1, 0.11), Vector3(0, belt + 0.05, zf_roof - 0.05))
+	cb.add_cylinder(0.17, 0.17, 0.03, Color(0.2, 0.2, 0.22), Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, PI * 0.4), Vector3(-0.32, belt + 0.28, zf_roof + 0.12)), 12)
 	# hood and trunk lids (paint), raked
 	var hood_l := maxf((L * 0.5) - (cab_l * 0.5 - cz) - 0.3, 0.4)
 	pb.add_box_at(Vector3(W * 0.94, 0.08, hood_l), paint, Vector3(0, ground + bh + 0.03, cz - cab_l * 0.5 - hood_l * 0.5 - 0.1))
@@ -198,12 +210,13 @@ static func build(kind: String, paint: Color, roof: Color = Color(-1, 0, 0), pla
 	body_root.add_child(door)
 	var db := MeshBatch.new()
 	db.add_box_at(Vector3(0.05, bh * 0.78, dl - 0.04), paint, Vector3(-0.012, ground + bh * 0.52, dl * 0.5))
-	db.add_box_at(Vector3(0.05, gh * 0.9, dl * 0.8), roof_c, Vector3(W * 0.035 - 0.012, gy + gh * 0.5 - 0.01, dl * 0.5 - 0.05))   # window frame
+	db.add_box_at(Vector3(0.05, 0.03, dl * 0.8), roof_c, Vector3(W * 0.05 - 0.012, belt + 0.015, dl * 0.5 - 0.05))   # window sill
+	db.add_box_at(Vector3(0.05, gh, 0.05), roof_c, Vector3(W * 0.05 - 0.012, gy, 0.03))                              # window frame post
 	var door_mi := MeshInstance3D.new()
 	door_mi.mesh = db.commit_with(_paint_mat)
 	door.add_child(door_mi)
 	var dgb := MeshBatch.new()
-	dgb.add_box_at(Vector3(0.05, gh * 0.8, dl * 0.7), glass, Vector3(W * 0.035 - 0.014, gy, dl * 0.5 - 0.05))
+	dgb.add_box_at(Vector3(0.02, gh - 0.04, dl * 0.8), glass, Vector3(W * 0.05 - 0.008, gy, dl * 0.5 - 0.05))
 	var door_glass := MeshInstance3D.new()
 	door_glass.mesh = dgb.commit_with(_glass_mat)
 	door_glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -215,7 +228,6 @@ static func build(kind: String, paint: Color, roof: Color = Color(-1, 0, 0), pla
 	door.add_child(door_handle)
 	var gap := MeshBatch.new()
 	gap.add_box_at(Vector3(0.02, bh * 0.78, dl - 0.04), Color(0.03, 0.03, 0.035), Vector3(-W * 0.5 - 0.012, ground + bh * 0.52, zf + dl * 0.5))
-	gap.add_box_at(Vector3(0.02, gh * 0.8, dl * 0.7), Color(0.03, 0.03, 0.035), Vector3(-W * 0.465 - 0.014, gy, zf + dl * 0.5 - 0.05))
 	var gap_mi := MeshInstance3D.new()
 	gap_mi.mesh = gap.commit_with(_trim_mat)
 	gap_mi.visible = false
@@ -223,8 +235,8 @@ static func build(kind: String, paint: Color, roof: Color = Color(-1, 0, 0), pla
 	root.set_meta("door_l", door)
 	root.set_meta("door_gap", gap_mi)
 	root.set_meta("door_point", Vector3(-(W * 0.5 + 0.75), 0.0, zf + dl * 0.5))
-	root.set_meta("seat", Vector3(-0.32, ground + bh + 0.25, cz - 0.05))
-	root.set_meta("roof_y", cy + cab_h * 0.18 + cab_h * 0.5)
+	root.set_meta("seat", Vector3(-0.32, belt + 0.03, cz - 0.05))   # cushion top (driver side)
+	root.set_meta("roof_y", roof_under)
 	# wheels: tyre + rim with spokes, as separate nodes so they spin / steer
 	var wheels: Array[Node3D] = []
 	for sz: float in [-1.0, 1.0]:
@@ -256,3 +268,40 @@ static func build(kind: String, paint: Color, roof: Color = Color(-1, 0, 0), pla
 static func random_kind(rng: RandomNumberGenerator) -> String:
 	var r := rng.randf()
 	return "sedan" if r < 0.45 else ("suv" if r < 0.7 else ("hatch" if r < 0.9 else "pickup"))
+
+
+# A baked seated person behind the wheel (same bodies as the crowd), hips on
+# the cushion and sunk a little if the head would touch the roof.
+static func add_driver(car: Node3D, rng: RandomNumberGenerator, tree_parent: Node) -> void:
+	var sex := "F" if rng.randf() < 0.5 else "M"
+	var spec: Dictionary = SkinnedPeople.BODIES[sex]
+	var hairs: Array = spec["hairs"].keys()
+	var hair: String = hairs[rng.randi() % hairs.size()]
+	var casual: Array = SkinnedPeople.CASUAL_OUTFITS[sex]
+	var outfit: String = casual[rng.randi() % casual.size()]
+	var skin: Color = SkinnedPeople.SKIN_TINTS[rng.randi() % SkinnedPeople.SKIN_TINTS.size()]
+	var hair_tint: Color = SkinnedPeople.HAIR_TINTS[rng.randi() % SkinnedPeople.HAIR_TINTS.size()]
+	var baked := SkinnedPeople.bake(sex, hair, "Sitting_Idle", rng.randf_range(0.0, 1.5), tree_parent, {}, "average")
+	if baked["body"] == null:
+		return
+	var aabb: AABB = (baked["body"] as Mesh).get_aabb()
+	var seat: Vector3 = car.get_meta("seat")
+	var roof_y: float = car.get_meta("roof_y")
+	# hips of the seated clip sit about 0.45 m above its root
+	var root_y := minf(seat.y + 0.06 - 0.45, roof_y - 0.08 - aabb.end.y)
+	var xf := Transform3D(Basis.IDENTITY, Vector3(seat.x, root_y, seat.z))
+	# body in its outfit, eyes, and brows + hair on the hair texture: three draws
+	var groups := [[[baked["body"]], skin, SkinnedPeople.outfit_material(outfit)],
+		[[baked["eyes"]], Color(1, 1, 1), SkinnedPeople.eye_material()],
+		[[baked["brows"], baked["hair"]], hair_tint, SkinnedPeople.hair_material(SkinnedPeople.hair_tex_for(hair))]]
+	for g in groups:
+		var b := MeshBatch.new()
+		var any := false
+		for m in g[0]:
+			if m:
+				b.add(m, xf, g[1])
+				any = true
+		if any:
+			var mi := MeshInstance3D.new()
+			mi.mesh = b.commit_with(g[2])
+			car.add_child(mi)

@@ -48,20 +48,25 @@ func build() -> void:
 	_set_mode("foot")
 
 
-# Play the seated clip once to learn where the head ends up, so the root can
-# be placed with the head just under the roof (legs vanish into the floor).
+# Play the seated clip once to learn where the hips and head end up, then
+# place the root so the hips rest on the cushion, sinking a little further if
+# the head would otherwise touch the roof (legs vanish into the body shell).
 func _measure_sitting() -> void:
 	var skel: Skeleton3D = walker.skel
 	var head := skel.find_bone("Head")
+	var hips := skel.find_bone("Hips")
 	walker.anim.play("Sitting_Idle")
 	walker.anim.seek(0.2, true)
 	skel.force_update_all_bone_transforms()
 	var head_h := skel.get_bone_global_pose(head).origin.y if head >= 0 else 0.0
+	var hip_h := skel.get_bone_global_pose(hips).origin.y if hips >= 0 else 0.0
 	if head_h < 0.5 or head_h > 1.3:
 		head_h = 0.95   # pose not applied yet (or odd rig): typical seated head height
+	if hip_h < 0.2 or hip_h > 0.7:
+		hip_h = 0.45
+	var seat: Vector3 = car.get_meta("seat")
 	var roof_y: float = car.get_meta("roof_y")
-	sit_root_y = roof_y - 0.16 - head_h
-	print("driver: seated head %.2f m, roof %.2f m, root at %.2f m" % [head_h, roof_y, sit_root_y])
+	sit_root_y = minf(seat.y + 0.06 - hip_h, roof_y - 0.22 - head_h)
 	walker.anim.play("Idle")
 
 

@@ -21,6 +21,7 @@ static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
 			player = StreetWalkerLayer.new()
 		"drive":
 			player = VehiclePlayerLayer.new()
+			(player as VehiclePlayerLayer).with_driver = true
 			ctx.hud_hint = "Up: accelerate   Down: brake / reverse   Left / Right: steer   Drag: look around"
 		_:
 			player = DriverLayer.new()

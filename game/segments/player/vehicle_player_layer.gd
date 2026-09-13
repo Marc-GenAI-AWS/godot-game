@@ -10,7 +10,8 @@ var speed := 0.0
 var steer := 0.0
 var spin := 0.0
 var kind := "hatch"
-var brake_latch := false   # Down while rolling brakes to a stop; release and press again to reverse
+var brake_latch := false
+var with_driver := false   # drive-only variant: bake a seated driver so the cabin isn't empty   # Down while rolling brakes to a stop; release and press again to reverse
 var paint := Color(0.95, 0.75, 0.1)
 var roof := Color(0.08, 0.08, 0.08)
 
@@ -27,6 +28,10 @@ const PROFILE := {"dist": 7.0, "height": 2.4, "look": 0.8, "fov": 66.0, "lookahe
 func build() -> void:
 	car = Car.build(kind, paint, roof)
 	car.name = "PlayerCar"
+	if with_driver:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 99
+		Car.add_driver(car, rng, self)
 	car.position = Vector3((ctx as StreetContext).LANE_X, 0.0, 0.0)   # right-hand traffic
 	add_child(car)
 	ctx.player = car

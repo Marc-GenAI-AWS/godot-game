@@ -44,6 +44,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 			car.position = Vector3(lane[0], 0.0, z)
 			car.rotation.y = 0.0 if lane[1] < 0.0 else PI
 			chunk.add_child(car)
+			Car.add_driver(car, rng, self)
 			traffic.append({"node": car, "dir": lane[1], "cruise": rng.randf_range(11.0, 15.5), "speed": 0.0, "lane": lane[0], "wheels": car.get_meta("wheels"), "wr": car.get_meta("wheel_radius"), "spin": 0.0})
 
 
