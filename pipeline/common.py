@@ -62,7 +62,8 @@ def read_jsonl(path):
 
 def extract_code(text: str) -> str:
     """Return the body of the first fenced gdscript block, or the whole text."""
-    m = re.search(r"```(?:gdscript|gd)?\s*\n(.*?)```", text, re.S)
+    # greedy to the LAST fence: a nested fence inside the block would otherwise end it early
+    m = re.search(r"```(?:gdscript|gd)?\s*\n(.*)```", text, re.S)
     body = (m.group(1) if m else text)
     # models sometimes nest a second fence inside the first: drop any fence lines
     body = "\n".join(l for l in body.splitlines() if not l.strip().startswith("```"))
