@@ -23,7 +23,7 @@ digraph pipeline {
   }
 
   subgraph cluster_m1 {
-    label="M1  Verifier  (done for sky)"; style="rounded,filled"; fillcolor="#eef7ee"; color="#7bb07b";
+    label="M1  Verifier  (done for sky, vegetation, props, ground, water)"; style="rounded,filled"; fillcolor="#eef7ee"; color="#7bb07b";
     v1 [label="Static gate\nextends SceneLayer, no forbidden APIs", fillcolor="#cfe9cf"];
     v2 [label="Runtime gate\nheadless boot, no script errors", fillcolor="#cfe9cf"];
     v3 [label="Native capture\nGPU, 3 views, stats.json", fillcolor="#cfe9cf"];
@@ -35,7 +35,7 @@ digraph pipeline {
   }
 
   subgraph cluster_m2 {
-    label="M2  Data generation  (running: 120 sky briefs)"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
+    label="M2  Data generation  (sky done: 293 examples; vegetation + props running; ground + water queued)"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
     d1 [label="Brief sampler\ntime of day x weather x palette", fillcolor="#ffe3b0"];
     d2 [label="Teacher\nClaude Sonnet 5 writes 2 candidates / brief", fillcolor="#ffe3b0"];
     d3 [label="Verify\npass -> example, fail -> evidence", fillcolor="#ffe3b0"];
@@ -47,36 +47,36 @@ digraph pipeline {
   }
 
   subgraph cluster_m3 {
-    label="M3  Fine-tune specialists  (next, SageMaker)"; style="rounded,filled"; fillcolor="#e9f0fb"; color="#5b8dd6";
-    t1 [label="SFT training job\nQwen2.5-Coder-7B + LoRA per segment", fillcolor="#cfdcf5"];
-    t2 [label="Bake-off\n1.5B / 3B / 7B on held-out briefs", fillcolor="#cfdcf5"];
-    t3 [label="Evaluate\nverifier pass rate vs teacher", fillcolor="#cfdcf5"];
-    t4 [label="Model Registry\napproval gated on pass rate", fillcolor="#cfdcf5"];
+    label="M3  Fine-tune specialists  (sky done: 7B / 3B / 1.5B bake-off; other segments queued)"; style="rounded,filled"; fillcolor="#eef7ee"; color="#7bb07b";
+    t1 [label="SFT training job\nQwen2.5-Coder + LoRA per segment (SageMaker, us-east-2)", fillcolor="#cfe9cf"];
+    t2 [label="Bake-off\nsky: 1.5B and 3B 77% one-shot, 7B 60%, teacher 60%", fillcolor="#cfe9cf"];
+    t3 [label="Evaluate\nsame verifier, one self-revision round", fillcolor="#cfe9cf"];
+    t4 [label="Model Registry\napproval gated on pass rate (not yet run)", fillcolor="#cfdcf5"];
     t1 -> t2 -> t3 -> t4;
     {rank=same; t1; t2; t3; t4;}
   }
 
   subgraph cluster_m4 {
-    label="M4  Agentic loop  (built for one segment; composite verifier next)"; style="rounded,filled"; fillcolor="#e9f0fb"; color="#5b8dd6";
-    l1 [label="Director\nClaude Fable 5.1: scene brief -> segment briefs\n(palette, scale, style shared)", fillcolor="#cfdcf5"];
-    l2 [label="Specialists\nsky first, props before crowd,\nplayer before camera, rest in parallel", fillcolor="#cfdcf5"];
-    l3 [label="Per-layer verifier\neach layer alone, rendered in the scene", fillcolor="#cfdcf5"];
+    label="M4  Agentic loop  (runs with the trained 3B sky specialist; composite verifier next)"; style="rounded,filled"; fillcolor="#e9f0fb"; color="#5b8dd6";
+    l1 [label="Director\nClaude Fable 5.1: scene brief -> segment briefs\n(palette, scale, style shared)", fillcolor="#cfe9cf"];
+    l2 [label="Specialists\nsky: 3B adapter (3 briefs accepted end to end)\nothers: shipped gold layers until trained", fillcolor="#cfe9cf"];
+    l3 [label="Per-layer verifier\neach layer alone, rendered in the scene", fillcolor="#cfe9cf"];
     l3b [label="Composite verifier\nassembled scene, whole-scene rubric,\nproblems attributed to segments", fillcolor="#ffffff", color="#5b8dd6", penwidth=2, style="rounded,filled,dashed"];
-    l4 [label="Revise\nup to 3 rounds from evidence", fillcolor="#cfdcf5"];
-    l5 [label="Publish\ninstall layers, export, GitHub Pages", fillcolor="#cfdcf5"];
+    l4 [label="Revise\nup to 3 rounds from evidence", fillcolor="#cfe9cf"];
+    l5 [label="Publish\ninstall layers, export, GitHub Pages", fillcolor="#cfe9cf"];
     l1 -> l2 -> l3 -> l3b -> l4 -> l5;
     l4 -> l2 [constraint=false, label="revision briefs", style=dashed];
     {rank=same; l1; l2; l3; l3b; l4; l5;}
   }
 
   subgraph cluster_m5 {
-    label="M5  Segments through M1-M4   (each needs: contract, rubric, brief sampler, checks, capture recipe)"; style="rounded,filled"; fillcolor="#f3f3f3"; color="#999999";
-    g0 [label="sky\ncontract, rubric, sampler, checks: done\nspecialist: training next", fillcolor="#cfe9cf"];
-    g1 [label="ground / water\nterrain queries, winding, wet band", fillcolor="#e0e0e0"];
+    label="M5  Segments through M1-M4   (each needs: contract, rubric, brief sampler, checks, capture recipe)   <- current milestone"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
+    g0 [label="sky\nspecialist trained + evaluated\n(1.5B / 3B beat the teacher one-shot)", fillcolor="#cfe9cf"];
+    g1 [label="ground / water\ncontract, rubric, sampler, checks: done\ndata runs queued", fillcolor="#cfdcf5"];
     g2 [label="camera\nframing box, stabilisation", fillcolor="#e0e0e0"];
     g3 [label="fauna\nflock motion, flush behaviour", fillcolor="#e0e0e0"];
-    g4 [label="props\nplacement, spots for the crowd", fillcolor="#e0e0e0"];
-    g5 [label="vegetation\nspecies generators, budgets", fillcolor="#e0e0e0"];
+    g4 [label="props\ncontract + checks done (spots, contact validator)\ndata run in progress", fillcolor="#ffe3b0"];
+    g5 [label="vegetation\ncontract + checks done (placement zones, counts)\ndata run done, re-scoring with fixed views", fillcolor="#ffe3b0"];
     g6 [label="architecture\nlots, facades, skyline", fillcolor="#e0e0e0"];
     g7 [label="crowd\ncontact validator, gaits", fillcolor="#e0e0e0"];
     g8 [label="characters: body + motion\nSFT only, cached assets", fillcolor="#e0e0e0"];

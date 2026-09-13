@@ -43,11 +43,11 @@ flowchart TB
 | Milestone | State | Exit criterion |
 |---|---|---|
 | M0 Gold scenes | done | two worlds under one contract, published |
-| M1 Verifier | done for sky | gates veto, checks + judge agree with a human anchor set |
-| M2 Data generation | done for sky | 293 verified examples over 200 briefs (two runs, contract v1.1), 30 held-out briefs, 165 preference pairs |
-| M3 Fine-tune | done for sky | 7B / 3B / 1.5B LoRA adapters; 1.5B and 3B pass 77% of held-out briefs one-shot vs the teacher's 60%; registry step not yet run |
-| M4 Agentic loop | runs with a trained specialist | three scene briefs accepted end to end with the 3B sky specialist (one first try, two after one revision); composite verifier still to build |
-| M5 Segments | sky only | each segment has a contract, rubric, sampler, checks and capture recipe, and a specialist through M1 to M4, in the order shown |
+| M1 Verifier | done for sky, vegetation, props, ground, water | gates veto, checks + judge agree with a human anchor set |
+| M2 Data generation | sky done (293 examples); vegetation and props running; ground and water queued | ~100 verified examples per segment across the brief space, held-out slice kept |
+| M3 Fine-tune | sky done: 1.5B and 3B adapters beat the teacher one-shot (77% vs 60%); other segments queued | a specialist whose held-out pass rate is within reach of the teacher's, registered |
+| M4 Agentic loop | runs with the trained 3B sky specialist (three scene briefs accepted end to end) | composite verifier added; a new scene brief rendered and accepted with trained specialists, no hand edits |
+| M5 Segments (current) | five of ten segments have contracts, rubrics, samplers and checks; sky trained; vegetation and props in their data runs; ground and water queued | each segment has a specialist through M1 to M4, in the order shown |
 | M6 RL | later | pass rate above SFT on the same held-out briefs, anchor agreement unchanged |
 | M7 Holistic generation | later | one brief in, a playable scene out: the director writes the world assembly, every layer comes from a specialist, the composite verifier accepts |
 
