@@ -61,6 +61,7 @@ def main():
         num_train_epochs=a.epochs,
         max_steps=a.max_steps,
         per_device_train_batch_size=a.batch,
+        per_device_eval_batch_size=1,     # 8 x 6k-token logits was a 16 GB allocation
         gradient_accumulation_steps=a.grad_accum,
         learning_rate=a.lr,
         lr_scheduler_type="cosine",
