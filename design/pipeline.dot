@@ -63,7 +63,7 @@ digraph pipeline {
     l3 [label="Per-layer verifier\neach layer alone, rendered in the scene", fillcolor="#cfe9cf"];
     l3b [label="Composite verifier\nassembled scene, whole-scene rubric,\nproblems attributed to segments", fillcolor="#ffffff", color="#5b8dd6", penwidth=2, style="rounded,filled,dashed"];
     l4 [label="Revise\nup to 3 rounds from evidence", fillcolor="#cfe9cf"];
-    l5 [label="Publish\ninstall layers, export, GitHub Pages", fillcolor="#cfe9cf"];
+    l5 [label="Publish\ninstall layers: automated (director)\nweb export + GitHub Pages: by hand", fillcolor="#ffe3b0"];
     l1 -> l2 -> l3 -> l3b -> l4 -> l5;
     l4 -> l2 [constraint=false, label="revision briefs", style=dashed];
     {rank=same; l1; l2; l3; l3b; l4; l5;}

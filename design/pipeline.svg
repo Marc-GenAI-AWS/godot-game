@@ -31,8 +31,8 @@
 </g>
 <g id="clust9" class="cluster">
 <title>cluster_m4</title>
-<path fill="#e9f0fb" stroke="#5b8dd6" d="M426,-398C426,-398 1957,-398 1957,-398 1963,-398 1969,-404 1969,-410 1969,-410 1969,-492 1969,-492 1969,-498 1963,-504 1957,-504 1957,-504 426,-504 426,-504 420,-504 414,-498 414,-492 414,-492 414,-410 414,-410 414,-404 420,-398 426,-398"/>
-<text text-anchor="middle" x="1191.5" y="-490.4" font-family="Helvetica,sans-Serif" font-size="12.00">M4 &#160;Agentic loop &#160;(runs with the trained 3B sky specialist; composite verifier next)</text>
+<path fill="#e9f0fb" stroke="#5b8dd6" d="M426,-398C426,-398 1967,-398 1967,-398 1973,-398 1979,-404 1979,-410 1979,-410 1979,-492 1979,-492 1979,-498 1973,-504 1967,-504 1967,-504 426,-504 426,-504 420,-504 414,-498 414,-492 414,-492 414,-410 414,-410 414,-404 420,-398 426,-398"/>
+<text text-anchor="middle" x="1196.5" y="-490.4" font-family="Helvetica,sans-Serif" font-size="12.00">M4 &#160;Agentic loop &#160;(runs with the trained 3B sky specialist; composite verifier next)</text>
 </g>
 <g id="clust11" class="cluster">
 <title>cluster_m5</title>
@@ -393,15 +393,16 @@
 <!-- l5 -->
 <g id="node24" class="node">
 <title>l5</title>
-<path fill="#cfe9cf" stroke="#444444" d="M1949.5,-448C1949.5,-448 1778.5,-448 1778.5,-448 1772.5,-448 1766.5,-442 1766.5,-436 1766.5,-436 1766.5,-424 1766.5,-424 1766.5,-418 1772.5,-412 1778.5,-412 1778.5,-412 1949.5,-412 1949.5,-412 1955.5,-412 1961.5,-418 1961.5,-424 1961.5,-424 1961.5,-436 1961.5,-436 1961.5,-442 1955.5,-448 1949.5,-448"/>
-<text text-anchor="middle" x="1864" y="-433.2" font-family="Helvetica,sans-Serif" font-size="11.00">Publish</text>
-<text text-anchor="middle" x="1864" y="-421.2" font-family="Helvetica,sans-Serif" font-size="11.00">install layers, export, GitHub Pages</text>
+<path fill="#ffe3b0" stroke="#444444" d="M1959,-454C1959,-454 1779,-454 1779,-454 1773,-454 1767,-448 1767,-442 1767,-442 1767,-418 1767,-418 1767,-412 1773,-406 1779,-406 1779,-406 1959,-406 1959,-406 1965,-406 1971,-412 1971,-418 1971,-418 1971,-442 1971,-442 1971,-448 1965,-454 1959,-454"/>
+<text text-anchor="middle" x="1869" y="-439.2" font-family="Helvetica,sans-Serif" font-size="11.00">Publish</text>
+<text text-anchor="middle" x="1869" y="-427.2" font-family="Helvetica,sans-Serif" font-size="11.00">install layers: automated (director)</text>
+<text text-anchor="middle" x="1869" y="-415.2" font-family="Helvetica,sans-Serif" font-size="11.00">web export + GitHub Pages: by hand</text>
 </g>
 <!-- l4&#45;&gt;l5 -->
 <g id="edge20" class="edge">
 <title>l4&#45;&gt;l5</title>
-<path fill="none" stroke="#555555" d="M1717.11,-430C1730.86,-430 1744.61,-430 1758.36,-430"/>
-<polygon fill="#555555" stroke="#555555" points="1758.45,-432.8 1766.45,-430 1758.45,-427.2 1758.45,-432.8"/>
+<path fill="none" stroke="#555555" d="M1717.08,-430C1730.97,-430 1744.86,-430 1758.75,-430"/>
+<polygon fill="#555555" stroke="#555555" points="1758.93,-432.8 1766.93,-430 1758.93,-427.2 1758.93,-432.8"/>
 </g>
 <!-- g1 -->
 <g id="node26" class="node">
