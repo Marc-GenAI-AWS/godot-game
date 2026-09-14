@@ -15,7 +15,7 @@ REGION = os.environ.get("AWS_REGION", "us-west-2")
 
 # Bedrock inference profiles (on-demand invocation needs the profile id).
 TEACHER_MODEL = os.environ.get("TEACHER_MODEL", "us.anthropic.claude-sonnet-5")
-JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "us.anthropic.claude-fable-5-1")
+JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "us.anthropic.claude-sonnet-5")   # Fable judge was ~5x the cost (Sep 13 bill)
 DIRECTOR_MODEL = os.environ.get("DIRECTOR_MODEL", "us.anthropic.claude-fable-5-1")
 
 CONTRACT_VERSION = "v1.3"
