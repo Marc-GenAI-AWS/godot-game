@@ -72,7 +72,7 @@ digraph pipeline {
   subgraph cluster_m5 {
     label="M5  Segments through M1-M4   (each needs: contract, rubric, brief sampler, checks, capture recipe)   <- current milestone"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
     g0 [label="sky\nspecialist trained + evaluated\n(1.5B / 3B beat the teacher one-shot)", fillcolor="#cfe9cf"];
-    g1 [label="ground / water\nground: 28 examples, ground3 (72 briefs) verifying\nwater: colour table recalibrated (4 -> 16 examples);\nfoam shader fix before water3", fillcolor="#ffe3b0"];
+    g1 [label="ground / water\nground: 3B trained on 102 examples, held out 1/7 (teacher 31%);\nstreet weak (parse errors, road features) -> more street data\nwater: foam shader + colour fixed, 18 examples; water3 verifying", fillcolor="#ffe3b0"];
     g2 [label="camera\nframing box, stabilisation", fillcolor="#e0e0e0"];
     g3 [label="fauna\nflock motion, flush behaviour", fillcolor="#e0e0e0"];
     g4 [label="props\n145 examples (street judge vs shipped street: 65 -> 145)\nready for 3B training; props3 queued", fillcolor="#ffe3b0"];
