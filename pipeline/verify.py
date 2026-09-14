@@ -291,15 +291,29 @@ CHECKS = {"sky": sky_checks, "vegetation": vegetation_checks, "props": props_che
 
 # ----------------------------------------------------------------- judge ---
 
-def judge(segment: str, brief: dict, frames: list) -> dict:
+def judge(segment: str, brief: dict, frames: list, reference: list | None = None) -> dict:
     rubric = read(PIPE / "rubrics" / f"{segment}.md")
+    spec = SEGMENTS[segment]
+    world = brief.get("world", spec["world"])
+    labels = spec.get("views_by_world", {}).get(world) or spec.get("views") or \
+        {"sky": ['default view', 'tilted up', 'side view']}.get(segment, ['default view', 'turned to one side', 'turned to the other side'])
     blocks = [{"text": "Brief:\n" + json.dumps({k: v for k, v in brief.items() if k != "id"}, indent=2)}]
+    ref_desc = spec.get("reference", {}).get(world)
+    if reference and ref_desc:
+        # knob segments: the shipped layer under the same views anchors the judge's
+        # sense of how this scene's lighting renders a colour
+        blocks.append({"text": f"Reference frames: the shipped default layer under the same views ({ref_desc}). "
+                               "The scene's daylight lightens and cools every colour, so judge the candidate's colours and tones "
+                               "relative to these frames, not against the nominal numbers in the brief. The reference is not "
+                               "what the brief asks for; it only shows how a known look renders here."})
+        for i, f in enumerate(reference):
+            blocks.append({"text": f"Reference {i + 1} ({labels[i] if i < len(labels) else 'extra'}):"})
+            blocks.append(image_block(f))
+        blocks.append({"text": "Candidate frames follow."})
     for i, f in enumerate(frames):
-        labels = {"sky": ['default view', 'tilted up', 'side view'], "ground": ['default view', 'tilted down at the ground', 'side view'],
-                  "water": ['default view', 'turned toward the sea', 'tilted down']}.get(segment, ['default view', 'turned to one side', 'turned to the other side'])
-        blocks.append({"text": f"Frame {i + 1} ({labels[i] if i < 3 else 'extra'}):"})
+        blocks.append({"text": f"Frame {i + 1} ({labels[i] if i < len(labels) else 'extra'}):"})
         blocks.append(image_block(f))
-    blocks.append({"text": "Score the frames against the brief. JSON only."})
+    blocks.append({"text": "Score the candidate frames against the brief. JSON only."})
     text, usage = converse(JUDGE_MODEL, rubric, blocks, max_tokens=3000)
     try:
         j = parse_json(text)
@@ -357,7 +371,7 @@ def verify_one(row: dict, out_dir: Path, do_judge=True) -> dict:
     res["checks"] = {"score": cscore, "notes": notes}
     jscore = None
     if do_judge:
-        j = judge(segment, brief, stats["frames"])
+        j = judge(segment, brief, stats["frames"], base.get("frames") if "reference" in spec else None)
         res["judge"] = j
         jscore = float(j.get("overall", 0)) / 10.0
     if jscore is None:

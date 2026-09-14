@@ -1,4 +1,4 @@
-# Water specialist contract (v1)
+# Water specialist contract (v1.1)
 
 You write ONE file: the sea layer of the beach world. It is one large flat
 grid mesh at sea level with a shader that does the swell, the depth colour,
@@ -40,7 +40,9 @@ edge zones and the breaker lines; you choose the values:
 
 - `noise_tex` (use `ctx.noise_tex`), `sand_slope` (`BeachContext.SAND_SLOPE`),
   `tide_amp` (0.14; keep it),
-- colours `deep_color`, `shallow_color`, `sand_color` (vec3),
+- colours `deep_color`, `shallow_color`, `sand_color` (pass `Color(r, g, b)`
+  values, never `Vector3`: a raw vec3 skips the sRGB conversion and renders
+  neon-bright),
 - `swell_amp` (0.3 calm .. 1 gentle .. 2 choppy), `chop` (0 glassy .. 1.5),
 - `foam_amount` (0 none .. 1 lacy band .. 2 heavy), `breaker_strength`
   (0 none .. 1.5), `breaker_spacing` (0.5 tight .. 2 wide),
@@ -54,10 +56,12 @@ edge zones and the breaker lines; you choose the values:
   hidden) to +520 and z as above, 3 m step, height 0 (the shader adds tide
   and swell).
 - `ctx.time`, `ctx.noise_tex`, `ctx.sky_horizon`, `WorldContext.CHUNK`.
-  The world's tide line (`ctx.tide_reach`) follows `3.2 + 1.6 * sin(t *
-  0.55) + 0.5 * sin(t * 1.7)`; the shader's tide term
+  The sea level is `ctx.sea_level()` = `0.14 * sin(t * 0.55) + 0.05 * sin(t
+  * 1.7)`; the world's wet line (`ctx.tide_reach`) sits 2.5 m up the beach
+  from where that level meets the sand slope. The shader's tide term
   `tide_amp * sin(TIME * 0.55) + 0.05 * sin(TIME * 1.7)` is what makes the
-  water's edge and the wet sand agree, so keep those frequencies.
+  water's edge and the wet sand agree, so keep `tide_amp` at 0.14 and those
+  frequencies.
 
 Forbidden: `OS`, `FileAccess`, `DirAccess`, `HTTPRequest`, `JavaScriptBridge`,
 `get_tree().quit()`, `preload()`, `load()` of anything but the water shader,
@@ -82,10 +86,15 @@ Forbidden: `OS`, `FileAccess`, `DirAccess`, `HTTPRequest`, `JavaScriptBridge`,
 ## Capture recipe (what the verifier renders)
 
 Three 1280x720 frames from the chase camera: the default view at 3 s (the
-shoreline runs down the right of the frame), a view turned toward the sea at
-6 s, and a tilted-down view at 9 s. The judge scores sea state, colour and
-depth gradient, the water's edge and foam, breaker lines, and artifacts
-(seams, flat untextured water, edges of the mesh, z-fighting with the sand).
+shoreline runs down the right of the frame); then the walker turns to the
+sea and walks to the wet band, and the camera tilts down at their feet at
+7 s (wet sand, the water's edge and the shallows fill the frame); then the
+camera turns to look along the shore with the sea on the left at 9 s. The
+judge also sees the shipped default sea under the same views and scores
+colour relative to it (this scene's daylight lightens every colour). It
+scores sea state, colour and depth gradient, the water's edge and foam,
+breaker lines, and artifacts (seams, flat untextured water, edges of the
+mesh, z-fighting with the sand).
 
 ## Gold example
 

@@ -20,6 +20,7 @@ var capture_dir := ""
 var shots: Array[float] = []
 var script_events: Array = []      # [time, kind, key/dx, hold/dy]
 var _held: Array = []              # [release_time, keycode]
+var _drag_delta := Vector2.ZERO    # where the current injected drag ended
 var _fps_samples: Array[float] = []
 var _draw_calls := 0
 var _ready_time := 0.0
@@ -157,6 +158,7 @@ func _drag(dx: float, dy: float) -> void:
 	var move := InputEventMouseMotion.new()
 	move.position = centre + Vector2(dx, dy)
 	move.relative = Vector2(dx, dy)
+	_drag_delta = Vector2(dx, dy)
 	move.button_mask = MOUSE_BUTTON_MASK_LEFT
 	Input.parse_input_event(move)
 
@@ -165,7 +167,9 @@ func _drag_release() -> void:
 	var up := InputEventMouseButton.new()
 	up.button_index = MOUSE_BUTTON_LEFT
 	up.pressed = false
-	up.position = get_viewport().get_visible_rect().size * 0.5
+	# release where the drag ended, so a drag is not mistaken for a tap
+	# (a tap toggles walking)
+	up.position = get_viewport().get_visible_rect().size * 0.5 + _drag_delta
 	Input.parse_input_event(up)
 
 

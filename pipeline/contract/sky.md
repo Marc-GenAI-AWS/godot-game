@@ -65,6 +65,10 @@ Everything else in the context is another segment's business. Do not call
   (`light_angular_distance` does nothing). Soft light is therefore expressed
   by turning the sun's `shadow_enabled` off (overcast, heavy haze, night) or
   keeping its energy low relative to ambient, never by shadow softness.
+- Ambient fill: keep `AMBIENT_SOURCE_SKY` but set `ambient_light_color` to a
+  desaturated version of the horizon colour and `ambient_light_sky_contribution`
+  around 0.3 (as the gold does). With the sky dome as the only fill, shadows
+  and white surfaces turn saturated blue.
 - Night briefs have a negative sun elevation (the sun is below the horizon);
   place the moon, the directional light, 15 to 45 degrees above the horizon
   at the brief's azimuth. The moon is the directional light (cool colour,
@@ -139,9 +143,13 @@ func build() -> void:
 	sky.sky_material = sky_mat
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
+	# Ambient: mostly a desaturated daylight grey-blue with a little of the
+	# sky's own colour, so shadows and white surfaces do not turn saturated
+	# blue (the sky dome's zenith on its own is far too blue as fill light).
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_sky_contribution = 1.0
-	env.ambient_light_energy = 0.45
+	env.ambient_light_color = ctx.sky_horizon.lerp(Color(0.78, 0.78, 0.78), 0.5)
+	env.ambient_light_sky_contribution = 0.3
+	env.ambient_light_energy = 0.5
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_exposure = 0.82

@@ -1,4 +1,4 @@
-# Ground specialist contract (v1)
+# Ground specialist contract (v1.1)
 
 You write ONE file: the ground layer for the world named in the brief. On the
 beach it is the sand surface (a height-field mesh with a sand shader: grain,
@@ -55,14 +55,15 @@ texture (a generated `ImageTexture` on a `StandardMaterial3D` is fine).
 - `res://segments/ground/shaders/sand.gdshader` uniforms:
   `noise_tex` (use `ctx.noise_tex`), `grain_normal` (use `ctx.sand_normal_tex`),
   `reach_x` (float; set every frame from `ctx.tide_reach` in `tick`),
-  `dry_color`, `wet_color`, `sky_color` (vec3 colours; `sky_color` from
+  `dry_color`, `wet_color`, `sky_color` (`Color` values, never `Vector3`:
+  a raw vec3 skips the sRGB conversion and renders neon; `sky_color` from
   `ctx.sky_horizon`), `grain_scale` (0.5 coarse .. 2.0 fine, default 1),
   `wet_width` (metres of wet band, default 10; narrow 4-6, wide 12-16),
   `sheet_strength` (0 none .. 2 strong mirror sheet, default 1),
   `ripple_depth` (0 smooth packed .. 1.5 rippled, default 1),
   `mottle` (0 uniform .. 1.5 patchy, default 1).
 - `res://segments/ground/shaders/asphalt.gdshader` uniforms: `noise_tex`,
-  `base_color` (vec3), `lane_x` (`StreetContext.LANE_X`), `track_offset`,
+  `base_color` (a `Color`), `lane_x` (`StreetContext.LANE_X`), `track_offset`,
   `grain_scale` (default 1), `track_strength` (0..1.5), `stain_strength`
   (0..1.5), `patch_strength` (0..1.5), `wear` (0 fresh uniform .. 1.5 uneven).
 
@@ -73,7 +74,8 @@ Both shaders sample world-space XZ so they tile seamlessly across chunks.
 - `ctx.ground_height(x, z)`: beach sand height (slopes down into the sea at
   +X, up the beach at -X, with gentle undulation); street ground is 0.
 - Beach (`BeachContext`): sea at +X, `ctx.tide_reach` is the world X the last
-  wave reached (about 1.6 to 4.8, moving), the walker walks the sand from
+  wave reached (2.5 m up the beach from the water's edge; about -5.7 to 0.7,
+  moving with the tide), the walker walks the sand from
   x = -62 (promenade deck) to x = +4. The sand mesh must cover x from -130 to
   +70 and z from `-CHUNK * 2.2` to `CHUNK * 1.2` at a 2 m step. Shell scatter
   lives on the tide line (x from -8 to 3, some further up the beach).
@@ -112,8 +114,13 @@ above, `Shader.new()`, `shader.code`, `class_name`.
 
 ## Capture recipe (what the verifier renders)
 
-Three 1280x720 frames from the chase camera: the default view at 3 s, a
-view tilted down at the ground at 6 s, and a side view at 9 s. Numeric checks
+Three 1280x720 frames from the chase camera. Beach: the default view at 3 s;
+then the walker turns to the sea and walks to the wet band and the camera
+tilts down at their feet at 7 s (wet sand, sheet, shells, the water's edge);
+then the camera turns to look along the beach at 9 s. Street: the default
+view at 3 s, tilted down at the ground at 6 s, a side view at 9 s. The judge
+also sees the shipped default ground under the same views and scores colour
+relative to it (this scene's daylight lightens every colour). Numeric checks
 read draw calls and fps and that a ground mesh exists. The judge scores
 surface look (grain, tone), the wet band / markings, edge and kerb geometry,
 grounding of the walker and props (nothing floating or sunk), and artifacts

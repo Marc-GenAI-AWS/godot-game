@@ -18,7 +18,7 @@ TEACHER_MODEL = os.environ.get("TEACHER_MODEL", "us.anthropic.claude-sonnet-5")
 JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "us.anthropic.claude-fable-5-1")
 DIRECTOR_MODEL = os.environ.get("DIRECTOR_MODEL", "us.anthropic.claude-fable-5-1")
 
-CONTRACT_VERSION = "v1.2"
+CONTRACT_VERSION = "v1.3"
 
 # When a profile rejects calls in a transient window, try these in order.
 FALLBACKS = {
@@ -38,8 +38,20 @@ SEGMENTS = {
     # street furniture is small and near the kerb: look along the sidewalk ahead, then across the road
     "props": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-300_-40~2.5,7:Drag_-230_20~2.5",
               "script_by_world": {"street": "4:Drag_-90_-20~2.5,7:Drag_260_-10~2.5"}},
-    "ground": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_0_260~2.5,7:Drag_-330_-200~2.5"},
-    "water": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_330_0~2.5,7:Drag_0_260~2.5"},
+    # surface segments on the beach: default view, then the walker stops, turns
+    # to the sea and walks to the wet band; the camera tilts down at the feet
+    # (wet sand, water's edge, shallows), then turns to look along the shore
+    # (ground: beach side; water: sea side). The judge also gets the shipped
+    # layer's frames as a colour reference.
+    "ground": {"world": "beach", "shots": "3,7,9", "script": "3:ArrowDown,3.2:ArrowRight~0.72,4:ArrowUp,5.8:ArrowDown,6:Drag_0_260~1.5,8:Drag_-330_-260~1.5",
+               "script_by_world": {"street": "4:Drag_0_260~2.5,7:Drag_-330_-200~2.5"},
+               "views": ["default view", "tilted down at the walker's feet by the water", "turned to look along the beach"],
+               "views_by_world": {"street": ["default view", "tilted down at the ground", "side view"]},
+               "reference": {"beach": "golden fine-grain sand, a 10 m wet band with a mirror sheet at the tide line, shells along the tide line",
+                             "street": "worn grey asphalt, double yellow centre line, white edge lines, plain concrete kerbs and slab sidewalks, mown lawns"}},
+    "water": {"world": "beach", "shots": "3,7,9", "script": "3:ArrowDown,3.2:ArrowRight~0.72,4:ArrowUp,5.8:ArrowDown,6:Drag_0_260~1.5,8:Drag_330_-260~1.5",
+              "views": ["default view", "tilted down at the walker's feet by the water", "turned to look along the shore, sea on the left"],
+              "reference": {"beach": "gentle swell, turquoise tropical water, a lacy foam band at the edge, sand visible through the shallows"}},
 }
 # load() paths a segment's candidates may use (everything else is forbidden)
 ALLOWED_LOADS = {
