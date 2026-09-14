@@ -13,8 +13,17 @@ declare -A JOBS
 for m in Qwen/Qwen2.5-Coder-1.5B-Instruct Qwen/Qwen2.5-Coder-3B-Instruct; do
   tag=$(echo $m | sed 's/.*Coder-//; s/-Instruct//' | tr 'A-Z.' 'a-zp')
   echo "== $(date +%T) launching $SEG $tag"
-  out=$(.venv/bin/python sagemaker/launch_sft.py --data runs/$RUN/sft --segment $SEG --spot 0 --instance ml.g6e.xlarge --model $m 2>&1 | grep launched)
-  job=$(echo "$out" | sed 's/launched \([^;]*\);.*/\1/')
+  job=""
+  for try in $(seq 1 40); do   # the region allows one training instance per size: wait for a slot
+    for inst in ml.g6e.xlarge ml.g6e.2xlarge; do
+      out=$(.venv/bin/python sagemaker/launch_sft.py --data runs/$RUN/sft --segment $SEG --spot 0 --instance $inst --model $m 2>&1 | grep '^launched')
+      job=$(echo "$out" | sed 's/launched \([^;]*\);.*/\1/')
+      [ -n "$job" ] && break
+    done
+    [ -n "$job" ] && break
+    echo "   no free training slot (try $try); waiting"; sleep 90
+  done
+  if [ -z "$job" ]; then echo "== could not launch $SEG $tag"; continue; fi
   echo "   $job"
   JOBS[$tag]=$job
   sleep 65
