@@ -99,18 +99,19 @@ def converse(model: str, system: str, user_blocks, max_tokens=9000, temperature=
     )
     if system:
         kwargs["system"] = [{"text": system}]
-    delay = 2.0
-    for attempt in range(retries):
+    # transient service errors (throttling, brief model-side outages) can last
+    # minutes: up to ~4 minutes of backoff before giving up
+    delays = [3, 8, 15, 30, 60, 90]
+    for attempt in range(len(delays) + 1):
         try:
             r = bedrock().converse(**kwargs)
             text = "".join(b.get("text", "") for b in r["output"]["message"]["content"])
             return text, r.get("usage", {})
-        except Exception as e:  # throttling, transient
-            if attempt == retries - 1:
+        except Exception as e:
+            if attempt >= len(delays):
                 raise
-            print(f"  bedrock retry {attempt + 1}: {str(e)[:120]}")
-            time.sleep(delay)
-            delay *= 2
+            print(f"  bedrock retry {attempt + 1}: {str(e)[:120]}", flush=True)
+            time.sleep(delays[attempt])
 
 
 def image_block(path) -> dict:
