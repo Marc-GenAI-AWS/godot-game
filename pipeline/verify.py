@@ -332,6 +332,11 @@ def judge(segment: str, brief: dict, frames: list, reference: list | None = None
             j = parse_json(text2)
         except Exception:
             j = {"attributes": {}, "overall": 0, "pass": False, "revision_notes": "judge reply was not JSON: " + text2[:300]}
+    if not isinstance(j, dict):
+        j = {"attributes": {}, "overall": 0, "pass": False, "revision_notes": "judge reply was not a JSON object"}
+    # judges sometimes give an attribute as a bare score ({"density": 6}) instead of {score, evidence}
+    j["attributes"] = {k: (v if isinstance(v, dict) else {"score": v, "evidence": ""})
+                       for k, v in (j.get("attributes") or {}).items()} if isinstance(j.get("attributes"), dict) else {}
     j["usage"] = usage
     return j
 

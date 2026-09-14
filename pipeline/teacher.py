@@ -24,6 +24,11 @@ def user_prompt(brief: dict) -> str:
             "\n\nWrite the complete layer file for this brief.")
 
 
+# Street props files run long (the shipped one is ~150 lines of batched geometry):
+# 6000 and 9000 token caps cut replies off mid-file and the extractor saved them empty.
+TEACHER_MAX_TOKENS = 16000
+
+
 def revise_prompt(brief: dict, previous: str, evidence: str) -> str:
     return (user_prompt(brief) +
             "\n\nYour previous attempt is below. The verifier's evidence follows it. "
@@ -36,7 +41,7 @@ def generate(brief, k, out_dir, model, temperature):
     rows = []
     for i in range(k):
         prompt = user_prompt(brief)
-        text, usage = converse(model, system, [{"text": prompt}], temperature=temperature)
+        text, usage = converse(model, system, [{"text": prompt}], max_tokens=TEACHER_MAX_TOKENS, temperature=temperature)
         code = extract_code(text)
         if usage.get("outputTokens", 0) >= 8990:
             print(f"  {brief['id']}_{i}: hit the output cap, likely truncated", flush=True)
@@ -55,7 +60,7 @@ def revise(row, out_dir, model, temperature):
     previous = read(row["path"])
     evidence = row.get("evidence", "")
     prompt = revise_prompt(brief, previous, evidence)
-    text, usage = converse(model, system, [{"text": prompt}], temperature=temperature)
+    text, usage = converse(model, system, [{"text": prompt}], max_tokens=TEACHER_MAX_TOKENS, temperature=temperature)
     code = extract_code(text)
     cid = row["candidate"] + "r"
     (out_dir / "candidates" / f"{cid}.gd").write_text(code)
