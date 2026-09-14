@@ -87,6 +87,15 @@ def main():
         elif a.revise:
             fails = [r for r in read_jsonl(a.revise) if not r.get("pass")]
             rows = []
+            prev = out_dir / "revisions.jsonl"
+            if prev.exists() and prev.stat().st_mtime > Path(a.revise).stat().st_mtime:
+                # resume: keep revisions written after this verified pass (a checkpoint
+                # from an interrupted run); older files belong to an earlier pass
+                wanted = {f["candidate"]: f for f in fails}
+                rows = [r for r in read_jsonl(prev) if r.get("parent") in wanted and Path(r["path"]).exists()]
+                done = {r["parent"] for r in rows}
+                fails = [f for f in fails if f["candidate"] not in done]
+                print(f"resume: {len(rows)} revisions kept, {len(fails)} to write")
             for r in ex.map(lambda r: revise(r, out_dir, a.model, a.temperature), fails):
                 rows.append(r)
                 if len(rows) % 10 == 0:
