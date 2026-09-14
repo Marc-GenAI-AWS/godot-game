@@ -20,6 +20,12 @@ DIRECTOR_MODEL = os.environ.get("DIRECTOR_MODEL", "us.anthropic.claude-fable-5-1
 
 CONTRACT_VERSION = "v1.2"
 
+# When a profile rejects calls in a transient window, try these in order.
+FALLBACKS = {
+    "us.anthropic.claude-fable-5-1": ["global.anthropic.claude-fable-5-1", "us.anthropic.claude-sonnet-5"],
+    "us.anthropic.claude-sonnet-5": ["global.anthropic.claude-sonnet-5"],
+}
+
 SEGMENTS = {
     # segment -> (world used for verification, capture shots, capture script)
     # drags are held (~s) past the shot so the camera has not eased back yet
@@ -102,15 +108,25 @@ def converse(model: str, system: str, user_blocks, max_tokens=9000, temperature=
     # transient service errors (throttling, brief model-side outages) can last
     # minutes: up to ~4 minutes of backoff before giving up
     delays = [3, 8, 15, 30, 60, 90]
+    chain = [model] + [m for m in FALLBACKS.get(model, []) if m != model]
     for attempt in range(len(delays) + 1):
         try:
             r = bedrock().converse(**kwargs)
             text = "".join(b.get("text", "") for b in r["output"]["message"]["content"])
             return text, r.get("usage", {})
         except Exception as e:
+            msg = str(e)
+            # a model-side rejection that comes and goes ("data retention mode ... not
+            # available"): try the next profile / model in the chain before waiting
+            if "retention" in msg and chain:
+                nxt = chain.pop(0) if chain[0] != kwargs["modelId"] else (chain.pop(0) and chain.pop(0) if len(chain) > 1 else None)
+                if nxt and nxt != kwargs["modelId"]:
+                    print(f"  bedrock: {kwargs['modelId']} rejected the call; switching to {nxt}", flush=True)
+                    kwargs["modelId"] = nxt
+                    continue
             if attempt >= len(delays):
                 raise
-            print(f"  bedrock retry {attempt + 1}: {str(e)[:120]}", flush=True)
+            print(f"  bedrock retry {attempt + 1}: {msg[:120]}", flush=True)
             time.sleep(delays[attempt])
 
 
