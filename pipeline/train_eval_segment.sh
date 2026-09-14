@@ -6,7 +6,8 @@ set -uo pipefail
 cd "$(dirname "$0")"
 SEG=$1; RUN=$2
 N=$(wc -l < runs/$RUN/sft/train.jsonl 2>/dev/null || echo 0)
-if [ "$N" -lt 20 ]; then echo "== $SEG: only $N training examples in runs/$RUN; not training"; exit 0; fi
+MIN=${MIN_EXAMPLES:-100}   # below this an adapter cannot approach the teacher (sky needed ~250); don't spend on it
+if [ "$N" -lt "$MIN" ]; then echo "== $SEG: only $N training examples in runs/$RUN (minimum $MIN); not training"; exit 0; fi
 export AWS_REGION=us-east-2 SAGEMAKER_BUCKET=amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l
 B=s3://$SAGEMAKER_BUCKET/scene-studio/$SEG/models
 declare -A JOBS

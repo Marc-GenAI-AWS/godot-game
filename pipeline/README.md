@@ -132,6 +132,13 @@ Fifty examples is not enough: both adapters compile most of the time and place
 plants correctly (checks 0.8 to 1.0) but the judge scores them 4 to 6, below
 the teacher's 6.35. Sky needed about 250 examples to reach parity.
 
+Props (73 examples, 60 train): the 3B adapter passes 0 of 9 held-out briefs
+(judge mean 4.2 vs the teacher's 6.85; four beach candidates emit an invented
+`endfunc` keyword). Same conclusion: below about 100 examples an adapter is
+not worth evaluating, so `train_eval_segment.sh` now refuses datasets under
+`MIN_EXAMPLES` (default 100). The unit of progress per segment is verified
+examples, and the runs that produce them accumulate.
+
 The gap between the specialist and the teacher one-shot is entirely code that
 fails to load (duplicate `var` declarations, a hallucinated `aerial_perspective`
 property); judge quality on the candidates that ran was at parity (6.67 vs
