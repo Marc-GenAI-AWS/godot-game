@@ -463,6 +463,10 @@ def main():
                     pending.append((r0, stats, base))   # new judge prompt, same frames
                     continue
                 finish(r0, stats, base, r0["judge"])
+            elif a.rejudge_saved:
+                # a new judge prompt changes nothing for rows that never reached the judge:
+                # keep them rather than rerun their gates (Godot processes, memory)
+                already[r0["candidate"]] = r0
             elif r0["gates"].get("static") and any("must start with" in x for x in r0["gates"]["static"]):
                 # a nested code fence hid the extends line: strip fence lines and re-verify
                 p = Path(r0["path"])
@@ -485,7 +489,7 @@ def main():
                 list(ex.map(rejudge, pending))
         results.extend(already.values())
         rows = [r0 for r0 in rows if r0["candidate"] not in already]
-        print(f"rescore: {len(already)} rescored from disk, {len(rows)} to re-verify")
+        print(f"rescore: {len(already)} rescored from disk, {len(rows)} to re-verify", flush=True)
     if a.resume and (out_dir / a.name).exists():
         for r0 in read_jsonl(out_dir / a.name):
             already[r0["candidate"]] = r0
