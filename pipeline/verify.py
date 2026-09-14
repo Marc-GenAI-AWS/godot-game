@@ -38,6 +38,10 @@ def static_gate(code: str, segment: str = "") -> list:
     problems = []
     for path in ALLOWED_LOADS.get(segment, []):
         code = code.replace(f'load("{path}")', "ALLOWED_LOAD")
+    if segment in ("ground", "water"):
+        for tok in ("Shader.new(", "shader.code", "shader_type"):
+            if tok in code:
+                problems.append(f"forbidden for this segment: {tok} (set the shipped shader's uniforms instead)")
     # leading comments and blank lines are fine before `extends`
     head = "\n".join(l for l in code.splitlines() if l.strip() and not l.strip().startswith("#")).lstrip()
     if not (head.startswith("extends SceneLayer") or head.startswith("extends ChunkedLayer")):

@@ -18,7 +18,7 @@ TEACHER_MODEL = os.environ.get("TEACHER_MODEL", "us.anthropic.claude-sonnet-5")
 JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "us.anthropic.claude-fable-5-1")
 DIRECTOR_MODEL = os.environ.get("DIRECTOR_MODEL", "us.anthropic.claude-fable-5-1")
 
-CONTRACT_VERSION = "v1.1"
+CONTRACT_VERSION = "v1.2"
 
 SEGMENTS = {
     # segment -> (world used for verification, capture shots, capture script)

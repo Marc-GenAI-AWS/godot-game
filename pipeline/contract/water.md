@@ -30,14 +30,21 @@ func grid_mesh(x0: float, x1: float, z0: float, z1: float, step: float, height_f
 Your file must start exactly with `extends SceneLayer` and must NOT declare
 `class_name`.
 
-## Shader
+## Shader: set knobs, do not write shader code
 
-Load the shipped water shader and set its uniforms, or write your own with
-`Shader.new()` and `shader.code = "..."`. `load()` is allowed ONLY for
-`res://segments/water/shaders/water.gdshader`, whose uniforms are
-`noise_tex` (sampler2D, use `ctx.noise_tex`), `sand_slope` (float,
-`BeachContext.SAND_SLOPE`), `tide_amp` (float, 0.14), `deep_color`,
-`shallow_color`, `sand_color` (vec3 colours).
+Load the shipped water shader (`res://segments/water/shaders/water.gdshader`)
+and set its uniforms; do NOT write shader code (`Shader.new()`,
+`shader.code`, `load()` of anything else) - the verifier rejects it. The
+shader already does the swell, depth colour, sand show-through, the three
+edge zones and the breaker lines; you choose the values:
+
+- `noise_tex` (use `ctx.noise_tex`), `sand_slope` (`BeachContext.SAND_SLOPE`),
+  `tide_amp` (0.14; keep it),
+- colours `deep_color`, `shallow_color`, `sand_color` (vec3),
+- `swell_amp` (0.3 calm .. 1 gentle .. 2 choppy), `chop` (0 glassy .. 1.5),
+- `foam_amount` (0 none .. 1 lacy band .. 2 heavy), `breaker_strength`
+  (0 none .. 1.5), `breaker_spacing` (0.5 tight .. 2 wide),
+- `clarity_depth` (0.3 murky .. 1 .. 3 sand visible far out), `sparkle` (0..1.5).
 
 ## World context you may use
 
@@ -54,17 +61,21 @@ Load the shipped water shader and set its uniforms, or write your own with
 
 Forbidden: `OS`, `FileAccess`, `DirAccess`, `HTTPRequest`, `JavaScriptBridge`,
 `get_tree().quit()`, `preload()`, `load()` of anything but the water shader,
-`class_name`.
+`Shader.new()`, `shader.code`, `class_name`.
 
 ## Conventions
 
 - The project treats GDScript warnings as errors: explicit types
   everywhere, no inference from Variant, no shadowed names.
-- Brief words: sea state (calm / gentle / choppy) scales swell amplitudes
-  and breaker frequency; colour words set `deep_color` and `shallow_color`
-  (turquoise tropical, deep navy, grey-green temperate, milky jade); foam
-  words scale the edge foam and breaker foam; clarity words set how far the
-  sand shows through (the depth at which `sand_color` fades out).
+- Brief words: sea state sets `swell_amp` and `chop` (calm 0.3 / 0.2,
+  gentle 1 / 1, choppy 1.8 / 1.5) and `breaker_strength` (calm 0.2, gentle 1,
+  choppy 1.4); colour words set `deep_color` and `shallow_color` (turquoise
+  tropical 0/0.16/0.42 and 0.02/0.34/0.46; deep navy 0/0.08/0.3 and
+  0.02/0.2/0.4; grey-green temperate 0.08/0.18/0.22 and 0.16/0.3/0.3; milky
+  jade 0.05/0.3/0.3 and 0.25/0.55/0.5; clear aquamarine 0/0.25/0.5 and
+  0.1/0.5/0.6); foam words set `foam_amount` (little 0.4, lacy 1, heavy
+  1.8); clarity words set `clarity_depth` (murky 0.35, only at the edge 1,
+  far out 2.5).
 - Keep the three-zone water's edge from the reference: a thin dark
   reflective wash film, a dense lacy foam band, then sparse lace streaks.
 
@@ -102,69 +113,7 @@ func build() -> void:
 	add_child(mi)
 ```
 
-The water shader it loads, for reference (write a variant inline with
-`Shader.new()` when the brief needs a different sea):
-
-```glsl
-shader_type spatial;
-render_mode cull_disabled, depth_draw_opaque;
-uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
-uniform float sand_slope = 0.06;
-uniform float tide_amp = 0.14;
-uniform vec3 deep_color : source_color = vec3(0.0, 0.16, 0.42);
-uniform vec3 shallow_color : source_color = vec3(0.02, 0.34, 0.46);
-uniform vec3 sand_color : source_color = vec3(0.38, 0.31, 0.23);
-varying vec3 v_world;
-varying float v_depth;
-void vertex() {
-	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	float t = TIME;
-	float tide = tide_amp * sin(t * 0.55) + 0.05 * sin(t * 1.7);
-	float shore = clamp(w.x / 18.0, 0.0, 1.0);
-	float swell = 0.10 * sin(w.x * 0.35 - t * 1.1) + 0.05 * sin(w.z * 0.4 + w.x * 0.2 + t * 0.8)
-		+ 0.03 * sin((w.x + w.z) * 1.6 - t * 2.3);
-	float y = tide + swell * shore;
-	VERTEX.y += y;
-	v_world = vec3(w.x, y, w.z);
-	v_depth = y + sand_slope * w.x;
-	float dx = 0.10 * 0.35 * cos(w.x * 0.35 - t * 1.1) * shore;
-	NORMAL = normalize(vec3(-dx, 1.0, 0.0));
-}
-void fragment() {
-	float t = TIME;
-	float d = v_depth;
-	vec3 col = mix(shallow_color, deep_color, smoothstep(0.0, 7.0, d));
-	col = mix(sand_color, col, smoothstep(0.0, 0.28, d));
-	float n1 = texture(noise_tex, v_world.xz * vec2(0.25, 0.08) + vec2(-t * 0.08, t * 0.02)).r;
-	float n2 = texture(noise_tex, v_world.xz * vec2(0.9, 0.5) + vec2(t * 0.05, -t * 0.07)).r;
-	float n4 = texture(noise_tex, v_world.xz * vec2(1.8, 1.1) + vec2(-t * 0.11, t * 0.04)).r;
-	float lace = n1 * 0.45 + n2 * 0.5 + n4 * 0.35;
-	float wash = smoothstep(0.07, 0.015, d);
-	float foam_band = smoothstep(0.03, 0.07, d) * smoothstep(0.24, 0.12, d);
-	float outer = smoothstep(0.18, 0.28, d) * smoothstep(0.55, 0.3, d);
-	float edge_foam = foam_band * smoothstep(0.28, 0.5, lace + 0.25) + outer * smoothstep(0.42, 0.62, lace);
-	edge_foam = max(edge_foam, wash * smoothstep(0.5, 0.7, lace) * 0.5);
-	vec3 wet_film = mix(sand_color * 0.75, vec3(0.32, 0.46, 0.64), 0.4);
-	col = mix(col, wet_film, wash);
-	float band = sin(v_world.x * 0.5 - t * 1.1 + n1 * 2.0);
-	float breakers = smoothstep(0.75, 0.95, band) * smoothstep(3.0, 9.0, v_world.x) * smoothstep(40.0, 15.0, v_world.x);
-	breakers *= smoothstep(0.3, 0.6, n2);
-	float foam = clamp(edge_foam + breakers * 0.9, 0.0, 1.0);
-	col = mix(col, vec3(0.88, 0.91, 0.94) * (0.82 + 0.18 * n2), foam);
-	float r1 = texture(noise_tex, v_world.xz * 0.6 + vec2(t * 0.06, t * 0.04)).r;
-	float r2 = texture(noise_tex, v_world.xz * 0.6 + vec2(0.013, 0.0) + vec2(t * 0.06, t * 0.04)).r;
-	float r3 = texture(noise_tex, v_world.xz * 0.6 + vec2(0.0, 0.013) + vec2(t * 0.06, t * 0.04)).r;
-	vec3 ripple = normalize(vec3((r1 - r2) * 6.0, 1.0, (r1 - r3) * 6.0));
-	NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(ripple, 0.0)).xyz, 0.12));
-	ALBEDO = col;
-	ROUGHNESS = mix(mix(0.3, 0.05, wash), 0.85, foam);
-	SPECULAR = mix(mix(0.3, 0.6, wash), 0.15, foam);
-	METALLIC = 0.0;
-}
-```
-
 ## Output format
 
 Reply with exactly one fenced code block tagged `gdscript` containing the
-complete file, and nothing else. A custom shader goes inside it as a string
-assigned to `shader.code`.
+complete file, and nothing else.

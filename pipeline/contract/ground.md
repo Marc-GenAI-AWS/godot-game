@@ -43,20 +43,28 @@ Your file must start with `extends SceneLayer` (beach) or
 commit_with) merges static boxes and cylinders into one draw call per
 material; see the street gold example.
 
-## Shaders
+## Shaders: set knobs, do not write shader code
 
-You may load the two shipped shaders and set their uniforms, or write your
-own with `Shader.new()` and `shader.code = "..."` (a spatial shader string).
-`load()` is allowed ONLY for these two paths:
+The look comes from the two shipped shaders. Load them and set their
+uniforms; do NOT write shader code (`Shader.new()`, `shader.code`,
+`load()` of anything else) - the verifier rejects it. What you author is the
+choice of knob values from the brief, plus geometry: shell scatter density
+and placement, slab sizes, joints and cracks, markings, kerb colours, lawn
+texture (a generated `ImageTexture` on a `StandardMaterial3D` is fine).
 
-- `res://segments/ground/shaders/sand.gdshader` with uniforms
-  `noise_tex` (sampler2D, use `ctx.noise_tex`), `grain_normal` (sampler2D,
-  use `ctx.sand_normal_tex`), `reach_x` (float, world X of the wet line; set
-  it every frame from `ctx.tide_reach`), `dry_color`, `wet_color`,
-  `sky_color` (vec3 colours; `sky_color` from `ctx.sky_horizon`).
-- `res://segments/ground/shaders/asphalt.gdshader` with uniforms `noise_tex`,
-  `base_color` (vec3), `lane_x` (float, `StreetContext.LANE_X`),
-  `track_offset` (float).
+- `res://segments/ground/shaders/sand.gdshader` uniforms:
+  `noise_tex` (use `ctx.noise_tex`), `grain_normal` (use `ctx.sand_normal_tex`),
+  `reach_x` (float; set every frame from `ctx.tide_reach` in `tick`),
+  `dry_color`, `wet_color`, `sky_color` (vec3 colours; `sky_color` from
+  `ctx.sky_horizon`), `grain_scale` (0.5 coarse .. 2.0 fine, default 1),
+  `wet_width` (metres of wet band, default 10; narrow 4-6, wide 12-16),
+  `sheet_strength` (0 none .. 2 strong mirror sheet, default 1),
+  `ripple_depth` (0 smooth packed .. 1.5 rippled, default 1),
+  `mottle` (0 uniform .. 1.5 patchy, default 1).
+- `res://segments/ground/shaders/asphalt.gdshader` uniforms: `noise_tex`,
+  `base_color` (vec3), `lane_x` (`StreetContext.LANE_X`), `track_offset`,
+  `grain_scale` (default 1), `track_strength` (0..1.5), `stain_strength`
+  (0..1.5), `patch_strength` (0..1.5), `wear` (0 fresh uniform .. 1.5 uneven).
 
 Both shaders sample world-space XZ so they tile seamlessly across chunks.
 
@@ -81,7 +89,7 @@ Both shaders sample world-space XZ so they tile seamlessly across chunks.
 
 Forbidden: `OS`, `FileAccess`, `DirAccess`, `HTTPRequest`, `JavaScriptBridge`,
 `get_tree().quit()`, `preload()`, `load()` of anything but the two shaders
-above, `class_name`.
+above, `Shader.new()`, `shader.code`, `class_name`.
 
 ## Conventions
 
@@ -89,11 +97,14 @@ above, `class_name`.
 - The project treats GDScript warnings as errors: explicit types everywhere
   (`var n := 3`, `var c: Color = ...`), no inference from Variant, no shadowed
   names, one declaration per name per scope.
-- Brief words map to uniforms and geometry: sand tone words set `dry_color`
-  and `wet_color` (dark warm tan / golden / pale white / grey volcanic); wet
-  band width and sheet strength are yours to express in a custom shader if
-  the shipped one does not fit; road tone words set `base_color` (fresh
-  black about 0.16, worn grey about 0.34, brownish about 0.36/0.33/0.28);
+- Brief words map to knobs and geometry: sand tone words set `dry_color`
+  and `wet_color` (dark warm tan 0.56/0.41/0.26 and 0.3/0.22/0.15; golden
+  0.72/0.55/0.3; pale white coral 0.86/0.8/0.7; grey volcanic 0.3/0.29/0.28;
+  pinkish shell 0.74/0.56/0.5), wet band words set `wet_width` and
+  `sheet_strength`, grain words set `grain_scale` and `ripple_depth`, shell
+  words set the scatter count (few 300, tide line 900, dense drift 2500);
+  road tone words set `base_color` (fresh black about 0.16, worn grey about
+  0.34, brownish about 0.36/0.33/0.28) and `wear` / `patch_strength`;
   marking words choose double yellow centre line, single dashed white, or
   none; kerb words choose plain concrete, red-painted near the crossing, or
   granite grey; sidewalk words set slab length and crack density; lawn
@@ -165,39 +176,6 @@ func build() -> void:
 
 func tick(_delta: float) -> void:
 	material.set_shader_parameter("reach_x", ctx.tide_reach)
-```
-
-The sand shader it loads, for reference (write a variant of it inline with
-`Shader.new()` when the brief needs a different surface):
-
-```glsl
-shader_type spatial;
-uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
-uniform sampler2D grain_normal : hint_normal, repeat_enable, filter_linear_mipmap;
-uniform float reach_x = 3.0;
-uniform vec3 dry_color : source_color = vec3(0.56, 0.41, 0.26);
-uniform vec3 wet_color : source_color = vec3(0.3, 0.22, 0.15);
-uniform vec3 sky_color : source_color = vec3(0.62, 0.78, 0.95);
-varying vec3 v_world;
-void vertex() { v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
-void fragment() {
-	float n1 = texture(noise_tex, v_world.xz * 0.12).r;
-	float n2 = texture(noise_tex, v_world.xz * 0.9 + 0.3).r;
-	float n3 = texture(noise_tex, v_world.xz * 0.03 + 0.7).r;
-	vec3 base = dry_color * (0.84 + 0.2 * n1 + 0.08 * n2 + 0.1 * n3);
-	float edge = reach_x + (n1 - 0.5) * 3.0;
-	float wet = smoothstep(edge - 10.0, edge - 0.6, v_world.x);
-	float sheet = smoothstep(edge - 3.5, edge - 0.4, v_world.x) * (0.6 + 0.4 * n3);
-	vec3 col = mix(base, wet_color * (0.9 + 0.2 * n1), wet * 0.92);
-	float fres = pow(1.0 - clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0), 3.0);
-	col = mix(col, sky_color * 0.55, sheet * fres * 0.45);
-	ALBEDO = col;
-	NORMAL_MAP = texture(grain_normal, v_world.xz * 2.5).rgb;
-	NORMAL_MAP_DEPTH = mix(0.25, 0.05, sheet);
-	ROUGHNESS = mix(0.95, 0.12, max(wet * 0.5, sheet));
-	SPECULAR = mix(0.1, 0.45, sheet);
-	METALLIC = 0.0;
-}
 ```
 
 ## Gold example: the street world

@@ -5,6 +5,8 @@ render_mode cull_disabled, depth_draw_opaque;
 // transparency onto sand in the shallows, animated foam at the water's edge
 // and along breaking wave lines further out. The sand under the water is
 // assumed to be y = -sand_slope * x (sea is +x).
+// Knobs (defaults reproduce the shipped look): swell_amp, chop, foam_amount,
+// breaker_strength, breaker_spacing, clarity_depth, colours.
 
 uniform sampler2D noise_tex : repeat_enable, filter_linear_mipmap;
 uniform float sand_slope = 0.06;
@@ -12,6 +14,13 @@ uniform float tide_amp = 0.14;
 uniform vec3 deep_color : source_color = vec3(0.0, 0.16, 0.42);
 uniform vec3 shallow_color : source_color = vec3(0.02, 0.34, 0.46);
 uniform vec3 sand_color : source_color = vec3(0.38, 0.31, 0.23);
+uniform float swell_amp = 1.0;          // 0.3 calm .. 2.0 big swell
+uniform float chop = 1.0;               // small high-frequency waves (0 = glassy)
+uniform float foam_amount = 1.0;        // edge foam density (0 = none, 2 = heavy)
+uniform float breaker_strength = 1.0;   // foam lines further out (0 = none)
+uniform float breaker_spacing = 1.0;    // 0.5 = tight lines, 2.0 = wide
+uniform float clarity_depth = 1.0;      // how far the sand shows through (0.3 murky .. 3.0 very clear)
+uniform float sparkle = 1.0;            // ripple normal strength
 
 varying vec3 v_world;
 varying float v_depth;
@@ -21,14 +30,14 @@ void vertex() {
 	float t = TIME;
 	float tide = tide_amp * sin(t * 0.55) + 0.05 * sin(t * 1.7);
 	float shore = clamp(w.x / 18.0, 0.0, 1.0);
-	float swell = 0.10 * sin(w.x * 0.35 - t * 1.1) + 0.05 * sin(w.z * 0.4 + w.x * 0.2 + t * 0.8)
-		+ 0.03 * sin((w.x + w.z) * 1.6 - t * 2.3);
+	float swell = (0.10 * sin(w.x * 0.35 - t * 1.1) + 0.05 * sin(w.z * 0.4 + w.x * 0.2 + t * 0.8)) * swell_amp
+		+ 0.03 * sin((w.x + w.z) * 1.6 - t * 2.3) * chop;
 	float y = tide + swell * shore;
 	VERTEX.y += y;
 	v_world = vec3(w.x, y, w.z);
 	v_depth = y + sand_slope * w.x;
 	// Approximate normal from the same swell field for lighting.
-	float dx = 0.10 * 0.35 * cos(w.x * 0.35 - t * 1.1) * shore;
+	float dx = 0.10 * 0.35 * cos(w.x * 0.35 - t * 1.1) * shore * swell_amp;
 	NORMAL = normalize(vec3(-dx, 1.0, 0.0));
 }
 
@@ -37,7 +46,7 @@ void fragment() {
 	float d = v_depth;
 	vec3 col = mix(shallow_color, deep_color, smoothstep(0.0, 7.0, d));
 	// Shallows: let the sand show through.
-	col = mix(sand_color, col, smoothstep(0.0, 0.28, d));
+	col = mix(sand_color, col, smoothstep(0.0, 0.28 * clarity_depth, d));
 
 	// Water's edge in three zones (d = water depth over the sand):
 	//  wash  d < ~0.05  thin dark film that mirrors the sky
@@ -50,14 +59,16 @@ void fragment() {
 	float wash = smoothstep(0.07, 0.015, d);
 	float foam_band = smoothstep(0.03, 0.07, d) * smoothstep(0.24, 0.12, d);
 	float outer = smoothstep(0.18, 0.28, d) * smoothstep(0.55, 0.3, d);
-	float edge_foam = foam_band * smoothstep(0.28, 0.5, lace + 0.25) + outer * smoothstep(0.42, 0.62, lace);
+	float lace_bias = 0.25 * foam_amount;
+	float edge_foam = foam_band * smoothstep(0.28, 0.5, lace + lace_bias) + outer * smoothstep(0.42, 0.62, lace + 0.15 * (foam_amount - 1.0));
 	edge_foam = max(edge_foam, wash * smoothstep(0.5, 0.7, lace) * 0.5);
+	edge_foam *= clamp(foam_amount, 0.0, 2.0);
 	vec3 wet_film = mix(sand_color * 0.75, vec3(0.32, 0.46, 0.64), 0.4);
 	col = mix(col, wet_film, wash);
 	// Breaking lines: bands of foam rolling toward shore.
-	float band = sin(v_world.x * 0.5 - t * 1.1 + n1 * 2.0);
+	float band = sin(v_world.x * 0.5 / breaker_spacing - t * 1.1 + n1 * 2.0);
 	float breakers = smoothstep(0.75, 0.95, band) * smoothstep(3.0, 9.0, v_world.x) * smoothstep(40.0, 15.0, v_world.x);
-	breakers *= smoothstep(0.3, 0.6, n2);
+	breakers *= smoothstep(0.3, 0.6, n2) * breaker_strength;
 	float foam = clamp(edge_foam + breakers * 0.9, 0.0, 1.0);
 	col = mix(col, vec3(0.88, 0.91, 0.94) * (0.82 + 0.18 * n2), foam);
 
@@ -66,7 +77,7 @@ void fragment() {
 	float r2 = texture(noise_tex, v_world.xz * 0.6 + vec2(0.013, 0.0) + vec2(t * 0.06, t * 0.04)).r;
 	float r3 = texture(noise_tex, v_world.xz * 0.6 + vec2(0.0, 0.013) + vec2(t * 0.06, t * 0.04)).r;
 	vec3 ripple = normalize(vec3((r1 - r2) * 6.0, 1.0, (r1 - r3) * 6.0));
-	NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(ripple, 0.0)).xyz, 0.12));
+	NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(ripple, 0.0)).xyz, 0.12 * sparkle));
 
 	ALBEDO = col;
 	ROUGHNESS = mix(mix(0.3, 0.05, wash), 0.85, foam);
