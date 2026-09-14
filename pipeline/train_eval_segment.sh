@@ -1,6 +1,6 @@
 #!/bin/bash
-# Train the 1.5B and 3B adapters for a segment on SageMaker (us-east-2) and
-# evaluate both on the segment's held-out briefs when the artifacts land.
+# Train the segment's 3B adapter on SageMaker (us-east-2) and evaluate it on
+# the held-out briefs when the artifact lands (MODELS=... for a bake-off).
 #   pipeline/train_eval_segment.sh <segment> <data run name>   e.g. vegetation veg1
 set -uo pipefail
 cd "$(dirname "$0")"
@@ -10,7 +10,8 @@ if [ "$N" -lt 20 ]; then echo "== $SEG: only $N training examples in runs/$RUN; 
 export AWS_REGION=us-east-2 SAGEMAKER_BUCKET=amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l
 B=s3://$SAGEMAKER_BUCKET/scene-studio/$SEG/models
 declare -A JOBS
-for m in Qwen/Qwen2.5-Coder-1.5B-Instruct Qwen/Qwen2.5-Coder-3B-Instruct; do
+# One specialist size for every segment (decision 2026-09-13): 3B. Override with MODELS="a b".
+for m in ${MODELS:-Qwen/Qwen2.5-Coder-3B-Instruct}; do
   tag=$(echo $m | sed 's/.*Coder-//; s/-Instruct//' | tr 'A-Z.' 'a-zp')
   echo "== $(date +%T) launching $SEG $tag"
   job=""

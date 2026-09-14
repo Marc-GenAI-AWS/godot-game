@@ -82,6 +82,15 @@ The same `train_sft.py` runs on the dev box (GB10, 121 GB unified memory) with
 the local data paths, and `vllm serve <model_dir>` exposes the result to
 `loop/specialist.py --backend local:http://127.0.0.1:8000/v1`.
 
+## Model size
+
+One size for every segment: **Qwen2.5-Coder-3B-Instruct** with a LoRA
+adapter per segment (decided 2026-09-13 after the sky bake-off, where 1.5B
+and 3B tied at 77% one-shot and 7B trailed at 60%). 3B is kept over 1.5B for
+headroom on the segments whose datasets are still small. `train_eval_segment.sh`
+trains 3B only; set `MODELS="Qwen/Qwen2.5-Coder-1.5B-Instruct Qwen/Qwen2.5-Coder-3B-Instruct"`
+to run a bake-off again.
+
 ## Evaluating a specialist
 
 ```
