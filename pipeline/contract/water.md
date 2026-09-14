@@ -74,10 +74,13 @@ Forbidden: `OS`, `FileAccess`, `DirAccess`, `HTTPRequest`, `JavaScriptBridge`,
 - Brief words: sea state sets `swell_amp` and `chop` (calm 0.3 / 0.2,
   gentle 1 / 1, choppy 1.8 / 1.5) and `breaker_strength` (calm 0.2, gentle 1,
   choppy 1.4); colour words set `deep_color` and `shallow_color` (turquoise
-  tropical 0/0.16/0.42 and 0.02/0.34/0.46; deep navy 0/0.08/0.3 and
-  0.02/0.2/0.4; grey-green temperate 0.08/0.18/0.22 and 0.16/0.3/0.3; milky
-  jade 0.05/0.3/0.3 and 0.25/0.55/0.5; clear aquamarine 0/0.25/0.5 and
-  0.1/0.5/0.6); foam words set `foam_amount` (little 0.4, lacy 1, heavy
+  tropical 0/0.16/0.42 and 0.02/0.34/0.46; deep navy 0/0.03/0.15 and
+  0.01/0.1/0.28; grey-green temperate 0.1/0.16/0.13 and 0.22/0.28/0.22; milky
+  jade 0.1/0.28/0.2 and 0.35/0.52/0.36; clear aquamarine 0/0.22/0.36 and
+  0.08/0.48/0.46). These values are calibrated against renders of this
+  scene: its sky reflection and fog add blue and lift everything, so greens
+  need less blue and navy needs darker values than the words suggest. Foam
+  words set `foam_amount` (little 0.4, lacy 1, heavy
   1.8); clarity words set `clarity_depth` (murky 0.35, only at the edge 1,
   far out 2.5).
 - Keep the three-zone water's edge from the reference: a thin dark
