@@ -5,7 +5,8 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 SEG=$1; RUN=$2
-N=$(wc -l < runs/$RUN/sft/train.jsonl 2>/dev/null || echo 0)
+# synthetic repair examples (make_repair_pairs.py) don't count toward the minimum
+N=$(grep -vc '"mode": "repair"' runs/$RUN/sft/train.jsonl 2>/dev/null || echo 0)
 MIN=${MIN_EXAMPLES:-100}   # below this an adapter cannot approach the teacher (sky needed ~250); don't spend on it
 if [ "$N" -lt "$MIN" ]; then echo "== $SEG: only $N training examples in runs/$RUN (minimum $MIN); not training"; exit 0; fi
 export AWS_REGION=us-east-2 SAGEMAKER_BUCKET=amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l
