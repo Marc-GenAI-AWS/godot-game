@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scene Studio · Specialist skies</title>
+<style>
+body { margin: 0; font-family: 'Segoe UI', 'Noto Sans', Arial, sans-serif; color: #eaf2ff; background: linear-gradient(180deg, #0f3d8f 0%, #2f7fd6 55%, #b39a70 100%); min-height: 100vh; }
+main { max-width: 64rem; margin: 0 auto; padding: 4rem 1.5rem; }
+h1 { letter-spacing: 0.08em; margin: 0 0 0.4rem; }
+p.lead { color: #cfe2ff; margin-top: 0; line-height: 1.5; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(28rem, 1fr)); gap: 1.2rem; margin-top: 2rem; }
+.card { display: block; text-decoration: none; color: inherit; background: rgba(6, 30, 70, 0.55); border-radius: 1rem; padding: 1.2rem; box-shadow: 0 0.8rem 2rem rgba(0,0,0,0.3); transition: transform 0.15s; }
+.card:hover { transform: translateY(-3px); }
+.card h2 { margin: 0 0 0.4rem; font-size: 1.1rem; }
+.card p { margin: 0; color: #dce9ff; font-size: 0.9rem; line-height: 1.4; }
+.shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; margin: 0.8rem 0 0.6rem; }
+.shots img { width: 100%; border-radius: 0.4rem; display: block; }
+.card .tag { display: inline-block; margin-top: 0.6rem; font-size: 0.75rem; color: #ffe9b3; }
+.notes { margin-top: 2.5rem; background: rgba(6, 30, 70, 0.4); border-radius: 1rem; padding: 1rem 1.4rem; font-size: 0.9rem; line-height: 1.5; color: #dce9ff; }
+footer { margin-top: 3rem; font-size: 0.8rem; color: rgba(255,255,255,0.75); }
+a.back, footer a { color: #fff; }
+</style>
+</head>
+<body>
+<main>
+<p><a class="back" href="../">&larr; Scene Studio</a></p>
+<h1>SPECIALIST SKIES</h1>
+<p class="lead">Each sky below was written by a fine-tuned 3B model (Qwen2.5-Coder-3B, LoRA SFT) from a one-line scene
+description. Claude Fable 5.1 turns the description into a sky brief, the 3B specialist writes the sky layer, the verifier
+renders it in the game and Claude Sonnet 5 judges it; failed attempts go back to the same 3B model with the judge's
+evidence. No sky here was written or edited by a larger model. Click a card to play the scene with that sky.</p>
+<div class="grid">
+  <a class="card" href="../play/#world=street&swap=sky:res://segments/sky/generated/street-sunny.gd">
+    <h2>Street · bright sunny day</h2>
+    <p>"a bright sunny day on the street, clear blue sky, crisp midday light and short shadows"</p>
+    <div class="shots"><img src="street-sunny-a.jpg" alt="default view"><img src="street-sunny-b.jpg" alt="tilted up"><img src="street-sunny-c.jpg" alt="side view"></div>
+    <span class="tag">accepted on the first draft · judge 8/10 · Sep 14</span>
+  </a>
+  <a class="card" href="../play/#world=beach&swap=sky:res://segments/sky/generated/beach-cloudy-2.gd">
+    <h2>Beach · cloudy day</h2>
+    <p>"a cloudy day on the beach, a thick grey cloud deck with a few brighter breaks, soft shadowless light over the sea"</p>
+    <div class="shots"><img src="beach-cloudy-2-a.jpg" alt="default view"><img src="beach-cloudy-2-b.jpg" alt="tilted up"><img src="beach-cloudy-2-c.jpg" alt="side view"></div>
+    <span class="tag">second attempt, accepted after 2 self-revisions · judge 7/10 · Sep 14</span>
+  </a>
+  <a class="card" href="../play/#world=street&swap=sky:res://segments/sky/generated/loop-demo-1.gd">
+    <h2>Street · overcast drizzly morning</h2>
+    <p>"an overcast, drizzly-looking morning on the street, flat grey light, sun hidden"</p>
+    <div class="shots"><img src="loop-demo-1-a.jpg" alt="default view"><img src="loop-demo-1-b.jpg" alt="tilted up"><img src="loop-demo-1-c.jpg" alt="side view"></div>
+    <span class="tag">accepted on the first draft · judge 8/10 · Sep 13</span>
+  </a>
+  <a class="card" href="../play/#world=beach&swap=sky:res://segments/sky/generated/loop-demo-2.gd">
+    <h2>Beach · clear tropical noon</h2>
+    <p>"a clear tropical noon on the beach with a few small cumulus far out over the sea"</p>
+    <div class="shots"><img src="loop-demo-2-a.jpg" alt="default view"><img src="loop-demo-2-b.jpg" alt="tilted up"><img src="loop-demo-2-c.jpg" alt="side view"></div>
+    <span class="tag">accepted after 1 self-revision · judge 7/10 · Sep 13</span>
+  </a>
+  <a class="card" href="../play/#world=beach&swap=sky:res://segments/sky/generated/loop-demo-3.gd">
+    <h2>Beach · dusk, magenta band</h2>
+    <p>"dusk on the beach, sun just at the horizon over the sea, magenta band, long shadows"</p>
+    <div class="shots"><img src="loop-demo-3-a.jpg" alt="default view"><img src="loop-demo-3-b.jpg" alt="tilted up"><img src="loop-demo-3-c.jpg" alt="side view"></div>
+    <span class="tag">accepted after 1 self-revision · judge 7/10 · Sep 13</span>
+  </a>
+</div>
+<div class="notes">
+  <strong>Not shown:</strong> "dusk on the street, the sun just down behind the houses" failed on both attempts (three
+  rounds each, judge stuck at 6: a pink-mauve sky instead of an orange horizon fading to deep blue), and the first cloudy-beach
+  attempt never ran (the model used an Environment constant that does not exist in Godot). Only the sky is generated;
+  every other layer is the shipped scene. Thumbnails are the verifier's captures of the accepted round.
+</div>
+<footer>Source: <a href="https://github.com/mlobree/boulder-hill">github.com/mlobree/boulder-hill</a> · Built with Godot 4</footer>
+</main>
+</body>
+</html>
