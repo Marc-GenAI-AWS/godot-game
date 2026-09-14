@@ -291,6 +291,17 @@ CHECKS = {"sky": sky_checks, "vegetation": vegetation_checks, "props": props_che
 
 # ----------------------------------------------------------------- judge ---
 
+# how the judge reads reference frames unless the segment spec gives its own note
+COLOUR_NOTE = ("The scene's daylight lightens and cools every colour, so judge the candidate's colours and tones "
+               "relative to these frames, not against the nominal numbers in the brief. The reference is not "
+               "what the brief asks for; it only shows how a known look renders here. Calibration: for a brief "
+               "that described the reference look exactly, the reference frames would score 7 on every "
+               "attribute; the scene's own limits (low-poly people, hard shadows, the straightness of the "
+               "water's edge, the sun glint on wet sand) are not the candidate's defects unless the candidate "
+               "makes them worse. Score above 7 where the candidate matches its brief better than the "
+               "reference matches its own description, below 7 where it is worse or wrong.")
+
+
 def judge(segment: str, brief: dict, frames: list, reference: list | None = None) -> dict:
     rubric = read(PIPE / "rubrics" / f"{segment}.md")
     spec = SEGMENTS[segment]
@@ -300,17 +311,11 @@ def judge(segment: str, brief: dict, frames: list, reference: list | None = None
     blocks = [{"text": "Brief:\n" + json.dumps({k: v for k, v in brief.items() if k != "id"}, indent=2)}]
     ref_desc = spec.get("reference", {}).get(world)
     if reference and ref_desc:
-        # knob segments: the shipped layer under the same views anchors the judge's
-        # sense of how this scene's lighting renders a colour
+        # the shipped layer under the same views anchors the judge: how this scene's
+        # lighting renders a colour (knob segments), how much of a block's furniture
+        # the views actually show (street props)
         blocks.append({"text": f"Reference frames: the shipped default layer under the same views ({ref_desc}). "
-                               "The scene's daylight lightens and cools every colour, so judge the candidate's colours and tones "
-                               "relative to these frames, not against the nominal numbers in the brief. The reference is not "
-                               "what the brief asks for; it only shows how a known look renders here. Calibration: for a brief "
-                               "that described the reference look exactly, the reference frames would score 7 on every "
-                               "attribute; the scene's own limits (low-poly people, hard shadows, the straightness of the "
-                               "water's edge, the sun glint on wet sand) are not the candidate's defects unless the candidate "
-                               "makes them worse. Score above 7 where the candidate matches its brief better than the "
-                               "reference matches its own description, below 7 where it is worse or wrong."})
+                               + spec.get("reference_note", COLOUR_NOTE)})
         for i, f in enumerate(reference):
             blocks.append({"text": f"Reference {i + 1} ({labels[i] if i < len(labels) else 'extra'}):"})
             blocks.append(image_block(f))
@@ -414,6 +419,7 @@ def main():
     ap.add_argument("--resume", action="store_true", help="skip candidates already in the output file")
     ap.add_argument("--rescore", action="store_true", help="recompute checks and pass from saved captures + judge (no GPU, no Bedrock); re-verify rows without them")
     ap.add_argument("--rejudge-world", help="with --rescore: fully re-verify (capture + judge) rows of this world, e.g. after a recipe change")
+    ap.add_argument("--rejudge-saved", help="with --rescore: judge rows of this world again from their saved frames (new judge prompt, no capture)")
     a = ap.parse_args()
     out_dir = Path(a.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -428,7 +434,20 @@ def main():
 
     already = {}
     if a.rescore and (out_dir / a.name).exists():
-        kept = []
+        def finish(r0, stats, base, j):
+            cscore, notes = CHECKS[r0["segment"]](r0["brief"], stats, base)
+            r0["judge"] = j
+            r0["checks"] = {"score": cscore, "notes": notes}
+            r0["stats"] = {k: stats[k] for k in ("fps_avg", "draw_calls", "palette", "obstacles", "probe") if k in stats}
+            r0["score"] = 0.4 * cscore + 0.6 * float(j.get("overall", 0)) / 10.0
+            r0["pass"] = bool(j.get("pass")) and cscore >= 0.6
+            ev = ["checks: " + "; ".join(notes)] + [f"{k} {v.get('score')}/10: {v.get('evidence', '')}" for k, v in j.get("attributes", {}).items()]
+            if j.get("revision_notes"):
+                ev.append("revise: " + j["revision_notes"])
+            r0["evidence"] = "\n".join(ev)
+            already[r0["candidate"]] = r0
+
+        pending = []
         for r0 in read_jsonl(out_dir / a.name):
             cap = out_dir / "captures" / r0["candidate"] / "stats.json"
             if r0.get("judge") and cap.exists():
@@ -440,21 +459,30 @@ def main():
                     continue   # re-verified in full (new capture recipe)
                 with GPU_LOCK:
                     base = baseline(world, spec["shots"], spec.get("script_by_world", {}).get(world, spec["script"]), r0["segment"])
-                cscore, notes = CHECKS[r0["segment"]](r0["brief"], stats, base)
-                j = r0["judge"]
-                r0["checks"] = {"score": cscore, "notes": notes}
-                r0["stats"] = {k: stats[k] for k in ("fps_avg", "draw_calls", "palette", "obstacles", "probe") if k in stats}
-                r0["score"] = 0.4 * cscore + 0.6 * float(j.get("overall", 0)) / 10.0
-                r0["pass"] = bool(j.get("pass")) and cscore >= 0.6
-                ev = ["checks: " + "; ".join(notes)] + [f"{k} {v.get('score')}/10: {v.get('evidence', '')}" for k, v in j.get("attributes", {}).items()]
-                if j.get("revision_notes"):
-                    ev.append("revise: " + j["revision_notes"])
-                r0["evidence"] = "\n".join(ev)
-                already[r0["candidate"]] = r0
+                if a.rejudge_saved and world == a.rejudge_saved:
+                    pending.append((r0, stats, base))   # new judge prompt, same frames
+                    continue
+                finish(r0, stats, base, r0["judge"])
             elif r0["gates"].get("static") and any("must start with" in x for x in r0["gates"]["static"]):
                 # a nested code fence hid the extends line: strip fence lines and re-verify
                 p = Path(r0["path"])
                 p.write_text("\n".join(l for l in p.read_text().splitlines() if not l.strip().startswith("```")) + "\n")
+        if pending:
+            print(f"rejudge: {len(pending)} {a.rejudge_saved} rows from their saved frames", flush=True)
+
+            def rejudge(p):
+                r0, stats, base = p
+                spec = SEGMENTS[r0["segment"]]
+                try:
+                    j = judge(r0["segment"], r0["brief"], stats["frames"], base.get("frames") if "reference" in spec else None)
+                except Exception as e:   # keep the old judgement rather than lose the row
+                    print(f"  {r0['candidate']}: rejudge failed ({str(e)[:120]}), kept the old judgement", flush=True)
+                    j = r0["judge"]
+                finish(r0, stats, base, j)
+                print(f"  {r0['candidate']}: {'PASS' if r0['pass'] else 'fail'} judge {j.get('overall', '-')}", flush=True)
+
+            with ThreadPoolExecutor(max(1, a.workers)) as ex:
+                list(ex.map(rejudge, pending))
         results.extend(already.values())
         rows = [r0 for r0 in rows if r0["candidate"] not in already]
         print(f"rescore: {len(already)} rescored from disk, {len(rows)} to re-verify")

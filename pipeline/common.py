@@ -38,7 +38,21 @@ SEGMENTS = {
     # street furniture is small and near the kerb: look along the sidewalk ahead, then back along the
     # near kerb toward the crosswalk, then back across both kerbs (single per-block items are often out of view)
     "props": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-300_-40~2.5,7:Drag_-230_20~2.5",
-              "script_by_world": {"street": "4:Drag_580_-40~2.5,7:Drag_-230_-20~2.5"}},
+              "script_by_world": {"street": "4:Drag_580_-40~2.5,7:Drag_-230_-20~2.5"},
+              "views_by_world": {"street": ["default chase view along the sidewalk", "low view back along the near kerb toward the crosswalk",
+                                            "wider view back across both kerbs"]},
+              # street only: the judge capped variety for items too small to see from these views
+              "reference": {"street": "lamps with curved arms every 12 m on both kerbs, wooden power poles with wires on the verge, "
+                                      "dark green bins, red hydrants, a STOP sign and street-name sign at the crosswalk, a blue bus bench, a mailbox"},
+              "reference_note": ("The reference is not what the brief asks for; it shows how much of a block's street furniture "
+                                 "these three views actually reveal. Small repeated items (bins, hydrants) are a few pixels tall "
+                                 "at this distance, are often hidden by the walker, trees and parked cars, and a 40 m stretch holds "
+                                 "only one or two of each. Calibration: for a brief that described the reference look exactly, the "
+                                 "reference frames would score 7 on every attribute. Count an item type as present when it shows "
+                                 "about as often as comparable items do in the reference; lower variety or palette only for item "
+                                 "types clearly absent where the reference would show them, wrong or out-of-place items, clones, "
+                                 "or wrong colours you can see. Score above 7 where the candidate matches its brief better than "
+                                 "the reference matches its own description, below 7 where it is worse or wrong.")},
     # surface segments on the beach: default view, then the walker stops, turns
     # to the sea and walks to the wet band; the camera tilts down at the feet
     # (wet sand, water's edge, shallows), then turns to look along the shore
