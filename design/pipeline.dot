@@ -28,7 +28,7 @@ digraph pipeline {
     v2 [label="Runtime gate\nheadless boot, no script errors", fillcolor="#cfe9cf"];
     v3 [label="Native capture\nGPU, 3 views, stats.json", fillcolor="#cfe9cf"];
     v4 [label="Checks\nsun angles, palette, budget, brightness", fillcolor="#cfe9cf"];
-    v5 [label="Judge\nClaude Sonnet 5 + rubric -> scores, evidence\n(ground / water: vs shipped reference frames)", fillcolor="#cfe9cf"];
+    v5 [label="Judge\nClaude Sonnet 5 + rubric -> scores, evidence\n(ground / water / street props: vs shipped reference frames)", fillcolor="#cfe9cf"];
     v6 [label="Aggregate\nscore, pass, revision brief", fillcolor="#cfe9cf"];
     v1 -> v2 -> v3 -> v4 -> v5 -> v6;
     {rank=same; v1; v2; v3; v4; v5; v6;}
@@ -72,10 +72,10 @@ digraph pipeline {
   subgraph cluster_m5 {
     label="M5  Segments through M1-M4   (each needs: contract, rubric, brief sampler, checks, capture recipe)   <- current milestone"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
     g0 [label="sky\nspecialist trained + evaluated\n(1.5B / 3B beat the teacher one-shot)", fillcolor="#cfe9cf"];
-    g1 [label="ground / water\nbeach + verifier fixed: ground 1/48 -> 28 examples\nground3 (72 briefs) running, water2 + water3 next", fillcolor="#ffe3b0"];
+    g1 [label="ground / water\nground: 28 examples, ground3 (72 briefs) verifying\nwater: colour table recalibrated (4 -> 16 examples);\nfoam shader fix before water3", fillcolor="#ffe3b0"];
     g2 [label="camera\nframing box, stabilisation", fillcolor="#e0e0e0"];
     g3 [label="fauna\nflock motion, flush behaviour", fillcolor="#e0e0e0"];
-    g4 [label="props\nbeach strong; street views + token cap fixed\nstreet regeneration + props3 queued", fillcolor="#ffe3b0"];
+    g4 [label="props\n145 examples (street judge vs shipped street: 65 -> 145)\nready for 3B training; props3 queued", fillcolor="#ffe3b0"];
     g5 [label="vegetation\n63 examples from run 1\nveg2 (60 briefs) queued, then 3B training", fillcolor="#ffe3b0"];
     g6 [label="architecture\nlots, facades, skyline", fillcolor="#e0e0e0"];
     g7 [label="crowd\ncontact validator, gaits", fillcolor="#e0e0e0"];
