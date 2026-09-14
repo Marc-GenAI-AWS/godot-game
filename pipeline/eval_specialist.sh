@@ -37,7 +37,8 @@ first = [json.loads(l) for l in open(f"runs/{run}/verified.jsonl")]
 rev = {}
 for l in open(f"runs/{run}/verified_rev.jsonl"):
     r = json.loads(l); rev[r["candidate"][:-1]] = r
-teacher = [json.loads(l) for f in glob.glob(f"runs/{seg}*[0-9]/verified.jsonl") for l in open(f) if json.loads(l)["brief_id"] in ids]
+teacher = [json.loads(l) for f in glob.glob("runs/*/verified.jsonl") if "/eval-" not in f and "/loop-" not in f
+           for l in open(f) if json.loads(l)["brief_id"] in ids]   # brief ids are unique per data run
 def rate(rows): return round(sum(r["pass"] for r in rows) / max(1, len(rows)), 3)
 def js(rows):
     v = [r["judge"].get("overall", 0) for r in rows if r.get("judge")]; return round(sum(v) / max(1, len(v)), 2)
