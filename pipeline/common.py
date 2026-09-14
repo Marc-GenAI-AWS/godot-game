@@ -43,15 +43,15 @@ SEGMENTS = {
     # (wet sand, water's edge, shallows), then turns to look along the shore
     # (ground: beach side; water: sea side). The judge also gets the shipped
     # layer's frames as a colour reference.
-    "ground": {"world": "beach", "shots": "3,7,9", "script": "3:ArrowDown,3.2:ArrowRight~0.72,4:ArrowUp,5.8:ArrowDown,6:Drag_0_260~1.5,8:Drag_-330_-260~1.5",
+    "ground": {"world": "beach", "shots": "3,7,9", "script": "3:ArrowDown,3.2:ArrowRight~0.72,4:ArrowUp,5.8:ArrowDown,6:Look_0_260~1.5,8:Look_-330_-260~1.5",
                "script_by_world": {"street": "4:Drag_0_260~2.5,7:Drag_-330_-200~2.5"},
                "views": ["default view", "tilted down at the walker's feet by the water", "turned to look along the beach"],
                "views_by_world": {"street": ["default view", "tilted down at the ground", "side view"]},
-               "reference": {"beach": "golden fine-grain sand, a 10 m wet band with a mirror sheet at the tide line, shells along the tide line",
+               "reference": {"beach": "warm mid-brown fine-grain sand, a 10 m darker wet band with a mirror sheet at the tide line, a few shells along the tide line",
                              "street": "worn grey asphalt, double yellow centre line, white edge lines, plain concrete kerbs and slab sidewalks, mown lawns"}},
-    "water": {"world": "beach", "shots": "3,7,9", "script": "3:ArrowDown,3.2:ArrowRight~0.72,4:ArrowUp,5.8:ArrowDown,6:Drag_0_260~1.5,8:Drag_330_-260~1.5",
+    "water": {"world": "beach", "shots": "3,7,9", "script": "3:ArrowDown,3.2:ArrowRight~0.72,4:ArrowUp,5.8:ArrowDown,6:Look_0_260~1.5,8:Look_330_-260~1.5",
               "views": ["default view", "tilted down at the walker's feet by the water", "turned to look along the shore, sea on the left"],
-              "reference": {"beach": "gentle swell, turquoise tropical water, a lacy foam band at the edge, sand visible through the shallows"}},
+              "reference": {"beach": "gentle swell, turquoise tropical water, a lacy foam band at the edge with sand showing between the patches, sparse foam lines further out"}},
 }
 # load() paths a segment's candidates may use (everything else is forbidden)
 ALLOWED_LOADS = {

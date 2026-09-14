@@ -305,7 +305,12 @@ def judge(segment: str, brief: dict, frames: list, reference: list | None = None
         blocks.append({"text": f"Reference frames: the shipped default layer under the same views ({ref_desc}). "
                                "The scene's daylight lightens and cools every colour, so judge the candidate's colours and tones "
                                "relative to these frames, not against the nominal numbers in the brief. The reference is not "
-                               "what the brief asks for; it only shows how a known look renders here."})
+                               "what the brief asks for; it only shows how a known look renders here. Calibration: for a brief "
+                               "that described the reference look exactly, the reference frames would score 7 on every "
+                               "attribute; the scene's own limits (low-poly people, hard shadows, the straightness of the "
+                               "water's edge, the sun glint on wet sand) are not the candidate's defects unless the candidate "
+                               "makes them worse. Score above 7 where the candidate matches its brief better than the "
+                               "reference matches its own description, below 7 where it is worse or wrong."})
         for i, f in enumerate(reference):
             blocks.append({"text": f"Reference {i + 1} ({labels[i] if i < len(labels) else 'extra'}):"})
             blocks.append(image_block(f))

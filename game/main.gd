@@ -120,14 +120,17 @@ func _parse_script(spec: String) -> void:
 			continue
 		var t := float(kv[0])
 		var name := kv[1]
-		if name.begins_with("Drag_"):
+		if name.begins_with("Drag_") or name.begins_with("Look_"):
+			# Drag_ releases at the press point, which the walker reads as a tap
+			# (toggles walking); older recipes rely on that. Look_ releases where
+			# the drag ended, so it only orbits the camera.
 			var hold := 0.3
 			if "~" in name:
 				var nh := name.split("~")
 				name = nh[0]
 				hold = float(nh[1])
 			var p := name.split("_")
-			script_events.append([t, "drag", float(p[1]), float(p[2]), hold])
+			script_events.append([t, "drag", float(p[1]), float(p[2]), hold, p[0] == "Look"])
 		else:
 			var hold := 0.12
 			if "~" in name:
@@ -158,7 +161,6 @@ func _drag(dx: float, dy: float) -> void:
 	var move := InputEventMouseMotion.new()
 	move.position = centre + Vector2(dx, dy)
 	move.relative = Vector2(dx, dy)
-	_drag_delta = Vector2(dx, dy)
 	move.button_mask = MOUSE_BUTTON_MASK_LEFT
 	Input.parse_input_event(move)
 
@@ -167,8 +169,7 @@ func _drag_release() -> void:
 	var up := InputEventMouseButton.new()
 	up.button_index = MOUSE_BUTTON_LEFT
 	up.pressed = false
-	# release where the drag ended, so a drag is not mistaken for a tap
-	# (a tap toggles walking)
+	# Look_ releases where the drag ended (not a tap); Drag_ at the press point
 	up.position = get_viewport().get_visible_rect().size * 0.5 + _drag_delta
 	Input.parse_input_event(up)
 
@@ -179,6 +180,7 @@ func _capture_tick() -> void:
 		var ev: Array = script_events.pop_front()
 		if ev[1] == "drag":
 			_drag(ev[2], ev[3])
+			_drag_delta = Vector2(ev[2], ev[3]) if ev[5] else Vector2.ZERO
 			_held.append([t + ev[4], -1])          # -1 = mouse release
 		else:
 			_key_event(ev[2], true)

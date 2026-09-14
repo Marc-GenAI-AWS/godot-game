@@ -59,11 +59,13 @@ void fragment() {
 	float wash = smoothstep(0.07, 0.015, d);
 	float foam_band = smoothstep(0.03, 0.07, d) * smoothstep(0.24, 0.12, d);
 	float outer = smoothstep(0.18, 0.28, d) * smoothstep(0.55, 0.3, d);
-	float lace_bias = 0.25 * foam_amount;
-	float edge_foam = foam_band * smoothstep(0.28, 0.5, lace + lace_bias) + outer * smoothstep(0.42, 0.62, lace + 0.15 * (foam_amount - 1.0));
+	// The band is lace with holes (sand shows through between the patches)
+	// rather than a solid white strip; foam_amount closes the holes.
+	float lace_bias = 0.12 * foam_amount;
+	float edge_foam = foam_band * smoothstep(0.36, 0.6, lace + lace_bias) + outer * smoothstep(0.42, 0.62, lace + 0.15 * (foam_amount - 1.0));
 	edge_foam = max(edge_foam, wash * smoothstep(0.5, 0.7, lace) * 0.5);
 	edge_foam *= clamp(foam_amount, 0.0, 2.0);
-	vec3 wet_film = mix(sand_color * 0.75, vec3(0.32, 0.46, 0.64), 0.4);
+	vec3 wet_film = mix(sand_color * 0.6, vec3(0.32, 0.46, 0.64), 0.3);
 	col = mix(col, wet_film, wash);
 	// Breaking lines: bands of foam rolling toward shore.
 	float band = sin(v_world.x * 0.5 / breaker_spacing - t * 1.1 + n1 * 2.0);
@@ -80,7 +82,10 @@ void fragment() {
 	NORMAL = normalize(mix(NORMAL, (VIEW_MATRIX * vec4(ripple, 0.0)).xyz, 0.12 * sparkle));
 
 	ALBEDO = col;
-	ROUGHNESS = mix(mix(0.3, 0.05, wash), 0.85, foam);
-	SPECULAR = mix(mix(0.3, 0.6, wash), 0.15, foam);
+	// Ragged water's edge: fade the sheet out over the last centimetres of
+	// depth with noise so the plane/sand intersection is not a straight line.
+	ALPHA = smoothstep(-0.01, 0.035, d + (n4 - 0.5) * 0.06);
+	ROUGHNESS = mix(mix(0.3, 0.15, wash), 0.85, foam);
+	SPECULAR = mix(mix(0.3, 0.4, wash), 0.15, foam);
 	METALLIC = 0.0;
 }
