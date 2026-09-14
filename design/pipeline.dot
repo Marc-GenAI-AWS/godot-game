@@ -28,14 +28,14 @@ digraph pipeline {
     v2 [label="Runtime gate\nheadless boot, no script errors", fillcolor="#cfe9cf"];
     v3 [label="Native capture\nGPU, 3 views, stats.json", fillcolor="#cfe9cf"];
     v4 [label="Checks\nsun angles, palette, budget, brightness", fillcolor="#cfe9cf"];
-    v5 [label="Judge\nClaude Fable 5.1 + rubric -> scores, evidence", fillcolor="#cfe9cf"];
+    v5 [label="Judge\nClaude + rubric -> scores, evidence\n(ground / water: vs shipped reference frames)", fillcolor="#cfe9cf"];
     v6 [label="Aggregate\nscore, pass, revision brief", fillcolor="#cfe9cf"];
     v1 -> v2 -> v3 -> v4 -> v5 -> v6;
     {rank=same; v1; v2; v3; v4; v5; v6;}
   }
 
   subgraph cluster_m2 {
-    label="M2  Data generation  (sky done: 293 examples; vegetation + props running; ground + water queued)"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
+    label="M2  Data generation  (sky done: 293 examples; props re-judging; ground + water re-verifying on fixed beach; vegetation needs a 2nd run)"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
     d1 [label="Brief sampler\ntime of day x weather x palette", fillcolor="#ffe3b0"];
     d2 [label="Teacher\nClaude Sonnet 5 writes 2 candidates / brief", fillcolor="#ffe3b0"];
     d3 [label="Verify\npass -> example, fail -> evidence", fillcolor="#ffe3b0"];
@@ -47,7 +47,7 @@ digraph pipeline {
   }
 
   subgraph cluster_m3 {
-    label="M3  Fine-tune specialists  (sky done: 7B / 3B / 1.5B bake-off; other segments queued)"; style="rounded,filled"; fillcolor="#eef7ee"; color="#7bb07b";
+    label="M3  Fine-tune specialists  (sky done; one size chosen: Qwen2.5-Coder-3B for every segment; min 100 examples)"; style="rounded,filled"; fillcolor="#eef7ee"; color="#7bb07b";
     t1 [label="SFT training job\nQwen2.5-Coder + LoRA per segment (SageMaker, us-east-2)", fillcolor="#cfe9cf"];
     t2 [label="Bake-off\nsky: 1.5B and 3B 77% one-shot, 7B 60%, teacher 60%", fillcolor="#cfe9cf"];
     t3 [label="Evaluate\nsame verifier, one self-revision round", fillcolor="#cfe9cf"];
@@ -72,11 +72,11 @@ digraph pipeline {
   subgraph cluster_m5 {
     label="M5  Segments through M1-M4   (each needs: contract, rubric, brief sampler, checks, capture recipe)   <- current milestone"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
     g0 [label="sky\nspecialist trained + evaluated\n(1.5B / 3B beat the teacher one-shot)", fillcolor="#cfe9cf"];
-    g1 [label="ground / water\ncontract, rubric, sampler, checks: done\ndata runs queued", fillcolor="#cfdcf5"];
+    g1 [label="ground / water\nknob contracts v1.3; beach shore + lighting fixed\nshipped layers pass the verifier; re-verify running", fillcolor="#ffe3b0"];
     g2 [label="camera\nframing box, stabilisation", fillcolor="#e0e0e0"];
     g3 [label="fauna\nflock motion, flush behaviour", fillcolor="#e0e0e0"];
-    g4 [label="props\ncontract + checks done (spots, contact validator)\ndata run in progress", fillcolor="#ffe3b0"];
-    g5 [label="vegetation\ncontract + checks done (placement zones, counts)\ndata run done, re-scoring with fixed views", fillcolor="#ffe3b0"];
+    g4 [label="props\n2 data runs done; street re-judged with sidewalk views\nprops12 3B training next", fillcolor="#ffe3b0"];
+    g5 [label="vegetation\ndata run 1 done (50 examples)\nadapters 0/9: second data run needed", fillcolor="#ffe3b0"];
     g6 [label="architecture\nlots, facades, skyline", fillcolor="#e0e0e0"];
     g7 [label="crowd\ncontact validator, gaits", fillcolor="#e0e0e0"];
     g8 [label="characters: body + motion\nSFT only, cached assets", fillcolor="#e0e0e0"];
