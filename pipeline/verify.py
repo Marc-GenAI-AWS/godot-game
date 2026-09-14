@@ -55,6 +55,11 @@ def static_gate(code: str, segment: str = "") -> list:
             problems.append(f"forbidden token: {tok.strip()}")
     if len(code) > 20000:
         problems.append("file longer than 20k chars")
+    try:   # unknown engine / project constants, wrong built-in constructor arity (gdcheck.py); never blocks on its own bug
+        from gdcheck import check
+        problems += check(code)
+    except Exception as e:
+        print(f"  gdcheck skipped ({str(e)[:120]})", flush=True)
     return problems
 
 

@@ -22,10 +22,18 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--val-frac", type=float, default=0.15)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--repairs", choices=["auto", "none"], default="auto",
+                    help="auto: also use repairs.jsonl next to each verified file (make_repair_pairs.py)")
+    ap.add_argument("--repair-frac", type=float, default=0.3, help="at most this share of the examples are repairs")
     a = ap.parse_args()
     rows = []
     for p in a.verified:
         rows += read_jsonl(p)
+    repairs = []
+    if a.repairs == "auto":
+        for d in dict.fromkeys(Path(p).parent for p in a.verified):
+            if (d / "repairs.jsonl").exists():
+                repairs += read_jsonl(d / "repairs.jsonl")
     by_brief = defaultdict(list)
     for r in rows:
         by_brief[r["brief_id"]].append(r)
@@ -52,6 +60,21 @@ def main():
                               "chosen": read(best["path"]), "rejected": read(f["path"]),
                               "rejected_evidence": f["evidence"]})
     rng = random.Random(a.seed)
+    # repair examples (broken layer + gate evidence -> the passing layer) follow their brief
+    # into train or val like any other example, capped so they never dominate
+    repairs = [r for r in repairs if r["brief_id"] in by_brief]
+    cap = int(len(examples) * a.repair_frac / max(1e-9, 1 - a.repair_frac))
+    if len(repairs) > cap:
+        repairs = random.Random(a.seed + 1).sample(repairs, cap)
+    for r in repairs:
+        seg = r["segment"]
+        examples.append({
+            "brief_id": r["brief_id"], "segment": seg, "mode": "repair", "score": r["score"],
+            "messages": [
+                {"role": "system", "content": contracts[seg]},
+                {"role": "user", "content": r["prompt"]},
+                {"role": "assistant", "content": "```gdscript\n" + read(r["path"]) + "```"},
+            ]})
     briefs = sorted(by_brief.keys())
     rng.shuffle(briefs)
     n_val = max(1, int(len(briefs) * a.val_frac)) if len(briefs) > 3 else 0
@@ -64,7 +87,7 @@ def main():
     write_jsonl(out / "val.jsonl", val)
     write_jsonl(out / "preferences.jsonl", prefs)
     write_jsonl(out / "heldout_briefs.jsonl", [by_brief[b][0]["brief"] for b in sorted(val_ids)])
-    stats = {"briefs": len(briefs), "examples": len(examples), "train": len(train), "val": len(val),
+    stats = {"briefs": len(briefs), "examples": len(examples), "repair_examples": len(repairs), "train": len(train), "val": len(val),
              "preference_pairs": len(prefs), "pass_rate": round(sum(1 for r in rows if r["pass"]) / max(1, len(rows)), 3)}
     (out / "stats.json").write_text(json.dumps(stats, indent=2))
     print(json.dumps(stats))
