@@ -342,10 +342,11 @@ def verify_one(row: dict, out_dir: Path, do_judge=True) -> dict:
         res["evidence"] = "runtime gate: " + " | ".join(errors)
         return res
     cap_dir = out_dir / "captures" / cid
+    script = spec.get("script_by_world", {}).get(world, spec["script"])
     try:
         with GPU_LOCK:
-            base = baseline(world, spec["shots"], spec["script"], segment)
-            stats = capture(world, swap, cap_dir, spec["shots"], spec["script"])
+            base = baseline(world, spec["shots"], script, segment)
+            stats = capture(world, swap, cap_dir, spec["shots"], script)
     except Exception as e:
         res["gates"]["capture"] = [str(e)[:300]]
         res["evidence"] = "capture failed: " + str(e)[:300]
@@ -388,6 +389,7 @@ def main():
     ap.add_argument("--workers", type=int, default=3, help="candidates in flight (captures are still one at a time)")
     ap.add_argument("--resume", action="store_true", help="skip candidates already in the output file")
     ap.add_argument("--rescore", action="store_true", help="recompute checks and pass from saved captures + judge (no GPU, no Bedrock); re-verify rows without them")
+    ap.add_argument("--rejudge-world", help="with --rescore: fully re-verify (capture + judge) rows of this world, e.g. after a recipe change")
     a = ap.parse_args()
     out_dir = Path(a.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -410,8 +412,10 @@ def main():
                 stats["frames"] = sorted(str(p) for p in cap.parent.glob("*_*s.png"))
                 spec = SEGMENTS[r0["segment"]]
                 world = r0["brief"].get("world", spec["world"])
+                if a.rejudge_world and world == a.rejudge_world:
+                    continue   # re-verified in full (new capture recipe)
                 with GPU_LOCK:
-                    base = baseline(world, spec["shots"], spec["script"], r0["segment"])
+                    base = baseline(world, spec["shots"], spec.get("script_by_world", {}).get(world, spec["script"]), r0["segment"])
                 cscore, notes = CHECKS[r0["segment"]](r0["brief"], stats, base)
                 j = r0["judge"]
                 r0["checks"] = {"score": cscore, "notes": notes}
