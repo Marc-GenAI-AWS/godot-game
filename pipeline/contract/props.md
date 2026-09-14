@@ -104,8 +104,12 @@ Forbidden: `OS`, `FileAccess`, `DirAccess`, `HTTPRequest`, `JavaScriptBridge`,
 
 ## Capture recipe (what the verifier renders)
 
-Three 1280x720 frames: the default chase view at 3 s and views turned to
-each side at 6 s and 9 s. Numeric checks read placed node positions,
+Three 1280x720 frames. Beach: the default chase view at 3 s and views
+turned to each side at 6 s and 9 s. Street: the default view along the
+sidewalk at 3 s, a low view back along the near kerb toward the crosswalk at
+6 s, and a wider view back across both kerbs at 9 s (about 40 m of the
+block in all, so repeated items must recur within every 20 to 30 m to be
+seen). Numeric checks read placed node positions,
 `spots` count (beach), obstacle count, draw calls, and on the beach the
 crowd's contact validator (people must rest on loungers and towels within
 1 cm). The judge scores density, layout plausibility, item variety, palette,

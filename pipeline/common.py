@@ -35,9 +35,10 @@ SEGMENTS = {
     # the left) and slightly up so tall plants fit, then back along that side
     "vegetation": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-330_-110~2.5,7:Drag_-200_-30~2.5",
                    "script_by_world": {"street": "4:Drag_-200_-90~2.5,7:Drag_400_-40~2.5"}},
-    # street furniture is small and near the kerb: look along the sidewalk ahead, then across the road
+    # street furniture is small and near the kerb: look along the sidewalk ahead, then back along the
+    # near kerb toward the crosswalk, then back across both kerbs (single per-block items are often out of view)
     "props": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-300_-40~2.5,7:Drag_-230_20~2.5",
-              "script_by_world": {"street": "4:Drag_-90_-20~2.5,7:Drag_260_-10~2.5"}},
+              "script_by_world": {"street": "4:Drag_580_-40~2.5,7:Drag_-230_-20~2.5"}},
     # surface segments on the beach: default view, then the walker stops, turns
     # to the sea and walks to the wet band; the camera tilts down at the feet
     # (wet sand, water's edge, shallows), then turns to look along the shore
