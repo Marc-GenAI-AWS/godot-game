@@ -121,6 +121,17 @@ L40S, about $0.75 billable.
 | 3B LoRA, contract v1.1 data | 293 examples | 30 | 77% (0 gate fails, judge 6.90) | 80% | 60% |
 | 1.5B LoRA, contract v1.1 data | 293 examples | 30 | 77% (0 gate fails, judge 6.93) | 80% | 60% |
 
+Vegetation (63 examples, 50 train):
+
+| Adapter | Held-out briefs | One-shot pass | After one self-revision | Judge mean | Teacher one-shot, same briefs |
+|---|---|---|---|---|---|
+| 1.5B | 9 | 0% (4 gate fails) | 0% | 5.2 | 56% |
+| 3B | 9 | 0% (2 gate fails) | 11% | 5.57 | 56% (judge 6.35) |
+
+Fifty examples is not enough: both adapters compile most of the time and place
+plants correctly (checks 0.8 to 1.0) but the judge scores them 4 to 6, below
+the teacher's 6.35. Sky needed about 250 examples to reach parity.
+
 The gap between the specialist and the teacher one-shot is entirely code that
 fails to load (duplicate `var` declarations, a hallucinated `aerial_perspective`
 property); judge quality on the candidates that ran was at parity (6.67 vs
