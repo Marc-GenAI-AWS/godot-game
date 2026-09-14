@@ -43,9 +43,12 @@ edge zones and the breaker lines; you choose the values:
 - colours `deep_color`, `shallow_color`, `sand_color` (pass `Color(r, g, b)`
   values, never `Vector3`: a raw vec3 skips the sRGB conversion and renders
   neon-bright),
-- `swell_amp` (0.3 calm .. 1 gentle .. 2 choppy), `chop` (0 glassy .. 1.5),
-- `foam_amount` (0 none .. 1 lacy band .. 2 heavy), `breaker_strength`
-  (0 none .. 1.5), `breaker_spacing` (0.5 tight .. 2 wide),
+- `swell_amp` (0.3 calm .. 1 gentle .. 2 choppy), `chop` (0 glassy .. 1.5;
+  below 1 the surface glasses over, above 1 whitecaps fleck the open water),
+- `foam_amount` (0 none .. 1 lacy band .. 2 heavy; it sets how wide the edge
+  band and streaks reach, and the band stays lacy even when heavy),
+  `breaker_strength` (0 none .. 1.5; sets how wide the breaker lines are),
+  `breaker_spacing` (0.5 tight .. 2 wide),
 - `clarity_depth` (0.3 murky .. 1 .. 3 sand visible far out), `sparkle` (0..1.5).
 
 ## World context you may use
