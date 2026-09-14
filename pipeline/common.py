@@ -108,7 +108,7 @@ def converse(model: str, system: str, user_blocks, max_tokens=9000, temperature=
     # transient service errors (throttling, brief model-side outages) can last
     # minutes: up to ~4 minutes of backoff before giving up
     delays = [3, 8, 15, 30, 60, 90]
-    chain = [model] + [m for m in FALLBACKS.get(model, []) if m != model]
+    fallbacks = list(FALLBACKS.get(model, []))   # tried in order when the model rejects the call outright
     for attempt in range(len(delays) + 1):
         try:
             r = bedrock().converse(**kwargs)
@@ -117,13 +117,12 @@ def converse(model: str, system: str, user_blocks, max_tokens=9000, temperature=
         except Exception as e:
             msg = str(e)
             # a model-side rejection that comes and goes ("data retention mode ... not
-            # available"): try the next profile / model in the chain before waiting
-            if "retention" in msg and chain:
-                nxt = chain.pop(0) if chain[0] != kwargs["modelId"] else (chain.pop(0) and chain.pop(0) if len(chain) > 1 else None)
-                if nxt and nxt != kwargs["modelId"]:
-                    print(f"  bedrock: {kwargs['modelId']} rejected the call; switching to {nxt}", flush=True)
-                    kwargs["modelId"] = nxt
-                    continue
+            # available"): switch to the next profile / model before waiting
+            if "retention" in msg and fallbacks:
+                nxt = fallbacks.pop(0)
+                print(f"  bedrock: {kwargs['modelId']} rejected the call; switching to {nxt}", flush=True)
+                kwargs["modelId"] = nxt
+                continue
             if attempt >= len(delays):
                 raise
             print(f"  bedrock retry {attempt + 1}: {msg[:120]}", flush=True)
