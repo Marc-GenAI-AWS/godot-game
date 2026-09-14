@@ -3,8 +3,8 @@
 Procedural game scenes built layer by layer in Godot 4, exported to the web
 and served by GitHub Pages.
 
-**Play:** https://mlobree.github.io/boulder-hill/ (landing page) ·
-Beach Walk: https://mlobree.github.io/boulder-hill/play/#world=beach
+**Play:** https://mlobree.github.io/godot-game/ (landing page) ·
+Beach Walk: https://mlobree.github.io/godot-game/play/#world=beach
 
 Design note: [Specialised models for building game scenes](design/specialist-models.md)
 describes how the layered scenes become a training and agentic pipeline;
