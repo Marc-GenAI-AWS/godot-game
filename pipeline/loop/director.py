@@ -42,9 +42,16 @@ Azimuth is where the sun sits: 0 = ahead of the walker (-Z), 90 = +X (sea side /
 Keep values physically consistent (night: negative elevation; overcast: cover >= 0.85)."""
 
 
-def direct(scene_brief: str, segments: list) -> dict:
-    text, usage = converse(DIRECTOR_MODEL, DIRECTOR_SYSTEM.format(segments=", ".join(segments)),
-                           [{"text": "Scene brief: " + scene_brief}], max_tokens=1500)
+def direct(scene_brief: str, segments: list, run: str = "") -> dict:
+    system = DIRECTOR_SYSTEM.format(segments=", ".join(segments))
+    user = "Scene brief: " + scene_brief
+    text, usage = converse(DIRECTOR_MODEL, system, [{"text": user}], max_tokens=1500)
+    try:   # full record for training a local director later (calllog.py); logged before parsing so bad replies are kept too
+        from calllog import log_call
+        log_call("director", {"type": "plan", "run": run, "scene_brief": scene_brief, "segments": segments,
+                              "model": DIRECTOR_MODEL, "system": system, "user": user, "reply": text, "usage": usage})
+    except Exception as e:
+        print(f"  calllog: director call not logged ({str(e)[:160]})", flush=True)
     plan = parse_json(text)
     for seg, b in plan["segments"].items():
         b.setdefault("segment", seg)
@@ -67,7 +74,7 @@ def main():
     segments = a.segments.split(",")
 
     print("director:", DIRECTOR_MODEL)
-    plan = direct(a.scene_brief, segments)
+    plan = direct(a.scene_brief, segments, run=out.name)
     (out / "plan.json").write_text(json.dumps(plan, indent=2))
     print(" ", plan["summary"])
     log = []
@@ -102,6 +109,15 @@ def main():
               "unresolved": [s for s in segments if s not in accepted],
               "play": f"#world={plan['world']}" + "".join(f"&swap={s}:{p}" for s, p in accepted.items())}
     (out / "report.json").write_text(json.dumps(report, indent=2))
+    try:   # how the plan turned out: the label a local director is judged by
+        from calllog import log_call
+        log_call("director", {"type": "outcome", "run": out.name, "scene_brief": a.scene_brief, "backend": a.backend,
+                              "plan": plan, "accepted": accepted, "unresolved": report["unresolved"],
+                              "rounds": [{"candidate": r["candidate"], "mode": r.get("mode"), "pass": r["pass"],
+                                          "score": r["score"], "judge_overall": (r.get("judge") or {}).get("overall")}
+                                         for r in log]})
+    except Exception as e:
+        print(f"  calllog: loop outcome not logged ({str(e)[:160]})", flush=True)
     print(json.dumps(report, indent=2))
 
 

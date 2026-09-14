@@ -21,6 +21,9 @@ pipeline/
   rubrics/sky.md       the judge's per-segment rubric
   loop/specialist.py   one call = one layer; backends: teacher | local:<vLLM url> | endpoint:<SageMaker>
   loop/director.py     scene brief -> per-segment briefs -> specialists -> verify -> revise -> install
+  calllog.py           full judge / director call records + content-addressed frames (training data for local models)
+  backfill_calllog.py  records judgements made before call logging (verdict + frames only)
+  archive_calllog.sh   syncs runs/_calls and runs/_frames to S3
   sagemaker/
     train_sft.py       TRL SFT + LoRA (merged output), runs in a PyTorch DLC
     launch_sft.py      training job launcher (spot, g6e.2xlarge by default)
@@ -59,9 +62,33 @@ DISPLAY=:0 pipeline/.venv/bin/python pipeline/verify.py --candidates pipeline/ru
 pipeline/.venv/bin/python pipeline/build_sft.py --verified pipeline/runs/sky1/verified.jsonl pipeline/runs/sky1/verified_rev.jsonl --out pipeline/runs/sky1/sft
 ```
 
-Models (Bedrock inference profiles, `us-west-2`): teacher
-`us.anthropic.claude-sonnet-5`, judge and director `us.anthropic.claude-fable-5-1`.
+Models (Bedrock inference profiles, `us-west-2`): teacher and judge
+`us.anthropic.claude-sonnet-5`, director `us.anthropic.claude-fable-5-1`.
 Override with `TEACHER_MODEL`, `JUDGE_MODEL`, `DIRECTOR_MODEL`.
+
+## Call logs (for local judge and director models later)
+
+Claude stays the judge and director for now, but every call is recorded in
+full so both roles can later be distilled into local models:
+
+- `runs/_calls/judge.jsonl`: one line per judge call with the rubric
+  (system prompt), the prompt blocks (brief text, labels, reference and
+  candidate images by SHA-256), the raw reply and any JSON-repair reply, the
+  parsed verdict, usage, and the run / candidate it belongs to. Rows of type
+  `backfill` predate full logging and carry only the verdict and frames.
+- `runs/_calls/director.jsonl`: a `plan` line per director call (system
+  prompt, scene brief, raw reply) and an `outcome` line per loop run (the
+  plan, each round's pass / score / judge overall, accepted segments).
+- `runs/_frames/<ab>/<sha256>.png`: every image a judge saw, stored once.
+  Captures are deleted when a run is re-verified and reference frames are a
+  shared cache, so the log keeps its own copies.
+
+Logging never breaks a run (failures print a warning). After a data run:
+
+```
+pipeline/.venv/bin/python pipeline/backfill_calllog.py   # only needed once for older runs; safe to re-run
+pipeline/archive_calllog.sh                              # sync both to s3://$SAGEMAKER_BUCKET/call-logs/
+```
 
 ## Training on SageMaker
 

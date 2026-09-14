@@ -302,7 +302,7 @@ COLOUR_NOTE = ("The scene's daylight lightens and cools every colour, so judge t
                "reference matches its own description, below 7 where it is worse or wrong.")
 
 
-def judge(segment: str, brief: dict, frames: list, reference: list | None = None) -> dict:
+def judge(segment: str, brief: dict, frames: list, reference: list | None = None, log_ctx: dict | None = None) -> dict:
     rubric = read(PIPE / "rubrics" / f"{segment}.md")
     spec = SEGMENTS[segment]
     world = brief.get("world", spec["world"])
@@ -324,6 +324,8 @@ def judge(segment: str, brief: dict, frames: list, reference: list | None = None
         blocks.append({"text": f"Frame {i + 1} ({labels[i] if i < len(labels) else 'extra'}):"})
         blocks.append(image_block(f))
     blocks.append({"text": "Score the candidate frames against the brief. JSON only."})
+    image_paths = (list(reference) if reference and ref_desc else []) + list(frames)   # image block order, for the call log
+    text2 = None
     text, usage = converse(JUDGE_MODEL, rubric, blocks, max_tokens=3000)
     try:
         j = parse_json(text)
@@ -343,6 +345,14 @@ def judge(segment: str, brief: dict, frames: list, reference: list | None = None
     j["attributes"] = {k: (v if isinstance(v, dict) else {"score": v, "evidence": ""})
                        for k, v in (j.get("attributes") or {}).items()} if isinstance(j.get("attributes"), dict) else {}
     j["usage"] = usage
+    try:   # full record for training a local judge later (calllog.py); never breaks verification
+        from calllog import log_blocks, log_call
+        log_call("judge", {"type": "call", **(log_ctx or {}), "segment": segment, "world": world, "model": JUDGE_MODEL,
+                           "system": rubric, "blocks": log_blocks(blocks, image_paths), "reply": text,
+                           "repair_reply": text2, "has_reference": bool(reference and ref_desc),
+                           "verdict": {k: v for k, v in j.items() if k != "usage"}, "usage": usage})
+    except Exception as e:
+        print(f"  calllog: judge call not logged ({str(e)[:160]})", flush=True)
     return j
 
 
@@ -386,7 +396,8 @@ def verify_one(row: dict, out_dir: Path, do_judge=True) -> dict:
     res["checks"] = {"score": cscore, "notes": notes}
     jscore = None
     if do_judge:
-        j = judge(segment, brief, stats["frames"], base.get("frames") if "reference" in spec else None)
+        j = judge(segment, brief, stats["frames"], base.get("frames") if "reference" in spec else None,
+                  log_ctx={"run": out_dir.name, "candidate": cid, "brief_id": brief["id"], "mode": row.get("mode", "write"), "brief": brief})
         res["judge"] = j
         jscore = float(j.get("overall", 0)) / 10.0
     if jscore is None:
@@ -478,7 +489,9 @@ def main():
                 r0, stats, base = p
                 spec = SEGMENTS[r0["segment"]]
                 try:
-                    j = judge(r0["segment"], r0["brief"], stats["frames"], base.get("frames") if "reference" in spec else None)
+                    j = judge(r0["segment"], r0["brief"], stats["frames"], base.get("frames") if "reference" in spec else None,
+                              log_ctx={"run": out_dir.name, "candidate": r0["candidate"], "brief_id": r0.get("brief_id"),
+                                       "mode": "rejudge", "brief": r0["brief"]})
                 except Exception as e:   # keep the old judgement rather than lose the row
                     print(f"  {r0['candidate']}: rejudge failed ({str(e)[:120]}), kept the old judgement", flush=True)
                     j = r0["judge"]
