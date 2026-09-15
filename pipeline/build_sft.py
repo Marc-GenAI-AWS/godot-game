@@ -22,6 +22,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--val-frac", type=float, default=0.15)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--heldout", help="heldout_briefs.jsonl of an earlier build: use exactly those briefs for val (new briefs all train)")
     ap.add_argument("--repairs", choices=["auto", "none"], default="auto",
                     help="auto: also use repairs.jsonl next to each verified file (make_repair_pairs.py)")
     ap.add_argument("--repair-frac", type=float, default=0.3, help="at most this share of the examples are repairs")
@@ -76,9 +77,13 @@ def main():
                 {"role": "assistant", "content": "```gdscript\n" + read(r["path"]) + "```"},
             ]})
     briefs = sorted(by_brief.keys())
-    rng.shuffle(briefs)
-    n_val = max(1, int(len(briefs) * a.val_frac)) if len(briefs) > 3 else 0
-    val_ids = set(briefs[:n_val])
+    if a.heldout:
+        # keep an earlier dataset's held-out briefs so evals before and after a data top-up compare the same briefs
+        val_ids = {b["id"] for b in read_jsonl(a.heldout)} & set(briefs)
+    else:
+        rng.shuffle(briefs)
+        n_val = max(1, int(len(briefs) * a.val_frac)) if len(briefs) > 3 else 0
+        val_ids = set(briefs[:n_val])
     train = [e for e in examples if e["brief_id"] not in val_ids]
     val = [e for e in examples if e["brief_id"] in val_ids]
     out = Path(a.out)
