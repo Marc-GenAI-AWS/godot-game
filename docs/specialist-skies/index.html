@@ -61,12 +61,19 @@ evidence. No sky here was written or edited by a larger model. Click a card to p
     <div class="shots"><img src="loop-demo-3-a.jpg" alt="default view"><img src="loop-demo-3-b.jpg" alt="tilted up"><img src="loop-demo-3-c.jpg" alt="side view"></div>
     <span class="tag">accepted after 1 self-revision · judge 7/10 · Sep 13</span>
   </a>
+  <a class="card" href="../play/#world=street&swap=sky:res://segments/sky/generated/street-dusk-rejected.gd" style="border: 1px solid rgba(255,192,168,0.6)">
+    <h2>Street · dusk <span style="color:#ffc0a8">(not accepted)</span></h2>
+    <p>"dusk on the street, the sun just down behind the houses, warm orange horizon fading to deep blue, streetlights about to come on"</p>
+    <div class="shots"><img src="street-dusk-sky-rejected-a.jpg" alt="default view"><img src="street-dusk-sky-rejected-b.jpg" alt="tilted up"><img src="street-dusk-sky-rejected-c.jpg" alt="side view"></div>
+    <span class="tag" style="color:#ffc0a8">rejected: best of 6 rounds over two attempts, judge 6/10; a pink-mauve sky instead of an orange horizon fading to deep blue, weak sun direction (4/10)</span>
+  </a>
 </div>
 <div class="notes">
-  <strong>Not shown:</strong> "dusk on the street, the sun just down behind the houses" failed on both attempts (three
-  rounds each, judge stuck at 6: a pink-mauve sky instead of an orange horizon fading to deep blue), and the first cloudy-beach
-  attempt never ran (the model used an Environment constant that does not exist in Godot). Only the sky is generated;
-  every other layer is the shipped scene. Thumbnails are the verifier's captures of the accepted round.
+  <strong>About the rejected card.</strong> The street dusk sky never passed the verifier; it is shown so you can see what
+  the specialist actually produced, and in production it would not be used. Not shown at all: the first cloudy-beach attempt,
+  whose code never loaded (the model used an Environment constant that does not exist in Godot); its second attempt is the
+  accepted cloudy beach above. Only the sky is generated; every other layer is the shipped scene. Thumbnails are the verifier's
+  captures of each round shown.
 </div>
 <footer>Source: <a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a> · Built with Godot 4</footer>
 </main>

@@ -9,18 +9,20 @@ body { margin: 0; font-family: 'Segoe UI', 'Noto Sans', Arial, sans-serif; color
 main { max-width: 64rem; margin: 0 auto; padding: 4rem 1.5rem; }
 h1 { letter-spacing: 0.08em; margin: 0 0 0.4rem; }
 p.lead { color: #cfe2ff; margin-top: 0; line-height: 1.5; }
-.scene { display: block; text-decoration: none; color: inherit; background: rgba(6, 30, 70, 0.55); border-radius: 1rem; padding: 1.2rem; margin-top: 1.6rem; box-shadow: 0 0.8rem 2rem rgba(0,0,0,0.3); transition: transform 0.15s; }
-.scene:hover { transform: translateY(-3px); }
+.scene { background: rgba(6, 30, 70, 0.55); border-radius: 1rem; padding: 1.2rem; margin-top: 1.6rem; box-shadow: 0 0.8rem 2rem rgba(0,0,0,0.3); }
 .scene h2 { margin: 0 0 0.4rem; font-size: 1.15rem; }
 .scene p { margin: 0; color: #dce9ff; font-size: 0.92rem; line-height: 1.45; }
 .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; margin: 0.8rem 0 0.4rem; }
 .shots img { width: 100%; border-radius: 0.4rem; display: block; }
-.shipped { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; width: 50%; opacity: 0.85; }
-.shipped img { width: 100%; border-radius: 0.3rem; display: block; }
-.label { font-size: 0.75rem; color: #b9cdf0; margin: 0.5rem 0 0.25rem; }
-ul.segs { list-style: none; padding: 0; margin: 0.7rem 0 0; font-size: 0.88rem; }
-ul.segs li { margin: 0.2rem 0; }
-.ok { color: #9ff0b3; } .no { color: #ffc0a8; }
+.small { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; width: 50%; opacity: 0.9; }
+.small img { width: 100%; border-radius: 0.3rem; display: block; }
+.label { font-size: 0.75rem; color: #b9cdf0; margin: 0.6rem 0 0.25rem; }
+ul.segs { list-style: none; padding: 0; margin: 0.8rem 0 0; font-size: 0.88rem; }
+ul.segs li { margin: 0.25rem 0; }
+.ok { color: #9ff0b3; } .no { color: #ffc0a8; } .none { color: #d0d0d0; }
+.links { margin-top: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.links a { text-decoration: none; color: #0b2a55; background: #e9f2ff; border-radius: 0.5rem; padding: 0.45rem 0.8rem; font-size: 0.88rem; font-weight: 600; }
+.links a.all { background: #ffe3b0; }
 .tag { display: inline-block; margin-top: 0.7rem; font-size: 0.75rem; color: #ffe9b3; }
 .notes { margin-top: 2.5rem; background: rgba(6, 30, 70, 0.4); border-radius: 1rem; padding: 1rem 1.4rem; font-size: 0.9rem; line-height: 1.5; color: #dce9ff; }
 footer { margin-top: 3rem; font-size: 0.8rem; color: rgba(255,255,255,0.75); }
@@ -34,57 +36,104 @@ a.back, footer a, .notes a { color: #fff; }
 <p class="lead">Each scene below started as one sentence. Claude Fable 5.1 (the director) planned the sky, the ground and the
 vegetation together; three fine-tuned 3B models (Qwen2.5-Coder-3B, one per segment) wrote those layers on a local GPU; the
 verifier rendered each layer in the game and a Claude judge scored it, sending failures back to the same 3B model for up to
-three rounds. Segments that were not accepted keep the normal game layer. No layer was written or edited by a larger model.
-Click a scene to play it with its accepted layers.</p>
+three rounds. No layer was written or edited by a larger model.<br><br>
+Every scene has two ways to play it. <strong>Accepted layers only</strong> is what the pipeline would ship: segments the
+verifier did not accept keep the normal game layer. <strong>Everything the specialists wrote</strong> also swaps in their best
+rejected attempt, so you can see what the small models actually produced, failures included. Rejected layers are labelled
+with the reason they were rejected; a layer whose code never loaded cannot be shown.</p>
 
-<a class="scene" href="../play/#world=beach&swap=ground:res://segments/ground/generated/scene-beach-tropical.gd;vegetation:res://segments/vegetation/generated/scene-beach-tropical.gd">
+<div class="scene">
   <h2>Beach · lush tropical afternoon</h2>
   <p>"a lush tropical afternoon on the beach: giant fan palms along the promenade, golden sand with a wide shiny wet band, a few puffy clouds out over the sea"</p>
+  <div class="label">accepted layers composed</div>
   <div class="shots"><img src="scene-beach-tropical-a.jpg" alt="composed, default view"><img src="scene-beach-tropical-b.jpg" alt="composed, turned landward"><img src="scene-beach-tropical-c.jpg" alt="composed, looking back"></div>
   <div class="label">normal game, same views</div>
-  <div class="shipped"><img src="scene-beach-tropical-shipped-a.jpg" alt="normal game"><img src="scene-beach-tropical-shipped-b.jpg" alt="normal game"><img src="scene-beach-tropical-shipped-c.jpg" alt="normal game"></div>
+  <div class="small"><img src="scene-beach-tropical-shipped-a.jpg" alt="normal game"><img src="scene-beach-tropical-shipped-b.jpg" alt="normal game"><img src="scene-beach-tropical-shipped-c.jpg" alt="normal game"></div>
   <ul class="segs">
     <li class="ok">ground: accepted on the first draft (judge 7/10)</li>
     <li class="ok">vegetation: accepted on the first draft (judge 8/10)</li>
-    <li class="no">sky: not accepted after 3 rounds (judge 6, 6, 6: too few clouds), normal sky kept</li>
+    <li class="no">sky: not accepted after 3 rounds; best attempt judge 6/10, too few clouds for the brief (cloud cover 4/10)</li>
   </ul>
-  <span class="tag">2 of 3 layers from the 3B specialists · Sep 14</span>
-</a>
+  <div class="label">the rejected sky, shown alone in the normal scene</div>
+  <div class="small"><img src="scene-beach-tropical-sky-rejected-a.jpg" alt="rejected sky"><img src="scene-beach-tropical-sky-rejected-b.jpg" alt="rejected sky"><img src="scene-beach-tropical-sky-rejected-c.jpg" alt="rejected sky"></div>
+  <div class="links">
+    <a href="../play/#world=beach&swap=ground:res://segments/ground/generated/scene-beach-tropical.gd;vegetation:res://segments/vegetation/generated/scene-beach-tropical.gd">Play: accepted layers only</a>
+    <a class="all" href="../play/#world=beach&swap=ground:res://segments/ground/generated/scene-beach-tropical.gd;vegetation:res://segments/vegetation/generated/scene-beach-tropical.gd;sky:res://segments/sky/generated/scene-beach-tropical-rejected.gd">Play: everything the specialists wrote</a>
+  </div>
+  <span class="tag">2 of 3 layers accepted · Sep 14</span>
+</div>
 
-<a class="scene" href="../play/#world=street&swap=sky:res://segments/sky/generated/scene-street-dusk.gd;vegetation:res://segments/vegetation/generated/scene-street-dusk.gd">
+<div class="scene">
   <h2>Street · dusk</h2>
   <p>"dusk on a quiet suburban street: young leafy trees, dry yellow-green lawns, worn grey asphalt with a single dashed centre line, the sky fading from orange to deep blue"</p>
+  <div class="label">accepted layers composed</div>
   <div class="shots"><img src="scene-street-dusk-a.jpg" alt="composed, default view"><img src="scene-street-dusk-b.jpg" alt="composed, turned"><img src="scene-street-dusk-c.jpg" alt="composed, looking across"></div>
   <div class="label">normal game, same views</div>
-  <div class="shipped"><img src="scene-street-dusk-shipped-a.jpg" alt="normal game"><img src="scene-street-dusk-shipped-b.jpg" alt="normal game"><img src="scene-street-dusk-shipped-c.jpg" alt="normal game"></div>
+  <div class="small"><img src="scene-street-dusk-shipped-a.jpg" alt="normal game"><img src="scene-street-dusk-shipped-b.jpg" alt="normal game"><img src="scene-street-dusk-shipped-c.jpg" alt="normal game"></div>
   <ul class="segs">
     <li class="ok">sky: accepted on the first draft (judge 7/10)</li>
     <li class="ok">vegetation: accepted on the first draft (judge 7/10)</li>
-    <li class="no">ground: not accepted after 3 rounds (judge 6, 6, 8, but every round was far over its draw-call budget), normal ground kept</li>
+    <li class="no">ground: not accepted after 3 rounds; best attempt judge 8/10, rejected for its cost: 62 extra draw calls against a budget of 10</li>
   </ul>
-  <span class="tag">2 of 3 layers from the 3B specialists · Sep 14</span>
-</a>
+  <div class="label">the rejected ground, shown alone in the normal scene</div>
+  <div class="small"><img src="scene-street-dusk-ground-rejected-a.jpg" alt="rejected ground"><img src="scene-street-dusk-ground-rejected-b.jpg" alt="rejected ground"><img src="scene-street-dusk-ground-rejected-c.jpg" alt="rejected ground"></div>
+  <div class="links">
+    <a href="../play/#world=street&swap=sky:res://segments/sky/generated/scene-street-dusk.gd;vegetation:res://segments/vegetation/generated/scene-street-dusk.gd">Play: accepted layers only</a>
+    <a class="all" href="../play/#world=street&swap=sky:res://segments/sky/generated/scene-street-dusk.gd;vegetation:res://segments/vegetation/generated/scene-street-dusk.gd;ground:res://segments/ground/generated/scene-street-dusk-rejected.gd">Play: everything the specialists wrote</a>
+  </div>
+  <span class="tag">2 of 3 layers accepted · Sep 14</span>
+</div>
 
-<a class="scene" href="../play/#world=street&swap=vegetation:res://segments/vegetation/generated/scene-street-overcast.gd">
+<div class="scene">
   <h2>Street · overcast palm-lined morning</h2>
   <p>"an overcast morning on a manicured palm-lined street with fresh black asphalt, granite grey kerbs and dark mown lawns"</p>
+  <div class="label">accepted layers composed</div>
   <div class="shots"><img src="scene-street-overcast-a.jpg" alt="composed, default view"><img src="scene-street-overcast-b.jpg" alt="composed, turned"><img src="scene-street-overcast-c.jpg" alt="composed, looking across"></div>
   <div class="label">normal game, same views</div>
-  <div class="shipped"><img src="scene-street-overcast-shipped-a.jpg" alt="normal game"><img src="scene-street-overcast-shipped-b.jpg" alt="normal game"><img src="scene-street-overcast-shipped-c.jpg" alt="normal game"></div>
+  <div class="small"><img src="scene-street-overcast-shipped-a.jpg" alt="normal game"><img src="scene-street-overcast-shipped-b.jpg" alt="normal game"><img src="scene-street-overcast-shipped-c.jpg" alt="normal game"></div>
   <ul class="segs">
     <li class="ok">vegetation: accepted on the first draft (judge 8/10)</li>
-    <li class="no">sky: not accepted after 3 rounds (judge 5, 5, 6), normal sky kept</li>
-    <li class="no">ground: not accepted after 3 rounds (the code never loaded: an invented StreetContext constant), normal ground kept</li>
+    <li class="no">sky: not accepted after 3 rounds; best attempt judge 6/10, a flat white-grey haze with no cloud shapes (cloud cover 5/10)</li>
+    <li class="none">ground: none of its 3 attempts loaded (it used a StreetContext constant that does not exist), so both links keep the normal ground</li>
   </ul>
-  <span class="tag">1 of 3 layers from the 3B specialists · Sep 14</span>
-</a>
+  <div class="label">the rejected sky, shown alone in the normal scene</div>
+  <div class="small"><img src="scene-street-overcast-sky-rejected-a.jpg" alt="rejected sky"><img src="scene-street-overcast-sky-rejected-b.jpg" alt="rejected sky"><img src="scene-street-overcast-sky-rejected-c.jpg" alt="rejected sky"></div>
+  <div class="links">
+    <a href="../play/#world=street&swap=vegetation:res://segments/vegetation/generated/scene-street-overcast.gd">Play: accepted layers only</a>
+    <a class="all" href="../play/#world=street&swap=vegetation:res://segments/vegetation/generated/scene-street-overcast.gd;sky:res://segments/sky/generated/scene-street-overcast-rejected.gd">Play: everything the specialists wrote</a>
+  </div>
+  <span class="tag">1 of 3 layers accepted · Sep 14</span>
+</div>
+
+<div class="scene">
+  <h2>Street · overcast palm-lined morning, with the composite verifier</h2>
+  <p>The same one-line brief, run again with the composite verifier: after each layer passes on its own, a Claude judge
+  scores the assembled scene as a whole and sends the layers it blames back to their specialists.</p>
+  <div class="label">accepted layers composed (after the composite-driven fixes)</div>
+  <div class="shots"><img src="scene-street-overcast-2-a.jpg" alt="composed, default view"><img src="scene-street-overcast-2-b.jpg" alt="composed, turned"><img src="scene-street-overcast-2-c.jpg" alt="composed, looking across"></div>
+  <div class="label">normal game, same views</div>
+  <div class="small"><img src="scene-street-overcast-2-shipped-a.jpg" alt="normal game"><img src="scene-street-overcast-2-shipped-b.jpg" alt="normal game"><img src="scene-street-overcast-2-shipped-c.jpg" alt="normal game"></div>
+  <ul class="segs">
+    <li class="ok">vegetation: accepted on the first draft (judge 8/10)</li>
+    <li class="ok">ground: accepted on its own (judge 7/10), then blamed by the composite judge for blown-out sidewalk slabs with dark gaps, and revised until it passed again (judge 8/10)</li>
+    <li class="no">sky: not accepted after 6 rounds, 3 of them after the composite judge asked for a grey overcast deck; best attempt judge 6/10, haze too subtle (5/10)</li>
+    <li class="no">whole scene: the composite judge failed it twice (overall 5, then 4) because the sky stayed clear, so the pipeline would not publish this scene</li>
+  </ul>
+  <div class="label">the rejected sky, shown alone in the normal scene</div>
+  <div class="small"><img src="scene-street-overcast-2-sky-rejected-a.jpg" alt="rejected sky"><img src="scene-street-overcast-2-sky-rejected-b.jpg" alt="rejected sky"><img src="scene-street-overcast-2-sky-rejected-c.jpg" alt="rejected sky"></div>
+  <div class="links">
+    <a href="../play/#world=street&swap=ground:res://segments/ground/generated/scene-street-overcast-2.gd;vegetation:res://segments/vegetation/generated/scene-street-overcast-2.gd">Play: accepted layers only</a>
+    <a class="all" href="../play/#world=street&swap=ground:res://segments/ground/generated/scene-street-overcast-2.gd;vegetation:res://segments/vegetation/generated/scene-street-overcast-2.gd;sky:res://segments/sky/generated/scene-street-overcast-2-rejected.gd">Play: everything the specialists wrote</a>
+  </div>
+  <span class="tag">2 of 3 layers accepted · composite not passed · Sep 15</span>
+</div>
 
 <div class="notes">
-  <strong>What this does not show yet.</strong> Each layer is judged on its own, inside an otherwise normal scene; nothing
-  yet checks the assembled scene as a whole. That is why the overcast scene keeps the bright normal sky under its overcast
-  brief: a composite verifier that judges the whole scene and sends problems back to the right specialist is being built next.
-  Across these three scenes 6 of 9 layers were accepted (vegetation 3 of 3, sky 1 of 3, ground 1 of 3). Single-segment sky
-  examples are on the <a href="../specialist-skies/">specialist skies</a> page.
+  <strong>How to read this.</strong> In production the pipeline would publish only accepted layers, and only after the
+  composite verifier passes the whole scene. The "everything" links exist to show the specialists' real output, including
+  the attempts the verifier rejected; each rejected layer is the best-scoring attempt that loaded. Across the first three
+  scenes 6 of 9 layers were accepted (vegetation 3 of 3, sky 1 of 3, ground 1 of 3). Single-segment sky examples are on the
+  <a href="../specialist-skies/">specialist skies</a> page.
 </div>
 <footer>Source: <a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a> · Built with Godot 4</footer>
 </main>
