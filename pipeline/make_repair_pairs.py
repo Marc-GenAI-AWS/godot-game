@@ -97,19 +97,52 @@ def untyped_variant(code, rng):
     return code[:m.start()] + f"{m.group(1)}var {m.group(2)} := {m.group(3)}" + code[m.end():]
 
 
+def extra_closing_bracket(code, rng):
+    """One closing bracket too many: the props 3B's most common beach error
+    ("Closing } doesn't have an opening counterpart"), repeated unchanged on revision."""
+    ls = code.split("\n")
+    idx = [i for i, l in enumerate(ls) if l.rstrip().endswith(("}", "]", ")")) and not l.strip().startswith("#")]
+    if not idx:
+        return None
+    i = rng.choice(idx)
+    ls[i] = ls[i].rstrip() + ls[i].rstrip()[-1]
+    return "\n".join(ls)
+
+
+def undeclared_name(code, rng):
+    """A call to a helper that is never defined, or a loop variable used before its loop declares it:
+    the props 3B's street errors ("Function X not found in base self", "Identifier X not declared")."""
+    funcs = set(re.findall(r"^func (\w+)\(", code, re.M))
+    calls = [m for m in re.finditer(r"(?<![\w.])(?<!func )(_\w+)\(", code) if m.group(1) in funcs]   # calls, not definitions
+    if calls and rng.random() < 0.5:
+        m = rng.choice(calls)
+        name = m.group(1)
+        return code[:m.start(1)] + (name[:-1] if name.endswith("s") else name + "s") + code[m.end(1):]
+    loops = list(re.finditer(r"^\t+for (\w+)(?::\s*\w+)? in ", code, re.M))
+    if not loops:
+        return None
+    m = rng.choice(loops)
+    func_start = code.rfind("\nfunc ", 0, m.start())
+    if func_start < 0:
+        return None
+    sig_end = code.find("\n", func_start + 1)   # first body line goes right after the signature
+    return code[:sig_end] + f"\n\tvar first_{m.group(1)} := {m.group(1)}" + code[sig_end:]
+
+
 CORRUPTIONS = {"drop_paren": drop_paren, "duplicate_var": duplicate_var, "unterminated_string": unterminated_string,
                "wrong_arity": wrong_arity, "invented_constant": invented_constant,
-               "undeclared_identifier": undeclared_identifier, "untyped_variant": untyped_variant}
+               "undeclared_identifier": undeclared_identifier, "untyped_variant": untyped_variant,
+               "extra_closing_bracket": extra_closing_bracket, "undeclared_name": undeclared_name}
 
 
-def make_one(row: dict, kind: str, seed: int, out_dir: Path):
+def make_one(row: dict, kind: str, seed: int, out_dir: Path, suffix: str = "_fix"):
     code = read(row["path"])
     broken = CORRUPTIONS[kind](code, random.Random(seed))
     if not broken or broken == code:
         return None
     seg, brief = row["segment"], row["brief"]
     world = brief.get("world", SEGMENTS[seg]["world"])
-    cid = f"{row['candidate']}_fix"
+    cid = f"{row['candidate']}{suffix}"
     problems = static_gate(broken, seg)
     if problems:
         evidence = "static gate: " + "; ".join(problems)
@@ -131,7 +164,15 @@ def main():
     ap.add_argument("--runs", nargs="+", required=True, help="run directories under pipeline/runs")
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--kinds", help="comma list of error kinds to inject (default: all)")
+    ap.add_argument("--name", default="repairs.jsonl", help="output file in the run directory (build_sft reads repairs*.jsonl)")
     a = ap.parse_args()
+    kinds = a.kinds.split(",") if a.kinds else list(CORRUPTIONS)
+    unknown = [k for k in kinds if k not in CORRUPTIONS]
+    if unknown:
+        raise SystemExit(f"unknown kinds {unknown}; known: {list(CORRUPTIONS)}")
+    # broken copies of a targeted set get their own suffix so they don't overwrite the default set's files
+    suffix = "_fix" if a.name == "repairs.jsonl" else "_fix_" + Path(a.name).stem.replace("repairs_", "")
     for run in a.runs:
         out_dir = RUNS / run
         rows = []
@@ -143,7 +184,7 @@ def main():
         rng = random.Random(f"{a.seed}-{run}")
         jobs = []
         for r in rows:
-            order = list(CORRUPTIONS)
+            order = list(kinds)
             rng.shuffle(order)
             jobs.append((r, order, rng.randrange(1 << 30)))
 
@@ -151,7 +192,7 @@ def main():
             r, order, seed = job
             for kind in order:   # the first error kind that applies to this layer and that a gate rejects
                 try:
-                    res = make_one(r, kind, seed, out_dir)
+                    res = make_one(r, kind, seed, out_dir, suffix)
                 except Exception as e:
                     print(f"  {r['candidate']} {kind}: {str(e)[:120]}", flush=True)
                     res = None
@@ -161,7 +202,7 @@ def main():
 
         with ThreadPoolExecutor(max(1, a.workers)) as ex:
             out = [x for x in ex.map(work, jobs) if x]
-        write_jsonl(out_dir / "repairs.jsonl", out)
+        write_jsonl(out_dir / a.name, out)
         print(f"{run}: {len(out)} repair examples from {len(rows)} passing layers "
               f"{dict(Counter(x['repair_kind'] for x in out))}", flush=True)
 

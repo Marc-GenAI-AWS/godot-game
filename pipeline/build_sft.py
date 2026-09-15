@@ -32,8 +32,8 @@ def main():
     repairs = []
     if a.repairs == "auto":
         for d in dict.fromkeys(Path(p).parent for p in a.verified):
-            if (d / "repairs.jsonl").exists():
-                repairs += read_jsonl(d / "repairs.jsonl")
+            for rp in sorted(d.glob("repairs*.jsonl")):   # repairs.jsonl plus any targeted sets (repairs_props_errors.jsonl)
+                repairs += read_jsonl(rp)
     by_brief = defaultdict(list)
     for r in rows:
         by_brief[r["brief_id"]].append(r)
