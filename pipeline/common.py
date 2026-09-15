@@ -34,17 +34,50 @@ SEGMENTS = {
     # side (negative dx turns left; the beach's promenade and furniture are on
     # the left) and slightly up so tall plants fit, then back along that side
     "vegetation": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-330_-110~2.5,7:Drag_-200_-30~2.5",
-                   "script_by_world": {"street": "4:Drag_-200_-90~2.5,7:Drag_400_-40~2.5"}},
+                   "script_by_world": {"street": "4:Drag_-200_-90~2.5,7:Drag_400_-40~2.5"},
+                   # judged by Opus 5 with reference frames: on Marc's 28 anchor labels (pipeline/anchors/anchor1.jsonl)
+                   # Opus + reference agreed on 22 at the 7/4 bar, Sonnet 5 + reference on 9, the Sep 13 Fable judge on 19
+                   "judge_model": "us.anthropic.claude-opus-5",
+                   # the Sonnet 5 judge scored vegetation ~2 points below the Sep 13 judge on the same frames
+                   # (veg1 sample: 20/40 passes -> 1/40); the shipped layer anchors scale and density
+                   "reference": {"beach": "a line of tall thin fan palms along the promenade every 6 to 8 m, a few fuller coconut palms "
+                                          "on the upper sand, low hedges; mature size, normal density",
+                                 "street": "palms and leafy trees alternating along both verges every 10 to 17 m, hedges and low "
+                                           "shrubs along the lot fronts; mature size, normal density"},
+                   "reference_note": ("The reference is not what the brief asks for; it shows how the shipped vegetation reads "
+                                      "from these three views. Plants stand well back from the camera here, so trunks look thin "
+                                      "and crowns small, and a promenade of similar palms repeats along a row: those are the "
+                                      "scene's look, not the candidate's defects unless the candidate makes them worse. Judge "
+                                      "size, density and species mix relative to the reference: 'giant' should read clearly "
+                                      "taller and fuller than it, 'young' smaller, 'dense' fuller, 'sparse' emptier. Calibration: "
+                                      "for a brief that described the reference look exactly, the reference frames would score 7 "
+                                      "on every attribute. Score above 7 where the candidate matches its brief better than the "
+                                      "reference matches its own description, below 7 where it is worse or wrong.")},
     # street furniture is small and near the kerb: look along the sidewalk ahead, then back along the
     # near kerb toward the crosswalk, then back across both kerbs (single per-block items are often out of view)
     "props": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_-300_-40~2.5,7:Drag_-230_20~2.5",
               "script_by_world": {"street": "4:Drag_580_-40~2.5,7:Drag_-230_-20~2.5"},
               "views_by_world": {"street": ["default chase view along the sidewalk", "low view back along the near kerb toward the crosswalk",
                                             "wider view back across both kerbs"]},
-              # street only: the judge capped variety for items too small to see from these views
+              # judged by Opus 5 with reference frames in both worlds (Marc's anchor labels, 2026-09-14: Opus + reference
+              # agreed on 22 of 28 at the 7/4 bar). Street: items are too small to see from these views without the
+              # shipped block for scale. Beach: with the Sonnet 5 judge the reference made verdicts lower; with Opus it helps.
+              "judge_model": "us.anthropic.claude-opus-5",
               "reference": {"street": "lamps with curved arms every 12 m on both kerbs, wooden power poles with wires on the verge, "
-                                      "dark green bins, red hydrants, a STOP sign and street-name sign at the crosswalk, a blue bus bench, a mailbox"},
-              "reference_note": ("The reference is not what the brief asks for; it shows how much of a block's street furniture "
+                                      "dark green bins, red hydrants, a STOP sign and street-name sign at the crosswalk, a blue bus bench, a mailbox",
+                            "beach": "dense rows of white loungers with coloured fabric parallel to the shore, large multi-panel umbrellas "
+                                     "in bright and pastel colour sets, towels, buckets, bags and balls between the rows"},
+              "reference_note": {
+                  "beach": ("The reference is not what the brief asks for; it shows how the shipped beach furniture reads from "
+                            "these three views. The rows run back along the shore, so loungers and umbrellas further down the "
+                            "beach are small and overlap, towels and clutter are a few pixels, and similar loungers repeat along "
+                            "each row: those are the scene's look, not the candidate's defects unless the candidate makes them "
+                            "worse. Judge density, row occupancy, umbrella share and palette relative to the reference: 'dense' "
+                            "should read fuller than it, 'sparse' emptier. Calibration: for a brief that described the reference "
+                            "look exactly, the reference frames would score 7 on every attribute. Score above 7 where the "
+                            "candidate matches its brief better than the reference matches its own description, below 7 where "
+                            "it is worse or wrong."),
+                  "street": ("The reference is not what the brief asks for; it shows how much of a block's street furniture "
                                  "these three views actually reveal. Small repeated items (bins, hydrants) are a few pixels tall "
                                  "at this distance, are often hidden by the walker, trees and parked cars, and a 40 m stretch holds "
                                  "only one or two of each. Calibration: for a brief that described the reference look exactly, the "
@@ -52,7 +85,7 @@ SEGMENTS = {
                                  "about as often as comparable items do in the reference; lower variety or palette only for item "
                                  "types clearly absent where the reference would show them, wrong or out-of-place items, clones, "
                                  "or wrong colours you can see. Score above 7 where the candidate matches its brief better than "
-                                 "the reference matches its own description, below 7 where it is worse or wrong.")},
+                                 "the reference matches its own description, below 7 where it is worse or wrong.")}},
     # surface segments on the beach: default view, then the walker stops, turns
     # to the sea and walks to the wet band; the camera tilts down at the feet
     # (wet sand, water's edge, shallows), then turns to look along the shore

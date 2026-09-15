@@ -345,14 +345,17 @@ def judge(segment: str, brief: dict, frames: list, reference: list | None = None
     blocks.append({"text": "Score the candidate frames against the brief. JSON only."})
     image_paths = (list(reference) if reference and ref_desc else []) + list(frames)   # image block order, for the call log
     text2 = None
-    text, usage = converse(JUDGE_MODEL, rubric, blocks, max_tokens=3000)
+    # a segment's own judge wins over JUDGE_MODEL (orchestrators export Sonnet 5 for everything):
+    # vegetation and props use Opus 5, chosen on Marc's anchor labels 2026-09-14
+    model = spec.get("judge_model") or JUDGE_MODEL
+    text, usage = converse(model, rubric, blocks, max_tokens=3000)
     try:
         j = parse_json(text)
     except Exception as e:
         # one repair round: the same judge, shown its own reply and the parse error
         blocks2 = blocks + [{"text": "Your previous reply could not be parsed as JSON (%s). Reply again with the "
                                      "same judgement as strictly valid JSON only, escaping quotes inside strings:\n%s" % (e, text[:6000])}]
-        text2, usage2 = converse(JUDGE_MODEL, rubric, blocks2, max_tokens=3000)
+        text2, usage2 = converse(model, rubric, blocks2, max_tokens=3000)
         usage = {k: usage.get(k, 0) + usage2.get(k, 0) for k in set(usage) | set(usage2)}
         try:
             j = parse_json(text2)
@@ -366,7 +369,7 @@ def judge(segment: str, brief: dict, frames: list, reference: list | None = None
     j["usage"] = usage
     try:   # full record for training a local judge later (calllog.py); never breaks verification
         from calllog import log_blocks, log_call
-        log_call("judge", {"type": "call", **(log_ctx or {}), "segment": segment, "world": world, "model": JUDGE_MODEL,
+        log_call("judge", {"type": "call", **(log_ctx or {}), "segment": segment, "world": world, "model": model,
                            "system": rubric, "blocks": log_blocks(blocks, image_paths), "reply": text,
                            "repair_reply": text2, "has_reference": bool(reference and ref_desc),
                            "verdict": {k: v for k, v in j.items() if k != "usage"}, "usage": usage})

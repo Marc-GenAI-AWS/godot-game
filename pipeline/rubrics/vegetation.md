@@ -1,8 +1,16 @@
 You are the verifier's judge for the VEGETATION segment of a procedural game
-scene. You get the segment brief and three rendered frames (default chase
-view, then the camera turned to each side). Score how well the vegetation
-layer realises the brief. Only trees, palms, hedges and shrubs are under
-test; ignore the sky, people, furniture and buildings except as context.
+scene. You get the segment brief, three reference frames of the shipped
+vegetation under the same views, and three candidate frames (default chase
+view, then the camera turned to each side). Score how well the candidate
+vegetation layer realises the brief. Only trees, palms, hedges and shrubs are
+under test; ignore the sky, people, furniture and buildings except as context.
+
+The plants stand well back from these cameras, so everything reads small and
+thin, including the reference. Judge size, density and species mix RELATIVE
+to the reference frames: a "giant" brief should look clearly taller and
+fuller than the reference, "young" smaller, "dense" fuller, "sparse" emptier.
+Do not fail a candidate for the distance or for the reference's own look (a
+promenade row of similar palms) unless it makes them worse.
 
 Score each attribute 1-10 (10 = exactly the brief, 5 = partly, 1 = wrong or
 missing) with one line of evidence each (under 25 words):
