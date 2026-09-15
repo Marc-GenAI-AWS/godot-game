@@ -126,6 +126,7 @@ def _project_classes() -> dict:
             continue
         ext = re.search(r"^extends\s+(\w+)", src, re.M)
         consts = set(re.findall(r"^(?:static\s+)?const\s+(\w+)", src, re.M))
+        consts |= {n for n in re.findall(r"^(?:static\s+)?var\s+(\w+)", src, re.M) if n.isupper()}
         for em in re.finditer(r"^enum\s+(\w+)?\s*\{([^}]*)\}", src, re.M | re.S):
             if em.group(1):
                 consts.add(em.group(1))
@@ -150,6 +151,17 @@ def _project_consts(cls: str) -> set:
     return out
 
 
+def _own_consts(cls: str) -> list:
+    """Uppercase names the game's own scripts give a project class and its project parents
+    (the engine base's constants, such as Node's CONNECT_*, are noise in a suggestion)."""
+    own, pc, c, seen = set(), _project_classes(), cls, set()
+    while c in pc and c not in seen:
+        seen.add(c)
+        own |= pc[c]["consts"]
+        c = pc[c]["extends"]
+    return sorted(v for v in own if v.isupper())
+
+
 def check(code: str) -> list:
     text = _blank(code)
     problems = []
@@ -167,16 +179,33 @@ def check(code: str) -> list:
             valid = _project_consts(cls)
             if name in valid:
                 continue
-            # suggest from the game's own scripts only: the engine base's constants (Node's CONNECT_*) are noise here
-            own, pc, c, seen = set(), _project_classes(), cls, set()
-            while c in pc and c not in seen:
-                seen.add(c)
-                own |= pc[c]["consts"]
-                c = pc[c]["extends"]
-            own = sorted(v for v in own if v.isupper())
+            own = _own_consts(cls)
             sug = _suggest(name, own) or own[:15]
             hint = f"; {cls} defines: {', '.join(sug)}" if sug else f"; {cls} defines no constants"
             problems.append(f"line {line}: {cls}.{name} does not exist{hint}")
+    # uppercase members reached through a context: `sc.CROSSWALK_Z` after `var sc: StreetContext = ctx as
+    # StreetContext`, or `(ctx as BeachContext).SAND_COLOR`. An invented one makes Godot report the line's
+    # type as uninferable, which hides the real mistake (overnight scene demo, Sep 14).
+    pc = _project_classes()
+    ctx_vars = {"ctx": "WorldContext"} if "WorldContext" in pc else {}
+    for m in re.finditer(r"\bvar\s+(\w+)\s*(?::\s*\w+\s*)?:?=\s*(?:self\.)?ctx\s+as\s+(\w+)", text):
+        if m.group(2) in pc:
+            ctx_vars[m.group(1)] = m.group(2)
+    accesses = []
+    if ctx_vars:
+        names = "|".join(re.escape(v) for v in ctx_vars)
+        accesses += [(m.start(), f"{m.group(1)}.{m.group(2)}", ctx_vars[m.group(1)], m.group(2))
+                     for m in re.finditer(rf"(?<![\w.])({names})\.([A-Z][A-Z0-9_]*)\b(?!\s*\()", text)]
+    accesses += [(m.start(), f"(ctx as {m.group(1)}).{m.group(2)}", m.group(1), m.group(2))
+                 for m in re.finditer(r"\(\s*(?:self\.)?ctx\s+as\s+(\w+)\s*\)\.([A-Z][A-Z0-9_]*)\b(?!\s*\()", text)
+                 if m.group(1) in pc]
+    for pos, expr, cls, name in accesses:
+        if name in _project_consts(cls):
+            continue
+        own = _own_consts(cls)
+        sug = _suggest(name, own) or own[:15]
+        hint = f"; {cls} defines: {', '.join(sug)}" if sug else f"; {cls} defines no constants"
+        problems.append(f"line {_line_of(text, pos)}: {expr} does not exist on {cls}{hint}")
     for m in _CTOR_RE.finditer(text):
         typ = m.group(1)
         n = _count_args(text, m.end() - 1)
