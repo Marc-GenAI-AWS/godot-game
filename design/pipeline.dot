@@ -72,7 +72,7 @@ digraph pipeline {
   subgraph cluster_m5 {
     label="M5  Segments through M1-M4   (each needs: contract, rubric, brief sampler, checks, capture recipe)   <- current milestone"; style="rounded,filled"; fillcolor="#fff6e5"; color="#d9a441";
     g0 [label="sky\nspecialist trained + evaluated\n(1.5B / 3B beat the teacher one-shot)", fillcolor="#cfe9cf"];
-    g1 [label="ground / water\nground: 3B on 194 examples + repairs, 25 held out:\n24% one-shot, 44% after one self-revision (teacher 34%)\nwater: 85 examples, paused below 100 (judge question)", fillcolor="#ffe3b0"];
+    g1 [label="ground / water\nground: 3B on 194 examples + repairs, 25 held out:\n24% one-shot, 44% after one self-revision (teacher 34%)\nwater: 3B on 290 examples (judge bar 6/4 from Marc's labels), 24 held out:\n46% one-shot, 63% after one self-revision (teacher 42%)", fillcolor="#ffe3b0"];
     g2 [label="camera\nframing box, stabilisation", fillcolor="#e0e0e0"];
     g3 [label="fauna\nflock motion, flush behaviour", fillcolor="#e0e0e0"];
     g4 [label="props (21 held out, Opus judge, teacher 52% one-shot)\n3B: 9.5% -> 33% after revision with targeted repair examples\n7B: 38% one-shot, 43% after revision; beach 6/8\nstreet 3/13: varied code errors", fillcolor="#ffe3b0"];
