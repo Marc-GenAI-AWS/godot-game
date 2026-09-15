@@ -491,6 +491,62 @@ def verify_one(row: dict, out_dir: Path, do_judge=True) -> dict:
     return res
 
 
+# ------------------------------------------------------------- composite ---
+
+def verify_composite(scene_brief: str, world: str, briefs: dict, accepted: dict, out_dir: Path,
+                     run: str = "", round_: int = 0) -> dict:
+    """The assembled scene: every accepted layer at once (segments not accepted keep the shipped layer),
+    captured with the composite recipes and judged against the shipped scene with the whole-scene rubric.
+    briefs: segment -> brief; accepted: segment -> res:// path. Returns pass, score, evidence, and the
+    segments to blame (worst first) with the judge's per-segment problem and fix, for revision briefs."""
+    spec = SEGMENTS["composite"]
+    swap = ";".join(f"{s}:{p}" for s, p in accepted.items())
+    cap_root = Path(out_dir) / "composite" / f"round{round_}"
+    frames, ref_frames, added_dc, fps = [], [], 0, 999.0
+    with GPU_LOCK:
+        for i, rec in enumerate(spec["recipes"]):
+            script = rec.get("script_by_world", {}).get(world, rec["script"])
+            base = baseline(world, rec["shots"], script, f"composite{i}")
+            stats = capture(world, swap, cap_root / f"view{i}", rec["shots"], script)
+            frames += stats["frames"]
+            ref_frames += base["frames"]
+            added_dc = max(added_dc, stats["draw_calls"] - base["draw_calls"])
+            fps = min(fps, stats["fps_avg"])
+    # Scene-level draw calls are information only: two captures of the same shipped street under the two
+    # recipes counted 81 and 681 (the total follows what is on screen at the capture moment), so a scene
+    # delta is noise. Each layer's own check already enforces its budget; the scene check is the fps floor.
+    cnotes = [f"fps {fps:.0f}",
+              f"draw calls {added_dc:+d} vs the shipped scene (information only; replaced layers: {', '.join(accepted) or 'none'})"]
+    cscore = 1.0
+    if fps < 60:
+        cscore = 0.3
+        cnotes.append("below 60 fps")
+    brief = {"id": f"composite-{run}-r{round_}", "segment": "composite", "world": world, "scene_brief": scene_brief,
+             "segments": {s: {"brief": b.get("text", ""), "layer": "new (accepted)" if s in accepted else "shipped (not accepted)"}
+                          for s, b in briefs.items()}}
+    j = judge("composite", brief, frames, ref_frames,
+              log_ctx={"run": run, "candidate": brief["id"], "brief_id": brief["id"], "mode": "composite", "brief": brief})
+    segs = j.get("segments") if isinstance(j.get("segments"), dict) else {}
+    passed = bool(j.get("pass")) and cscore >= 0.6
+    notes = {}
+    for s, v in segs.items():
+        if isinstance(v, dict):
+            sc = v.get("score")
+            notes[s] = {"score": sc if isinstance(sc, (int, float)) else None,
+                        "problem": str(v.get("problem") or ""), "revise": str(v.get("revise") or "")}
+    blame = sorted((s for s, v in notes.items() if v["score"] is not None and
+                    (v["score"] < 6 or (not passed and v["score"] < 7 and v["revise"]))),
+                   key=lambda s: notes[s]["score"])
+    ev = checks_evidence(cnotes, cscore)
+    ev += [f"{k} {v.get('score')}/10: {v.get('evidence', '')}" for k, v in j.get("attributes", {}).items()]
+    ev += [f"segment {s} {v['score']}/10: {v['problem']}" + (f" | fix: {v['revise']}" if v["revise"] else "") for s, v in notes.items()]
+    if j.get("revision_notes"):
+        ev.append("scene: " + j["revision_notes"])
+    return {"pass": passed, "score": 0.4 * cscore + 0.6 * float(j.get("overall") or 0) / 10.0, "evidence": "\n".join(ev),
+            "blame": blame, "segment_notes": notes, "judge": j, "checks": {"score": cscore, "notes": cnotes},
+            "frames": frames, "reference_frames": ref_frames, "swap": swap}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--candidates", help="candidates.jsonl / revisions.jsonl from teacher.py")

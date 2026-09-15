@@ -1,11 +1,12 @@
-"""The agentic loop: scene brief -> director -> specialists -> verifier -> revise -> accept.
+"""The agentic loop: scene brief -> director -> specialists -> verifier -> revise -> composite -> accept.
 
     python3 pipeline/loop/director.py "a foggy dawn on the street, sun low behind the walker" \
         --out pipeline/runs/loop1 --backend teacher            # specialists stood in by Claude
     ... --backend local:http://127.0.0.1:8000/v1 --model sky-sft   # the fine-tuned specialist
     ... --backend endpoint:scene-sky-specialist                     # a SageMaker endpoint
     ... --segments sky,ground,vegetation \
-        --backend sky=hf:~/models/<sky job>,ground=hf:~/models/<ground job>,vegetation=hf:~/models/<veg job> --composite
+        --backend sky=hf:~/models/<sky job>,ground=hf:~/models/<ground job>,vegetation=hf:~/models/<veg job> \
+        --composite --composite-rounds 1
 
 The director (Claude on Bedrock) turns the scene brief into per-segment
 briefs in the schema the specialists were trained on. For sky it writes the
@@ -14,10 +15,18 @@ and the brief is built by briefs.py, so the prompt matches training exactly.
 Each specialist writes its layer, the verifier scores it (each layer alone in
 the shipped scene), and evidence goes back as a revision brief for up to
 --rounds rounds. Segments without a specialist keep the shipped gold layer.
+
+With --composite the verifier then judges the assembled scene as a whole
+(verify.verify_composite). If it fails, the segments it blames revise from its
+per-segment notes (their accepted layer, or their last draft if none passed)
+through the same per-layer check, and the scene is judged again, up to
+--composite-rounds times. The director never forms its own opinion of the
+scene: it routes the verifier's evidence. The report marks the scene
+publishable only when the last composite passed.
+
 Accepted layers are installed under game/segments/<segment>/generated/<run>.gd
 and the scene plays with all of them at
 #world=<world>&swap=<segment>:res://...gd;<segment>:res://...gd
---composite renders the accepted layers together in one capture.
 """
 import argparse
 import difflib
@@ -29,9 +38,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from briefs import VOCAB, ground_brief, vegetation_brief  # noqa: E402
-from common import DIRECTOR_MODEL, GAME, SEGMENTS, converse, parse_json, write_jsonl  # noqa: E402
+from common import DIRECTOR_MODEL, GAME, converse, parse_json, write_jsonl  # noqa: E402
 from specialist import Specialist  # noqa: E402
-from verify import capture, verify_one  # noqa: E402
+from verify import verify_composite, verify_one  # noqa: E402
 
 DIRECTOR_HEAD = """You are the director of a procedural game-scene studio. You turn a one-line
 scene brief into precise per-segment briefs for specialist models. Available
@@ -154,6 +163,46 @@ def free_model(sp: Specialist) -> None:
             pass
 
 
+def run_segment(seg: str, brief: dict, backend: str, model, rounds: int, out: Path, log: list,
+                start_code: str = None, start_evidence: str = None, first_round: int = 0, label: str = "") -> tuple:
+    """Write (or revise from start_code + start_evidence) and verify one layer for up to `rounds` rounds.
+    Returns (the passing verify row or None, the last code, the next free round number)."""
+    sp = Specialist(seg, backend, model)
+    if start_code is None:
+        code, prompt = sp.write(brief)
+    else:
+        code, prompt = sp.revise(brief, start_code, start_evidence)
+    passed = None
+    rnd = first_round
+    for i in range(rounds):
+        rnd = first_round + i
+        cid = f"{brief['id']}_r{rnd}"
+        path = out / "candidates" / f"{cid}.gd"
+        path.write_text(code)
+        mode = "write" if (start_code is None and i == 0) else ("composite-revise" if i == 0 else "revise")
+        row = {"candidate": cid, "brief_id": brief["id"], "brief": brief, "segment": seg, "path": str(path),
+               "mode": mode, "prompt": prompt}
+        res = verify_one(row, out)
+        log.append(res)
+        print(f"  {label}{seg} round {rnd}: {'PASS' if res['pass'] else 'fail'} score {res['score']:.2f} "
+              f"judge {res.get('judge', {}).get('overall', '-')}", flush=True)
+        if res["pass"]:
+            passed = res
+            break
+        print("   ", res["evidence"].splitlines()[-1][:200], flush=True)
+        if i < rounds - 1:
+            code, prompt = sp.revise(brief, code, res["evidence"])
+    free_model(sp)
+    return passed, code, rnd + 1
+
+
+def install(seg: str, res: dict, run: str) -> str:
+    dest = GAME / "segments" / seg / "generated"
+    dest.mkdir(parents=True, exist_ok=True)
+    shutil.copy(res["path"], dest / f"{run}.gd")
+    return f"res://segments/{seg}/generated/{run}.gd"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("scene_brief")
@@ -162,7 +211,8 @@ def main():
     ap.add_argument("--model")
     ap.add_argument("--rounds", type=int, default=3)
     ap.add_argument("--segments", default="sky")
-    ap.add_argument("--composite", action="store_true", help="render the accepted layers together")
+    ap.add_argument("--composite", action="store_true", help="judge the assembled scene and revise the segments it blames")
+    ap.add_argument("--composite-rounds", type=int, default=1, help="composite revision cycles after the first composite verdict")
     a = ap.parse_args()
     out = Path(a.out)
     (out / "candidates").mkdir(parents=True, exist_ok=True)
@@ -175,48 +225,52 @@ def main():
     print(" ", plan.get("summary", ""))
     for f in plan["fixes"]:
         print("  director fix:", f)
-    log = []
-    accepted = {}
+    log, accepted, last_code, next_round = [], {}, {}, {}
     for seg in segments:
         if seg not in plan["segments"] or seg not in backends:
             continue
-        brief = plan["segments"][seg]
-        sp = Specialist(seg, backends[seg], a.model)
-        code, prompt = sp.write(brief)
-        res = None
-        for rnd in range(a.rounds):
-            cid = f"{brief['id']}_r{rnd}"
-            path = out / "candidates" / f"{cid}.gd"
-            path.write_text(code)
-            row = {"candidate": cid, "brief_id": brief["id"], "brief": brief, "segment": seg, "path": str(path),
-                   "mode": "write" if rnd == 0 else "revise", "prompt": prompt}
-            res = verify_one(row, out)
-            log.append(res)
-            print(f"  {seg} round {rnd}: {'PASS' if res['pass'] else 'fail'} score {res['score']:.2f} "
-                  f"judge {res.get('judge', {}).get('overall', '-')}", flush=True)
-            if res["pass"]:
+        res, code, next_round[seg] = run_segment(seg, plan["segments"][seg], backends[seg], a.model, a.rounds, out, log)
+        last_code[seg] = code
+        if res:
+            accepted[seg] = install(seg, res, out.name)
+            last_code[seg] = Path(res["path"]).read_text()
+
+    composites = []
+    if a.composite and plan["segments"]:
+        for cround in range(a.composite_rounds + 1):
+            comp = verify_composite(a.scene_brief, plan["world"], plan["segments"], accepted, out, run=out.name, round_=cround)
+            composites.append({"round": cround, "pass": comp["pass"], "score": round(comp["score"], 3),
+                               "overall": comp["judge"].get("overall"), "blame": comp["blame"],
+                               "segment_notes": comp["segment_notes"], "accepted": dict(accepted), "frames": comp["frames"]})
+            print(f"  composite round {cround}: {'PASS' if comp['pass'] else 'fail'} overall {comp['judge'].get('overall')} "
+                  f"blame {comp['blame']}", flush=True)
+            if comp["pass"] or cround == a.composite_rounds:
                 break
-            print("   ", res["evidence"].splitlines()[-1][:200], flush=True)
-            if rnd < a.rounds - 1:
-                code, prompt = sp.revise(brief, code, res["evidence"])
-        free_model(sp)
-        if res and res["pass"]:
-            dest = GAME / "segments" / seg / "generated"
-            dest.mkdir(parents=True, exist_ok=True)
-            shutil.copy(res["path"], dest / f"{out.name}.gd")
-            accepted[seg] = f"res://segments/{seg}/generated/{out.name}.gd"
+            blamed = [s for s in comp["blame"] if s in backends and s in plan["segments"]]
+            if not blamed:
+                print("   no blamed segment has a specialist; stopping", flush=True)
+                break
+            for seg in blamed:
+                note = comp["segment_notes"].get(seg, {})
+                evidence = (f"composite (the whole scene): {note.get('problem', '')}"
+                            + (f" | fix: {note['revise']}" if note.get("revise") else "") + "\n" + comp["evidence"])
+                res, code, next_round[seg] = run_segment(seg, plan["segments"][seg], backends[seg], a.model, a.rounds, out, log,
+                                                         start_code=last_code[seg], start_evidence=evidence,
+                                                         first_round=next_round.get(seg, 0), label="composite fix: ")
+                last_code[seg] = code
+                if res:   # a revision that fails its own check keeps the earlier accepted layer
+                    accepted[seg] = install(seg, res, out.name)
+                    last_code[seg] = Path(res["path"]).read_text()
+
     write_jsonl(out / "log.jsonl", log)
     swap = ";".join(f"{s}:{p}" for s, p in accepted.items())
     report = {"scene_brief": a.scene_brief, "world": plan["world"], "accepted": accepted,
               "unresolved": [s for s in segments if s not in accepted],
               "play": f"#world={plan['world']}" + (f"&swap={swap}" if swap else "")}
-    if a.composite and accepted:
-        spec = SEGMENTS["vegetation"]
-        script = spec.get("script_by_world", {}).get(plan["world"], spec["script"])
-        try:
-            report["composite_frames"] = capture(plan["world"], swap, out / "composite", spec["shots"], script)["frames"]
-        except Exception as e:
-            report["composite_error"] = str(e)[:300]
+    if composites:
+        report["composite"] = composites
+        report["composite_frames"] = composites[-1]["frames"]
+        report["publishable"] = composites[-1]["pass"]
     (out / "report.json").write_text(json.dumps(report, indent=2))
     try:   # how the plan turned out: the label a local director is judged by
         from calllog import log_call
@@ -224,10 +278,11 @@ def main():
                               "plan": plan, "accepted": accepted, "unresolved": report["unresolved"],
                               "rounds": [{"candidate": r["candidate"], "mode": r.get("mode"), "pass": r["pass"],
                                           "score": r["score"], "judge_overall": (r.get("judge") or {}).get("overall")}
-                                         for r in log]})
+                                         for r in log],
+                              "composite": [{k: c[k] for k in ("round", "pass", "overall", "blame")} for c in composites]})
     except Exception as e:
         print(f"  calllog: loop outcome not logged ({str(e)[:160]})", flush=True)
-    print(json.dumps(report, indent=2))
+    print(json.dumps({k: v for k, v in report.items() if k != "composite_frames"}, indent=2))
 
 
 if __name__ == "__main__":

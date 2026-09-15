@@ -100,6 +100,23 @@ SEGMENTS = {
     "water": {"world": "beach", "shots": "3,7,9", "script": "3:ArrowDown,3.2:ArrowRight~0.72,4:ArrowUp,5.8:ArrowDown,6:Look_0_260~1.5,8:Look_330_-260~1.5",
               "views": ["default view", "tilted down at the walker's feet by the water", "turned to look along the shore, sea on the left"],
               "reference": {"beach": "gentle swell, turquoise tropical water, a lacy foam band at the edge with sand showing between the patches, sparse foam lines further out"}},
+    # the assembled scene, judged as a whole by verify_composite(): the vegetation views show sky, ground and
+    # plants together; the sky's tilted-up views show the weather and the light. Opus judges, the shipped scene
+    # is the reference, and the verdict blames segments so the director can send revision briefs.
+    "composite": {"world": "beach", "judge_model": "us.anthropic.claude-opus-5",
+                  "recipes": [{"shots": "3,6,9", "script": "4:Drag_-330_-110~2.5,7:Drag_-200_-30~2.5",
+                               "script_by_world": {"street": "4:Drag_-200_-90~2.5,7:Drag_400_-40~2.5"}},
+                              {"shots": "3,6,9", "script": "4:Drag_0_-220~2.5,7:Drag_-320_0~2.5"}],
+                  "views": ["default chase view", "turned to one side and up", "looking back along the scene",
+                            "default chase view again", "tilted up at the sky", "turned to the side, sky and horizon"],
+                  "reference": {"beach": "the normal game beach: every shipped layer (sky, sand, sea, palms, furniture, crowd)",
+                                "street": "the normal game street: every shipped layer (sky, road and lawns, trees, furniture, traffic)"},
+                  "reference_note": ("The reference is the normal game scene with every shipped layer, under the same views. It is not "
+                                     "what the scene brief asks for; it shows how this game renders a coherent scene, and its low-poly "
+                                     "style, hard shadows and draw distance are not defects. Calibration: the reference frames would "
+                                     "score 7 on coherence, integration and artifacts. Judge the candidate as one picture: do the new "
+                                     "layers agree with each other and with the layers that stayed shipped, and does the whole match "
+                                     "the scene brief?")},
 }
 # load() paths a segment's candidates may use (everything else is forbidden)
 ALLOWED_LOADS = {
