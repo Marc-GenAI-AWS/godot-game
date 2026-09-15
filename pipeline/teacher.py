@@ -27,6 +27,19 @@ def user_prompt(brief: dict) -> str:
 # Street props files run long (the shipped one is ~150 lines of batched geometry):
 # 6000 and 9000 token caps cut replies off mid-file and the extractor saved them empty.
 TEACHER_MAX_TOKENS = 16000
+# props5 (Sep 15): 2 of 96 street briefs x 2 still stopped at 16000, one mid-file at 147 lines
+STREET_PROPS_MAX_TOKENS = 32000
+
+
+def max_tokens_for(brief: dict) -> int:
+    if brief["segment"] == "props" and brief.get("world") == "street":
+        return STREET_PROPS_MAX_TOKENS
+    return TEACHER_MAX_TOKENS
+
+
+def warn_if_capped(cid: str, usage: dict, cap: int):
+    if usage.get("outputTokens", 0) >= cap - 10:
+        print(f"  {cid}: hit the {cap}-token output cap, likely truncated", flush=True)
 
 
 def revise_prompt(brief: dict, previous: str, evidence: str) -> str:
@@ -41,11 +54,11 @@ def generate(brief, k, out_dir, model, temperature):
     rows = []
     for i in range(k):
         prompt = user_prompt(brief)
-        text, usage = converse(model, system, [{"text": prompt}], max_tokens=TEACHER_MAX_TOKENS, temperature=temperature)
+        cap = max_tokens_for(brief)
+        text, usage = converse(model, system, [{"text": prompt}], max_tokens=cap, temperature=temperature)
         code = extract_code(text)
-        if usage.get("outputTokens", 0) >= 8990:
-            print(f"  {brief['id']}_{i}: hit the output cap, likely truncated", flush=True)
         cid = f"{brief['id']}_{i}"
+        warn_if_capped(cid, usage, cap)
         (out_dir / "candidates" / f"{cid}.gd").write_text(code)
         rows.append({"candidate": cid, "brief_id": brief["id"], "brief": brief, "segment": brief["segment"],
                      "mode": "write", "prompt": prompt, "teacher": model, "usage": usage,
@@ -60,9 +73,11 @@ def revise(row, out_dir, model, temperature):
     previous = read(row["path"])
     evidence = row.get("evidence", "")
     prompt = revise_prompt(brief, previous, evidence)
-    text, usage = converse(model, system, [{"text": prompt}], max_tokens=TEACHER_MAX_TOKENS, temperature=temperature)
+    cap = max_tokens_for(brief)
+    text, usage = converse(model, system, [{"text": prompt}], max_tokens=cap, temperature=temperature)
     code = extract_code(text)
     cid = row["candidate"] + "r"
+    warn_if_capped(cid, usage, cap)
     (out_dir / "candidates" / f"{cid}.gd").write_text(code)
     print(f"  {cid}: revised ({usage.get('outputTokens', '?')} tokens)")
     return {"candidate": cid, "brief_id": brief["id"], "brief": brief, "segment": brief["segment"],
