@@ -34,8 +34,10 @@ done
 for tag in "${!JOBS[@]}"; do
   job=${JOBS[$tag]}
   echo "== $(date +%T) waiting for $job"
-  until aws s3 ls "$B/$job/output/model.tar.gz" >/dev/null 2>&1; do
+  # wait on the job status, not on model.tar.gz: SageMaker uploads a 236-byte model.tar.gz for failed jobs too
+  while true; do
     st=$(aws sagemaker describe-training-job --training-job-name $job --region us-east-2 --query TrainingJobStatus --output text 2>/dev/null)
+    [ "$st" = "Completed" ] && break
     if [ "$st" = "Failed" ] || [ "$st" = "Stopped" ]; then echo "== $job $st"; aws sagemaker describe-training-job --training-job-name $job --region us-east-2 --query FailureReason --output text | cut -c1-300; continue 2; fi
     sleep 60
   done
