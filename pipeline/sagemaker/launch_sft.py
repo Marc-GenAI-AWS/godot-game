@@ -30,6 +30,9 @@ def main():
     ap.add_argument("--epochs", type=float, default=3.0)
     ap.add_argument("--spot", type=int, default=1)
     ap.add_argument("--max-hours", type=float, default=3.0)
+    # Sep 15: at 6144 tokens 528/529 props and 207/239 ground examples were cut (props contract alone is 5.3k
+    # tokens; repair and revision examples kept no answer tokens). Longest props example 13,059; sky/veg/water < 6.5k.
+    ap.add_argument("--max-len", type=int, default=14336, help="training sequence cut-off in tokens (contract + prompt + answer)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -37,7 +40,7 @@ def main():
     job = f"scene-{a.segment}-sft-{stamp}"
     s3_data = f"s3://{BUCKET}/{PREFIX}/{a.segment}/datasets/{stamp}"
     s3_out = f"s3://{BUCKET}/{PREFIX}/{a.segment}/models"
-    hp = {"model": a.model, "epochs": a.epochs, "lr": 1.5e-4, "max-len": 6144, "lora-r": 32, "merge": 1}
+    hp = {"model": a.model, "epochs": a.epochs, "lr": 1.5e-4, "max-len": a.max_len, "lora-r": 32, "merge": 1}
     print(f"job          {job}\ninstance     {a.instance} (spot={bool(a.spot)})\nbase model   {a.model}\n"
           f"data         {a.data} -> {s3_data}\noutput       {s3_out}\nhyperparams  {hp}")
     if a.dry_run:
