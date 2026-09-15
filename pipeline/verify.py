@@ -88,6 +88,37 @@ def godot(args, timeout, display=None):
     return p.stdout + p.stderr + f"\n[exit {p.returncode}]"
 
 
+def _gate_hints(out: str, swap: str) -> list:
+    """Type-inference errors quoted with their source line and the typed declaration to write:
+    the specialists repeated Godot's bare "Cannot infer the type" error across every revision."""
+    code_lines = []
+    if ":" in swap and swap.split(":", 1)[1].startswith("res://"):
+        p = GAME / swap.split(":", 1)[1][len("res://"):]
+        if p.exists():
+            code_lines = p.read_text().splitlines()
+    lines = out.splitlines()
+    hints = []
+    for i, l in enumerate(lines):
+        m = re.search(r'Cannot infer the type of "(\w+)" variable', l)
+        if not m and "inferred from a Variant value" not in l:
+            continue
+        ln = None
+        for nxt in lines[i + 1:i + 4]:
+            mm = re.search(r"/candidates/[^():]+\.gd:(\d+)\)", nxt)
+            if mm:
+                ln = int(mm.group(1))
+                break
+        src = code_lines[ln - 1].strip() if ln and 0 < ln <= len(code_lines) else ""
+        dm = re.match(r"var (\w+)\s*:=\s*(.+)$", src)
+        if dm:
+            name, expr = dm.group(1), dm.group(2)
+            typ = "bool" if re.search(r"[<>]=?|==|!=|\band\b|\bor\b|\bnot\b", expr) else "float" if re.search(r"[-+*/]", expr) else "<its type>"
+            hints.append(f"fix line {ln}: `{src[:100]}` has no known type; declare it explicitly: `var {name}: {typ} = {expr[:70]}`")
+        elif ln:
+            hints.append(f"fix line {ln}: `{src[:100]}` produces a value with no known type; declare the variable with an explicit type")
+    return list(dict.fromkeys(hints))
+
+
 def runtime_gate(world: str, swap: str) -> tuple:
     out = godot(["--headless", "--quit-after", "90", "--", f"--world={world}", f"--swap={swap}"], timeout=180)
     if 'Parameter "mem" is null' in out or "realloc_static" in out:
@@ -98,7 +129,8 @@ def runtime_gate(world: str, swap: str) -> tuple:
     if not ready and not errors:
         errors.append("scene never reported 'world ready'")
     LAST_GATE_OUTPUT[0] = out
-    return (len(errors) == 0, errors[:6])
+    hints = _gate_hints(out, swap) if errors else []
+    return (len(errors) == 0, (hints + errors)[:8])
 
 
 LAST_GATE_OUTPUT = [""]
@@ -306,6 +338,21 @@ def surface_checks(brief: dict, stats: dict, base: dict) -> tuple:
 CHECKS = {"sky": sky_checks, "vegetation": vegetation_checks, "props": props_checks, "ground": surface_checks, "water": surface_checks}
 
 
+def checks_evidence(notes: list, cscore: float) -> list:
+    """The checks line for the evidence. A failed check leads with what failed and the fix: specialists
+    ignored "draw calls +62 vs the shipped layer (budget +10)" when it read like a statistic."""
+    lines = []
+    if cscore < 0.6:
+        lines.append(f"FAILED CHECKS (score {cscore:.2f}, a pass needs 0.60): the layer is rejected whatever the judge scores")
+    for n in notes:
+        m = re.search(r"draw calls ([+-]\d+) vs .*\(budget \+(\d+)\)", n)
+        if m and int(m.group(1)) > int(m.group(2)):
+            lines.append(f"FAILED CHECK: draw calls {m.group(1)} is over the +{m.group(2)} budget; merge the geometry into one "
+                         "MeshBatch per material (add_box_at / add_box / add_cylinder, then instance or commit_with once) "
+                         "instead of a separate MeshInstance3D for each piece")
+    return lines + ["checks: " + "; ".join(notes)]
+
+
 # ----------------------------------------------------------------- judge ---
 
 # how the judge reads reference frames unless the segment spec gives its own note
@@ -428,7 +475,7 @@ def verify_one(row: dict, out_dir: Path, do_judge=True) -> dict:
     else:
         res["score"] = 0.4 * cscore + 0.6 * jscore
         res["pass"] = bool(j.get("pass")) and cscore >= 0.6
-    ev = ["checks: " + "; ".join(notes)]
+    ev = checks_evidence(notes, cscore)
     if do_judge:
         for k, v in res["judge"].get("attributes", {}).items():
             ev.append(f"{k} {v.get('score')}/10: {v.get('evidence', '')}")
@@ -474,7 +521,7 @@ def main():
             r0["stats"] = {k: stats[k] for k in ("fps_avg", "draw_calls", "palette", "obstacles", "probe") if k in stats}
             r0["score"] = 0.4 * cscore + 0.6 * float(j.get("overall", 0)) / 10.0
             r0["pass"] = bool(j.get("pass")) and cscore >= 0.6
-            ev = ["checks: " + "; ".join(notes)] + [f"{k} {v.get('score')}/10: {v.get('evidence', '')}" for k, v in j.get("attributes", {}).items()]
+            ev = checks_evidence(notes, cscore) + [f"{k} {v.get('score')}/10: {v.get('evidence', '')}" for k, v in j.get("attributes", {}).items()]
             if j.get("revision_notes"):
                 ev.append("revise: " + j["revision_notes"])
             r0["evidence"] = "\n".join(ev)
