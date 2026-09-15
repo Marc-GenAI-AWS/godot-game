@@ -29,6 +29,9 @@ def main():
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--merge", type=int, default=1)
     ap.add_argument("--max-steps", type=int, default=-1, help="smoke tests: stop after N steps")
+    # Liger's fused linear cross-entropy never materialises the full-vocabulary logits: at 14k tokens those
+    # are ~7 GB each for logits and their gradient, which ran a 7B out of memory on a 48 GB L40S
+    ap.add_argument("--liger", type=int, default=0)
     a = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(a.model)
@@ -71,6 +74,7 @@ def main():
         bf16=gpu,                      # CPU smoke tests run in fp32
         max_length=a.max_len,
         completion_only_loss=True,     # loss on the layer file, not the contract
+        use_liger_kernel=bool(a.liger),
         packing=False,
         report_to=[],
         eval_strategy="epoch" if "val" in ds else "no",

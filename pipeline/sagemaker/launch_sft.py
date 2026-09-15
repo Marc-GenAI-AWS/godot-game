@@ -33,14 +33,18 @@ def main():
     # Sep 15: at 6144 tokens 528/529 props and 207/239 ground examples were cut (props contract alone is 5.3k
     # tokens; repair and revision examples kept no answer tokens). Longest props example 13,059; sky/veg/water < 6.5k.
     ap.add_argument("--max-len", type=int, default=14336, help="training sequence cut-off in tokens (contract + prompt + answer)")
+    ap.add_argument("--liger", type=int, default=1, help="fused linear cross-entropy (a 7B at 14k tokens OOMed a 48 GB GPU without it)")
+    ap.add_argument("--max-steps", type=int, default=-1, help="smoke test: stop after N optimizer steps and skip the merge")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
     stamp = time.strftime("%Y%m%d-%H%M")
-    job = f"scene-{a.segment}-sft-{stamp}"
+    job = f"scene-{a.segment}-sft-{stamp}" if a.max_steps < 0 else f"scene-{a.segment}-smoke-{stamp}"
     s3_data = f"s3://{BUCKET}/{PREFIX}/{a.segment}/datasets/{stamp}"
     s3_out = f"s3://{BUCKET}/{PREFIX}/{a.segment}/models"
-    hp = {"model": a.model, "epochs": a.epochs, "lr": 1.5e-4, "max-len": a.max_len, "lora-r": 32, "merge": 1}
+    hp = {"model": a.model, "epochs": a.epochs, "lr": 1.5e-4, "max-len": a.max_len, "lora-r": 32, "merge": 1, "liger": a.liger}
+    if a.max_steps > 0:
+        hp.update({"max-steps": a.max_steps, "merge": 0})
     print(f"job          {job}\ninstance     {a.instance} (spot={bool(a.spot)})\nbase model   {a.model}\n"
           f"data         {a.data} -> {s3_data}\noutput       {s3_out}\nhyperparams  {hp}")
     if a.dry_run:
@@ -67,7 +71,8 @@ def main():
         use_spot_instances=bool(a.spot),
         max_run=int(a.max_hours * 3600),
         max_wait=int(a.max_hours * 3600) if a.spot else None,
-        environment={"HF_HOME": "/tmp/hf", "TOKENIZERS_PARALLELISM": "false"},
+        environment={"HF_HOME": "/tmp/hf", "TOKENIZERS_PARALLELISM": "false",
+                     "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"},   # the 14k OOM had 6 GB reserved but unallocated
         sagemaker_session=sess,
         disable_profiler=True,
     )
