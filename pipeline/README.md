@@ -20,7 +20,8 @@ pipeline/
   contract/sky.md      what the specialist may assume (given as the system prompt at train and test time)
   rubrics/sky.md       the judge's per-segment rubric
   loop/specialist.py   one call = one layer; backends: teacher | local:<vLLM url> | endpoint:<SageMaker>
-  loop/director.py     scene brief -> per-segment briefs -> specialists -> verify -> revise -> install
+  loop/director.py     scene brief -> per-segment briefs -> specialists -> verify -> revise -> composite -> install
+  rubrics/composite.md the whole-scene rubric (coherence, brief match, integration, artifacts, per-segment blame)
   calllog.py           full judge / director call records + content-addressed frames (training data for local models)
   backfill_calllog.py  records judgements made before call logging (verdict + frames only)
   archive_calllog.sh   syncs runs/_calls and runs/_frames to S3
@@ -89,6 +90,32 @@ Logging never breaks a run (failures print a warning). After a data run:
 pipeline/.venv/bin/python pipeline/backfill_calllog.py   # only needed once for older runs; safe to re-run
 pipeline/archive_calllog.sh                              # sync both to s3://$SAGEMAKER_BUCKET/call-logs/
 ```
+
+## Composite verifier (whole scenes)
+
+Each layer passes the verifier alone, inside the otherwise shipped scene. The
+composite verifier (`verify.verify_composite`) judges the assembled scene:
+every accepted layer at once, captured with the vegetation views and the sky's
+tilted-up views, against the shipped scene under the same views, with the
+whole-scene rubric (Opus 5). It scores coherence (one time of day, one light,
+one weather), brief match, integration and artifacts, and gives every segment
+a score, a problem and a fix.
+
+```
+PYTHONPATH=pipeline pipeline/.venv-train/bin/python pipeline/loop/director.py "an overcast morning on a palm-lined street" \
+    --out pipeline/runs/scene1 --segments sky,ground,vegetation \
+    --backend sky=hf:~/models/<sky job>,ground=hf:~/models/<ground job>,vegetation=hf:~/models/<veg job> \
+    --composite --composite-rounds 1
+```
+
+If the composite fails, each blamed segment with a specialist revises from its
+accepted layer (or its last draft) with the composite's problem and fix as
+evidence, through the normal per-layer check; the scene is judged again, up to
+`--composite-rounds` times. `report.json` records every composite verdict and
+sets `publishable` only when the last one passed. The scene-level check is the
+60 fps floor; scene draw-call totals are reported but not scored, because they
+follow what is on screen at the capture moment (the same shipped street counted
+81 and 681 under the two recipes). Each layer's own check keeps its budget.
 
 ## Training on SageMaker
 

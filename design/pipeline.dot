@@ -57,11 +57,11 @@ digraph pipeline {
   }
 
   subgraph cluster_m4 {
-    label="M4  Agentic loop  (runs with the trained 3B sky specialist; composite verifier next)"; style="rounded,filled"; fillcolor="#e9f0fb"; color="#5b8dd6";
+    label="M4  Agentic loop  (whole scenes from sky, ground and vegetation 3B specialists; composite verifier built)"; style="rounded,filled"; fillcolor="#e9f0fb"; color="#5b8dd6";
     l1 [label="Director\nClaude Fable 5.1: scene brief -> segment briefs\n(palette, scale, style shared)", fillcolor="#cfe9cf"];
-    l2 [label="Specialists\nsky: 3B adapter (3 briefs accepted end to end)\nothers: shipped gold layers until trained", fillcolor="#cfe9cf"];
+    l2 [label="Specialists\nsky, ground, vegetation: local 3B adapters\nprops, water: shipped layers until trained", fillcolor="#cfe9cf"];
     l3 [label="Per-layer verifier\neach layer alone, rendered in the scene", fillcolor="#cfe9cf"];
-    l3b [label="Composite verifier\nassembled scene, whole-scene rubric,\nproblems attributed to segments", fillcolor="#ffffff", color="#5b8dd6", penwidth=2, style="rounded,filled,dashed"];
+    l3b [label="Composite verifier\nassembled scene, whole-scene rubric (Opus),\nblame routed back to specialists\n3 demo scenes: 2 pass; overcast street fails on its sky", fillcolor="#cfe9cf"];
     l4 [label="Revise\nup to 3 rounds from evidence", fillcolor="#cfe9cf"];
     l5 [label="Publish\ninstall layers: automated (director)\nweb export + GitHub Pages: by hand", fillcolor="#ffe3b0"];
     l1 -> l2 -> l3 -> l3b -> l4 -> l5;
