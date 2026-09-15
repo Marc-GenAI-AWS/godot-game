@@ -343,6 +343,19 @@ def surface_checks(brief: dict, stats: dict, base: dict) -> tuple:
 CHECKS = {"sky": sky_checks, "vegetation": vegetation_checks, "props": props_checks, "ground": surface_checks, "water": surface_checks}
 
 
+def judge_pass(segment: str, j: dict) -> bool:
+    """The judge's verdict as a pass flag. A segment with a pass_bar (set from a human anchor set) passes on
+    the judge's scores: overall >= the bar and no attribute below the minimum; otherwise the judge's own flag."""
+    bar = SEGMENTS.get(segment, {}).get("pass_bar")
+    if not bar:
+        return bool(j.get("pass"))
+    overall = j.get("overall")
+    scores = [v.get("score") for v in (j.get("attributes") or {}).values()
+              if isinstance(v, dict) and isinstance(v.get("score"), (int, float))]
+    return (isinstance(overall, (int, float)) and overall >= bar["overall"]
+            and bool(scores) and min(scores) >= bar["min_attribute"])
+
+
 def checks_evidence(notes: list, cscore: float) -> list:
     """The checks line for the evidence. A failed check leads with what failed and the fix: specialists
     ignored "draw calls +62 vs the shipped layer (budget +10)" when it read like a statistic."""
@@ -479,7 +492,7 @@ def verify_one(row: dict, out_dir: Path, do_judge=True) -> dict:
         res["pass"] = cscore >= 0.7
     else:
         res["score"] = 0.4 * cscore + 0.6 * jscore
-        res["pass"] = bool(j.get("pass")) and cscore >= 0.6
+        res["pass"] = judge_pass(segment, j) and cscore >= 0.6
     ev = checks_evidence(notes, cscore)
     if do_judge:
         for k, v in res["judge"].get("attributes", {}).items():
@@ -581,7 +594,7 @@ def main():
             r0["checks"] = {"score": cscore, "notes": notes}
             r0["stats"] = {k: stats[k] for k in ("fps_avg", "draw_calls", "palette", "obstacles", "probe") if k in stats}
             r0["score"] = 0.4 * cscore + 0.6 * float(j.get("overall", 0)) / 10.0
-            r0["pass"] = bool(j.get("pass")) and cscore >= 0.6
+            r0["pass"] = judge_pass(r0["segment"], j) and cscore >= 0.6
             ev = checks_evidence(notes, cscore) + [f"{k} {v.get('score')}/10: {v.get('evidence', '')}" for k, v in j.get("attributes", {}).items()]
             if j.get("revision_notes"):
                 ev.append("revise: " + j["revision_notes"])

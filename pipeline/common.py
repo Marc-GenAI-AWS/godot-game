@@ -99,6 +99,9 @@ SEGMENTS = {
                              "street": "worn grey asphalt, double yellow centre line, white edge lines, plain concrete kerbs and slab sidewalks, mown lawns"}},
     "water": {"world": "beach", "shots": "3,7,9", "script": "3:ArrowDown,3.2:ArrowRight~0.72,4:ArrowUp,5.8:ArrowDown,6:Look_0_260~1.5,8:Look_330_-260~1.5",
               "views": ["default view", "tilted down at the walker's feet by the water", "turned to look along the shore, sea on the left"],
+              # pass from the judge's scores, not its own pass flag (Marc's anchor set 2, Sep 15: at the rubric's
+              # bar of 7 the judge agreed with him on 17 of 24 water layers; at overall 6 with no attribute below 4, on 20)
+              "pass_bar": {"overall": 6, "min_attribute": 4},
               "reference": {"beach": "gentle swell, turquoise tropical water, a lacy foam band at the edge with sand showing between the patches, sparse foam lines further out"}},
     # the assembled scene, judged as a whole by verify_composite(): the vegetation views show sky, ground and
     # plants together; the sky's tilted-up views show the weather and the light. Opus judges, the shipped scene
