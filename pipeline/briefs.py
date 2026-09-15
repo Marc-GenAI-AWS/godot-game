@@ -76,7 +76,16 @@ DENSITY = ["sparse", "normal", "dense"]
 VEG_MIX = {"beach": ["tall fan palms only", "mostly tall fan palms with a few coconut palms", "coconut palms dominant", "palms with dense hedges behind the deck"],
            "street": ["leafy trees only", "mostly leafy trees with some fan palms", "half palms half leafy trees", "palm-lined with sparse trees", "leafy trees with continuous hedges"]}
 VEG_SIZE = ["young", "mature", "giant"]
+VEG_HEDGES = ["no hedges", "some hedges", "continuous hedges"]
 VEG_WORDS = ["lush", "dry and sun-bleached", "manicured", "wild and overgrown", "tidy municipal planting", "resort planting"]
+
+
+def vegetation_brief(bid: str, world: str, density: str, species_mix: str, size: str, hedges: str, look: str) -> dict:
+    """A vegetation brief exactly as the specialist was trained on it (key order and text template);
+    used by the sampler and by the director."""
+    return {"id": bid, "segment": "vegetation", "contract": CONTRACT_VERSION, "world": world,
+            "density": density, "species_mix": species_mix, "size": size, "hedges": hedges, "look": look,
+            "text": f"{look.capitalize()} vegetation on the {world}: {density} density, {species_mix}, {size} plants, {hedges}."}
 
 
 def sample_vegetation(n: int, seed: int, times=None, weather=None):
@@ -87,11 +96,9 @@ def sample_vegetation(n: int, seed: int, times=None, weather=None):
         density = DENSITY[(i // 2) % 3]
         mix = rng.choice(VEG_MIX[world])
         size = rng.choice(VEG_SIZE)
-        hedges = rng.choice(["no hedges", "some hedges", "continuous hedges"])
+        hedges = rng.choice(VEG_HEDGES)
         word = rng.choice(VEG_WORDS)
-        out.append({"id": f"veg-{seed:02d}-{i:03d}", "segment": "vegetation", "contract": CONTRACT_VERSION, "world": world,
-                    "density": density, "species_mix": mix, "size": size, "hedges": hedges, "look": word,
-                    "text": f"{word.capitalize()} vegetation on the {world}: {density} density, {mix}, {size} plants, {hedges}."})
+        out.append(vegetation_brief(f"veg-{seed:02d}-{i:03d}", world, density, mix, size, hedges, word))
     return out
 
 
@@ -130,29 +137,48 @@ SAND_TONES = ["dark warm tan", "golden", "pale white coral sand", "grey volcanic
 ROAD_TONES = ["fresh black asphalt", "worn grey asphalt", "brownish sun-baked asphalt", "patched and faded asphalt"]
 
 
+SAND_WET = ["narrow wet band", "wide wet band", "wide wet band with a strong mirror sheet"]
+SAND_SHELLS = ["few shells", "shells and pebbles along the tide line", "dense shell drift"]
+SAND_GRAIN = ["fine grain", "coarse grain with ripples", "smooth packed sand"]
+ROAD_MARKINGS = ["double yellow centre line and white edge lines", "single dashed white centre line", "no centre line, white edge lines only"]
+ROAD_KERBS = ["plain concrete kerbs", "red-painted kerbs by the crossing", "granite grey kerbs"]
+ROAD_SIDEWALKS = ["short sidewalk slabs with cracks", "long clean slabs", "weathered slabs with many joints"]
+ROAD_LAWNS = ["lush green lawns", "dry yellow-green lawns", "dark mown lawns with stripes"]
+
+
+def ground_brief(bid: str, world: str, **f) -> dict:
+    """A ground brief exactly as the specialist was trained on it (key order and text template);
+    beach fields tone, wet_band, shells, grain; street fields tone, markings, kerb, sidewalk, lawn."""
+    row = {"id": bid, "segment": "ground", "contract": CONTRACT_VERSION, "world": world}
+    if world == "beach":
+        row["text"] = f"Beach sand: {f['tone']}, {f['grain']}, {f['wet_band']}, {f['shells']}."
+        keys = ["tone", "wet_band", "shells", "grain"]
+    else:
+        row["text"] = f"Street ground: {f['tone']}, {f['markings']}, {f['kerb']}, {f['sidewalk']}, {f['lawn']}."
+        keys = ["tone", "markings", "kerb", "sidewalk", "lawn"]
+    row.update({k: f[k] for k in keys})
+    return row
+
+
 def sample_ground(n: int, seed: int, times=None, weather=None):
     rng = random.Random(seed + 300)
     out = []
     for i in range(n):
         world = WORLDS[i % 2]
+        bid = f"ground-{seed:02d}-{i:03d}"
         if world == "beach":
             tone = rng.choice(SAND_TONES)
-            wet = rng.choice(["narrow wet band", "wide wet band", "wide wet band with a strong mirror sheet"])
-            shells = rng.choice(["few shells", "shells and pebbles along the tide line", "dense shell drift"])
-            grain = rng.choice(["fine grain", "coarse grain with ripples", "smooth packed sand"])
-            text = f"Beach sand: {tone}, {grain}, {wet}, {shells}."
-            b = {"tone": tone, "wet_band": wet, "shells": shells, "grain": grain}
+            wet = rng.choice(SAND_WET)
+            shells = rng.choice(SAND_SHELLS)
+            grain = rng.choice(SAND_GRAIN)
+            out.append(ground_brief(bid, world, tone=tone, wet_band=wet, shells=shells, grain=grain))
         else:
             tone = rng.choice(ROAD_TONES)
-            markings = rng.choice(["double yellow centre line and white edge lines", "single dashed white centre line", "no centre line, white edge lines only"])
-            kerb = rng.choice(["plain concrete kerbs", "red-painted kerbs by the crossing", "granite grey kerbs"])
-            walk = rng.choice(["short sidewalk slabs with cracks", "long clean slabs", "weathered slabs with many joints"])
-            lawn = rng.choice(["lush green lawns", "dry yellow-green lawns", "dark mown lawns with stripes"])
-            text = f"Street ground: {tone}, {markings}, {kerb}, {walk}, {lawn}."
-            b = {"tone": tone, "markings": markings, "kerb": kerb, "sidewalk": walk, "lawn": lawn}
-        row = {"id": f"ground-{seed:02d}-{i:03d}", "segment": "ground", "contract": CONTRACT_VERSION, "world": world, "text": text}
-        row.update(b)
-        out.append(row)
+            markings = rng.choice(ROAD_MARKINGS)
+            kerb = rng.choice(ROAD_KERBS)
+            walk = rng.choice(ROAD_SIDEWALKS)
+            lawn = rng.choice(ROAD_LAWNS)
+            out.append(ground_brief(bid, world, tone=tone, markings=markings, kerb=kerb, sidewalk=walk, lawn=lawn))
     return out
 
 
@@ -171,6 +197,14 @@ def sample_water(n: int, seed: int, times=None, weather=None):
 
 
 SAMPLERS = {"sky": sample_sky, "vegetation": sample_vegetation, "props": sample_props, "ground": sample_ground, "water": sample_water}
+
+# The words each specialist was trained on, for the director to choose from.
+VOCAB = {
+    "vegetation": {"density": DENSITY, "species_mix": VEG_MIX, "size": VEG_SIZE, "hedges": VEG_HEDGES, "look": VEG_WORDS},
+    "ground": {"beach": {"tone": SAND_TONES, "wet_band": SAND_WET, "shells": SAND_SHELLS, "grain": SAND_GRAIN},
+               "street": {"tone": ROAD_TONES, "markings": ROAD_MARKINGS, "kerb": ROAD_KERBS, "sidewalk": ROAD_SIDEWALKS,
+                          "lawn": ROAD_LAWNS}},
+}
 
 
 def main():
