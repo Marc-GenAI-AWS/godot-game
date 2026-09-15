@@ -75,7 +75,7 @@ digraph pipeline {
     g1 [label="ground / water\nground: 3B on 194 examples + repairs, 25 held out:\n24% one-shot, 44% after one self-revision (teacher 34%)\nwater: 85 examples, paused below 100 (judge question)", fillcolor="#ffe3b0"];
     g2 [label="camera\nframing box, stabilisation", fillcolor="#e0e0e0"];
     g3 [label="fauna\nflock motion, flush behaviour", fillcolor="#e0e0e0"];
-    g4 [label="props\n145 examples (street judge vs shipped street: 65 -> 145)\nready for 3B training; props3 queued", fillcolor="#ffe3b0"];
+    g4 [label="props\n3B on 219 examples + repairs (Opus judge), 21 held out:\n9.5% one-shot and after revision (teacher 52%)\nbeach: extra closing braces; street: undeclared names, invented methods", fillcolor="#ffe3b0"];
     g5 [label="vegetation\n3B on 289 examples + repairs (Opus judge), 18 held out:\n72% one-shot, 83% after one self-revision (teacher 57%)\nonly 3 of the 18 held-out briefs are beach", fillcolor="#cfe9cf"];
     g6 [label="architecture\nlots, facades, skyline", fillcolor="#e0e0e0"];
     g7 [label="crowd\ncontact validator, gaits", fillcolor="#e0e0e0"];

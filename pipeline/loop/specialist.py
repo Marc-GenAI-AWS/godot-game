@@ -71,7 +71,9 @@ class Specialist:
             self._hf = (tok, model)
         return self._hf
 
-    def _hf_generate(self, prompts: list, max_new_tokens=3000) -> list:
+    # 4096: props layers run long (training answers up to ~3,760 tokens; Qwen splits every digit), and
+    # one props1234 eval output stopped at the old 3000 cap
+    def _hf_generate(self, prompts: list, max_new_tokens=4096) -> list:
         import torch
         tok, model = self._hf_load()
         texts = [tok.apply_chat_template([{"role": "system", "content": self.system}, {"role": "user", "content": p}],
