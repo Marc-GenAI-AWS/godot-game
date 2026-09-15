@@ -112,7 +112,12 @@ def _gate_hints(out: str, swap: str) -> list:
         dm = re.match(r"var (\w+)\s*:=\s*(.+)$", src)
         if dm:
             name, expr = dm.group(1), dm.group(2)
-            typ = "bool" if re.search(r"[<>]=?|==|!=|\band\b|\bor\b|\bnot\b", expr) else "float" if re.search(r"[-+*/]", expr) else "<its type>"
+            if re.search(r"[<>]=?|==|!=|\band\b|\bor\b|\bnot\b", expr):
+                typ = "bool"
+            elif re.match(r"(lerp|lerpf|clamp|min|max|abs|sign|snapped|wrap|move_toward|remap)\(", expr) or re.search(r"[-+*/]", expr):
+                typ = "float"   # Variant-returning math helpers; here they always carry floats
+            else:
+                typ = "<its type>"
             hints.append(f"fix line {ln}: `{src[:100]}` has no known type; declare it explicitly: `var {name}: {typ} = {expr[:70]}`")
         elif ln:
             hints.append(f"fix line {ln}: `{src[:100]}` produces a value with no known type; declare the variable with an explicit type")
