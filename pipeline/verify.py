@@ -70,17 +70,29 @@ def install_candidate(segment: str, cid: str, code: str) -> str:
     return f"res://segments/{segment}/candidates/{cid}.gd"
 
 
+# Every Godot run gets a data-segment cap: a generated layer with an endless allocating loop
+# grew one process to 91 GB on 2026-09-14 and the kernel OOM-killed the whole run. Normal gates
+# and captures peak near 1 GB. A capped runaway fails its allocations and then hits the timeout.
+GODOT_MEM_BYTES = int(float(os.environ.get("GODOT_MEM_GB", "8")) * 1024 ** 3)
+_PRLIMIT = shutil.which("prlimit")
+
+
 def godot(args, timeout, display=None):
     env = dict(os.environ)
     if display:
         env["DISPLAY"] = display
-    p = subprocess.run([str(GODOT), "--path", str(GAME)] + args, capture_output=True, text=True,
-                       timeout=timeout, env=env)
+    cmd = [str(GODOT), "--path", str(GAME)] + args
+    if _PRLIMIT:
+        cmd = [_PRLIMIT, f"--data={GODOT_MEM_BYTES}"] + cmd
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
     return p.stdout + p.stderr + f"\n[exit {p.returncode}]"
 
 
 def runtime_gate(world: str, swap: str) -> tuple:
     out = godot(["--headless", "--quit-after", "90", "--", f"--world={world}", f"--swap={swap}"], timeout=180)
+    if 'Parameter "mem" is null' in out or "realloc_static" in out:
+        return (False, [f"ran out of memory above the {GODOT_MEM_BYTES / 1024 ** 3:.0f} GB cap while building "
+                        "(an endless loop that keeps allocating?)"])
     errors = [l.strip() for l in out.splitlines() if "SCRIPT ERROR" in l or l.startswith("ERROR") or "Parse Error" in l]
     ready = "world ready" in out
     if not ready and not errors:
@@ -319,8 +331,10 @@ def judge(segment: str, brief: dict, frames: list, reference: list | None = None
         # the shipped layer under the same views anchors the judge: how this scene's
         # lighting renders a colour (knob segments), how much of a block's furniture
         # the views actually show (street props)
-        blocks.append({"text": f"Reference frames: the shipped default layer under the same views ({ref_desc}). "
-                               + spec.get("reference_note", COLOUR_NOTE)})
+        note = spec.get("reference_note", COLOUR_NOTE)
+        if isinstance(note, dict):   # per-world notes (props: street furniture vs beach furniture)
+            note = note.get(world, COLOUR_NOTE)
+        blocks.append({"text": f"Reference frames: the shipped default layer under the same views ({ref_desc}). " + note})
         for i, f in enumerate(reference):
             blocks.append({"text": f"Reference {i + 1} ({labels[i] if i < len(labels) else 'extra'}):"})
             blocks.append(image_block(f))

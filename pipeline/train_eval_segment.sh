@@ -39,8 +39,8 @@ for tag in "${!JOBS[@]}"; do
     if [ "$st" = "Failed" ] || [ "$st" = "Stopped" ]; then echo "== $job $st"; aws sagemaker describe-training-job --training-job-name $job --region us-east-2 --query FailureReason --output text | cut -c1-300; continue 2; fi
     sleep 60
   done
-  echo "== $(date +%T) evaluating $job as eval-$SEG-$tag"
-  ./eval_specialist.sh "$B/$job/output/model.tar.gz" "eval-$SEG-$tag" runs/$RUN/sft/heldout_briefs.jsonl $SEG > runs/eval-$SEG-$tag.log 2>&1 || echo "== eval-$SEG-$tag FAILED"
-  grep -A 9 '"heldout_briefs"' runs/eval-$SEG-$tag.log | head -10
+  echo "== $(date +%T) evaluating $job as eval-$RUN-$tag"
+  ./eval_specialist.sh "$B/$job/output/model.tar.gz" "eval-$RUN-$tag" runs/$RUN/sft/heldout_briefs.jsonl $SEG > runs/eval-$RUN-$tag.log 2>&1 || echo "== eval-$RUN-$tag FAILED"
+  grep -A 9 '"heldout_briefs"' runs/eval-$RUN-$tag.log | head -10
 done
 echo "== $(date +%T) $SEG train/eval done"
