@@ -162,10 +162,24 @@ def _own_consts(cls: str) -> list:
     return sorted(v for v in own if v.isupper())
 
 
+# C math names the models fall back on from their pretraining. None of these exist in GDScript, and the
+# runtime gate reports them as "Function "cosf()" not found in base self", which the 3B then repeated for
+# five rounds in the dusk scene (Sep 15) because the message never says what to write instead.
+C_FUNCS = {"cosf": "cos", "sinf": "sin", "tanf": "tan", "acosf": "acos", "asinf": "asin", "atanf": "atan",
+           "atan2f": "atan2", "sqrtf": "sqrt", "powf": "pow", "expf": "exp", "logf": "log", "log10f": "log",
+           "fabsf": "abs", "fabs": "abs", "fmodf": "fmod", "floorf": "floor", "ceilf": "ceil", "roundf": "round",
+           "fminf": "min", "fmaxf": "max", "printf": "print"}
+
+
 def check(code: str) -> list:
     text = _blank(code)
     problems = []
     db = _classdb()
+    for m in re.finditer(rf"(?<![\w.])({'|'.join(C_FUNCS)})\s*\(", text):
+        name = m.group(1)
+        if re.search(rf"\bfunc\s+{name}\b", text):      # the layer defines its own helper with that name
+            continue
+        problems.append(f"line {_line_of(text, m.start())}: {name}() is C, not GDScript; use {C_FUNCS[name]}()")
     for m in _CONST_RE.finditer(text):
         cls, name = m.group(1), m.group(2)
         line = _line_of(text, m.start())
