@@ -107,29 +107,48 @@ PROPS_BEACH_PALETTES = ["white frames with blue and teal fabrics, pastel umbrell
 PROPS_STREET_PALETTES = ["grey lamps, dark green bins, red hydrants", "black lamps, blue bins, yellow hydrants", "weathered wooden poles, grey bins, red hydrants"]
 
 
+PROPS_UMBRELLAS = ["few umbrellas", "umbrellas on about a third of the loungers", "umbrellas on most loungers"]
+PROPS_CLUTTER = ["little clutter", "some clutter (buckets, coolers, balls, bags)", "lots of clutter"]
+PROPS_TOWELS = ["mostly loungers", "loungers with some towels", "many towels among the loungers"]
+PROPS_ITEMS = ["lamps and bins only", "lamps, bins and hydrants", "lamps, bins, hydrants, a bench and a mailbox",
+               "lamps, power poles with wires, bins, hydrants, a stop sign"]
+PROPS_SPACING = ["lamps every 12 m", "lamps every 18 m", "lamps every 24 m"]
+
+
+def props_brief(bid: str, world: str, density: str, palette: str, **f) -> dict:
+    """A props brief exactly as the specialist was trained on it (key order and text template);
+    used by the sampler and by the director."""
+    if world == "beach":
+        text = f"Beach furniture, {density} density: {f['towels']}, {f['umbrellas']}, {f['clutter']}; {palette}."
+        extra = {"umbrellas": f["umbrellas"], "clutter": f["clutter"], "towels": f["towels"]}
+    else:
+        text = f"Street furniture, {density} density: {f['items']}, {f['spacing']}; {palette}."
+        extra = {"items": f["items"], "spacing": f["spacing"]}
+    row = {"id": bid, "segment": "props", "contract": CONTRACT_VERSION, "world": world,
+           "density": density, "palette": palette, "text": text}
+    row.update(extra)
+    return row
+
+
 def sample_props(n: int, seed: int, times=None, weather=None):
     rng = random.Random(seed + 200)
     out = []
     for i in range(n):
         world = WORLDS[i % 2]
         density = DENSITY[(i // 2) % 3]
+        bid = f"props-{seed:02d}-{i:03d}"
         if world == "beach":
-            umbrellas = rng.choice(["few umbrellas", "umbrellas on about a third of the loungers", "umbrellas on most loungers"])
-            clutter = rng.choice(["little clutter", "some clutter (buckets, coolers, balls, bags)", "lots of clutter"])
-            towels = rng.choice(["mostly loungers", "loungers with some towels", "many towels among the loungers"])
+            # drawn in the original order so a given seed produces the same briefs as before
+            umbrellas = rng.choice(PROPS_UMBRELLAS)
+            clutter = rng.choice(PROPS_CLUTTER)
+            towels = rng.choice(PROPS_TOWELS)
             palette = rng.choice(PROPS_BEACH_PALETTES)
-            text = f"Beach furniture, {density} density: {towels}, {umbrellas}, {clutter}; {palette}."
-            b = {"umbrellas": umbrellas, "clutter": clutter, "towels": towels}
+            out.append(props_brief(bid, world, density, palette, umbrellas=umbrellas, clutter=clutter, towels=towels))
         else:
-            extras = rng.choice(["lamps and bins only", "lamps, bins and hydrants", "lamps, bins, hydrants, a bench and a mailbox", "lamps, power poles with wires, bins, hydrants, a stop sign"])
-            spacing = rng.choice(["lamps every 12 m", "lamps every 18 m", "lamps every 24 m"])
+            items = rng.choice(PROPS_ITEMS)
+            spacing = rng.choice(PROPS_SPACING)
             palette = rng.choice(PROPS_STREET_PALETTES)
-            text = f"Street furniture, {density} density: {extras}, {spacing}; {palette}."
-            b = {"items": extras, "spacing": spacing}
-        row = {"id": f"props-{seed:02d}-{i:03d}", "segment": "props", "contract": CONTRACT_VERSION, "world": world,
-               "density": density, "palette": palette, "text": text}
-        row.update(b)
-        out.append(row)
+            out.append(props_brief(bid, world, density, palette, items=items, spacing=spacing))
     return out
 
 
@@ -204,6 +223,10 @@ VOCAB = {
     "ground": {"beach": {"tone": SAND_TONES, "wet_band": SAND_WET, "shells": SAND_SHELLS, "grain": SAND_GRAIN},
                "street": {"tone": ROAD_TONES, "markings": ROAD_MARKINGS, "kerb": ROAD_KERBS, "sidewalk": ROAD_SIDEWALKS,
                           "lawn": ROAD_LAWNS}},
+    "props": {"beach": {"density": DENSITY, "palette": PROPS_BEACH_PALETTES, "towels": PROPS_TOWELS,
+                        "umbrellas": PROPS_UMBRELLAS, "clutter": PROPS_CLUTTER},
+              "street": {"density": DENSITY, "palette": PROPS_STREET_PALETTES, "items": PROPS_ITEMS,
+                         "spacing": PROPS_SPACING}},
 }
 
 

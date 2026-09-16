@@ -37,7 +37,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from briefs import VOCAB, ground_brief, vegetation_brief  # noqa: E402
+from briefs import VOCAB, ground_brief, props_brief, vegetation_brief  # noqa: E402
 from common import DIRECTOR_MODEL, GAME, converse, parse_json, write_jsonl  # noqa: E402
 from specialist import Specialist  # noqa: E402
 from verify import verify_composite, verify_one  # noqa: E402
@@ -60,6 +60,7 @@ SCHEMAS = {
             '     "cloud_cover": 0.0, "haze": 0.0, "wind_strength": 1.0, "palette_words": ["..."], "mood": "...", "text": "one or two sentences"}'),
     "ground": '"ground": {"tone": "...", "<field>": "... the other fields listed for the chosen world"}',
     "vegetation": '"vegetation": {"density": "...", "species_mix": "...", "size": "...", "hedges": "...", "look": "..."}',
+    "props": '"props": {"density": "...", "palette": "...", "<field>": "... the other fields listed for the chosen world"}',
 }
 
 SKY_RULES = ("sky: azimuth is where the sun sits: 0 = ahead of the walker (-Z), 90 = +X (sea side / right kerb), 180 = behind.\n"
@@ -69,9 +70,9 @@ SKY_RULES = ("sky: azimuth is where the sun sits: 0 = ahead of the walker (-Z), 
 def _rules(seg: str) -> str:
     if seg == "sky":
         return SKY_RULES
-    if seg == "ground":
-        lines = ["ground: choose exactly one of the listed values for each field, copied exactly, using the fields for the chosen world."]
-        for world, fields in VOCAB["ground"].items():
+    if seg in ("ground", "props"):
+        lines = [f"{seg}: choose exactly one of the listed values for each field, copied exactly, using the fields for the chosen world."]
+        for world, fields in VOCAB[seg].items():
             lines.append(f"  on the {world}: " + "; ".join(f"{k}: " + " | ".join(v) for k, v in fields.items()))
         return "\n".join(lines)
     if seg == "vegetation":
@@ -111,9 +112,10 @@ def build_brief(seg: str, raw: dict, world: str, bid: str, fixes: list) -> dict:
                                 _pick(raw.get("size"), v["size"], fixes, "vegetation.size"),
                                 _pick(raw.get("hedges"), v["hedges"], fixes, "vegetation.hedges"),
                                 _pick(raw.get("look"), v["look"], fixes, "vegetation.look"))
-    if seg == "ground":
-        fields = VOCAB["ground"][world]
-        return ground_brief(bid, world, **{k: _pick(raw.get(k), vals, fixes, f"ground.{k}") for k, vals in fields.items()})
+    if seg in ("ground", "props"):
+        fields = VOCAB[seg][world]
+        picked = {k: _pick(raw.get(k), vals, fixes, f"{seg}.{k}") for k, vals in fields.items()}
+        return (ground_brief if seg == "ground" else props_brief)(bid, world, **picked)
     raise ValueError(f"the director has no brief schema for segment {seg}")
 
 
