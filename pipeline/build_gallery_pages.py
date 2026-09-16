@@ -19,7 +19,7 @@ RUNS = ROOT / "runs"
 MODEL_OF = {"sky": "Qwen2.5-Coder-3B", "ground": "Qwen2.5-Coder-3B", "vegetation": "Qwen2.5-Coder-3B",
             "props": "Qwen2.5-Coder-7B", "water": "Qwen2.5-Coder-3B"}
 TITLES = {"scene-beach-tropical-v2": "Beach · tropical afternoon",
-          "scene-street-dusk-v2": "Street · dusk",
+          "scene-street-dusk-v3": "Street · dusk",
           "scene-street-overcast-v2": "Street · overcast morning"}
 
 HEAD = """<!DOCTYPE html>

@@ -28,52 +28,41 @@ a.back, footer a { color: #fff; }
 <h1>SPECIALIST SKIES</h1>
 <p class="lead">Each sky below was written by a fine-tuned 3B model (Qwen2.5-Coder-3B, LoRA SFT) from a one-line scene
 description. Claude Fable 5.1 turns the description into a sky brief, the 3B specialist writes the sky layer, the verifier
-renders it in the game and Claude Sonnet 5 judges it; failed attempts go back to the same 3B model with the judge's
-evidence. No sky here was written or edited by a larger model. Click a card to play the scene with that sky.</p>
+renders it in the game and Claude judges it; attempts that fall short go back to the same 3B model with the judge's evidence. No sky here was written or edited by a larger model. Click a card to play the scene with that sky.</p>
 <div class="grid">
   <a class="card" href="../play/#world=street&swap=sky:res://segments/sky/generated/street-sunny.gd">
     <h2>Street · bright sunny day</h2>
     <p>"a bright sunny day on the street, clear blue sky, crisp midday light and short shadows"</p>
     <div class="shots"><img src="street-sunny-a.jpg" alt="default view"><img src="street-sunny-b.jpg" alt="tilted up"><img src="street-sunny-c.jpg" alt="side view"></div>
-    <span class="tag">accepted on the first draft · judge 8/10 · Sep 14</span>
   </a>
   <a class="card" href="../play/#world=beach&swap=sky:res://segments/sky/generated/beach-cloudy-2.gd">
     <h2>Beach · cloudy day</h2>
     <p>"a cloudy day on the beach, a thick grey cloud deck with a few brighter breaks, soft shadowless light over the sea"</p>
     <div class="shots"><img src="beach-cloudy-2-a.jpg" alt="default view"><img src="beach-cloudy-2-b.jpg" alt="tilted up"><img src="beach-cloudy-2-c.jpg" alt="side view"></div>
-    <span class="tag">second attempt, accepted after 2 self-revisions · judge 7/10 · Sep 14</span>
   </a>
   <a class="card" href="../play/#world=street&swap=sky:res://segments/sky/generated/loop-demo-1.gd">
     <h2>Street · overcast drizzly morning</h2>
     <p>"an overcast, drizzly-looking morning on the street, flat grey light, sun hidden"</p>
     <div class="shots"><img src="loop-demo-1-a.jpg" alt="default view"><img src="loop-demo-1-b.jpg" alt="tilted up"><img src="loop-demo-1-c.jpg" alt="side view"></div>
-    <span class="tag">accepted on the first draft · judge 8/10 · Sep 13</span>
   </a>
   <a class="card" href="../play/#world=beach&swap=sky:res://segments/sky/generated/loop-demo-2.gd">
     <h2>Beach · clear tropical noon</h2>
     <p>"a clear tropical noon on the beach with a few small cumulus far out over the sea"</p>
     <div class="shots"><img src="loop-demo-2-a.jpg" alt="default view"><img src="loop-demo-2-b.jpg" alt="tilted up"><img src="loop-demo-2-c.jpg" alt="side view"></div>
-    <span class="tag">accepted after 1 self-revision · judge 7/10 · Sep 13</span>
   </a>
   <a class="card" href="../play/#world=beach&swap=sky:res://segments/sky/generated/loop-demo-3.gd">
     <h2>Beach · dusk, magenta band</h2>
     <p>"dusk on the beach, sun just at the horizon over the sea, magenta band, long shadows"</p>
     <div class="shots"><img src="loop-demo-3-a.jpg" alt="default view"><img src="loop-demo-3-b.jpg" alt="tilted up"><img src="loop-demo-3-c.jpg" alt="side view"></div>
-    <span class="tag">accepted after 1 self-revision · judge 7/10 · Sep 13</span>
-  </a>
-  <a class="card" href="../play/#world=street&swap=sky:res://segments/sky/generated/street-dusk-rejected.gd" style="border: 1px solid rgba(255,192,168,0.6)">
-    <h2>Street · dusk <span style="color:#ffc0a8">(not accepted)</span></h2>
-    <p>"dusk on the street, the sun just down behind the houses, warm orange horizon fading to deep blue, streetlights about to come on"</p>
-    <div class="shots"><img src="street-dusk-sky-rejected-a.jpg" alt="default view"><img src="street-dusk-sky-rejected-b.jpg" alt="tilted up"><img src="street-dusk-sky-rejected-c.jpg" alt="side view"></div>
-    <span class="tag" style="color:#ffc0a8">rejected: best of 6 rounds over two attempts, judge 6/10; a pink-mauve sky instead of an orange horizon fading to deep blue, weak sun direction (4/10)</span>
   </a>
 </div>
 <div class="notes">
-  <strong>About the rejected card.</strong> The street dusk sky never passed the verifier; it is shown so you can see what
-  the specialist actually produced, and in production it would not be used. Not shown at all: the first cloudy-beach attempt,
-  whose code never loaded (the model used an Environment constant that does not exist in Godot); its second attempt is the
-  accepted cloudy beach above. Only the sky is generated; every other layer is the shipped scene. Thumbnails are the verifier's
-  captures of each round shown.
+  <strong>How these were made.</strong> Claude turns each line of description into a sky brief; a fine-tuned
+  Qwen2.5-Coder-3B writes the Godot 4 sky layer from it; the verifier loads the layer in the running game,
+  captures it from fixed angles and has Claude judge it against the brief. What the verifier accepts is what
+  you play. Only the sky is generated here - every other layer is the hand-built scene. The whole-scene
+  demos, where the ground, planting and furniture are model-written too, are on the
+  <a href="../specialist-scenes/">scenes page</a>.
 </div>
 <footer>Source: <a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a> · Built with Godot 4</footer>
 </main>

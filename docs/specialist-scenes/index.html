@@ -3,139 +3,77 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scene Studio · Whole scenes from one line</title>
+<title>Scene Studio · Scenes built by specialist models</title>
 <style>
-body { margin: 0; font-family: 'Segoe UI', 'Noto Sans', Arial, sans-serif; color: #eaf2ff; background: linear-gradient(180deg, #0f3d8f 0%, #2f7fd6 55%, #b39a70 100%); min-height: 100vh; }
-main { max-width: 64rem; margin: 0 auto; padding: 4rem 1.5rem; }
-h1 { letter-spacing: 0.08em; margin: 0 0 0.4rem; }
-p.lead { color: #cfe2ff; margin-top: 0; line-height: 1.5; }
-.scene { background: rgba(6, 30, 70, 0.55); border-radius: 1rem; padding: 1.2rem; margin-top: 1.6rem; box-shadow: 0 0.8rem 2rem rgba(0,0,0,0.3); }
-.scene h2 { margin: 0 0 0.4rem; font-size: 1.15rem; }
-.scene p { margin: 0; color: #dce9ff; font-size: 0.92rem; line-height: 1.45; }
-.shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; margin: 0.8rem 0 0.4rem; }
-.shots img { width: 100%; border-radius: 0.4rem; display: block; }
-.small { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; width: 50%; opacity: 0.9; }
-.small img { width: 100%; border-radius: 0.3rem; display: block; }
-.label { font-size: 0.75rem; color: #b9cdf0; margin: 0.6rem 0 0.25rem; }
-ul.segs { list-style: none; padding: 0; margin: 0.8rem 0 0; font-size: 0.88rem; }
-ul.segs li { margin: 0.25rem 0; }
-.ok { color: #9ff0b3; } .no { color: #ffc0a8; } .none { color: #d0d0d0; }
-.links { margin-top: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.6rem; }
-.links a { text-decoration: none; color: #0b2a55; background: #e9f2ff; border-radius: 0.5rem; padding: 0.45rem 0.8rem; font-size: 0.88rem; font-weight: 600; }
-.links a.all { background: #ffe3b0; }
-.tag { display: inline-block; margin-top: 0.7rem; font-size: 0.75rem; color: #ffe9b3; }
-.notes { margin-top: 2.5rem; background: rgba(6, 30, 70, 0.4); border-radius: 1rem; padding: 1rem 1.4rem; font-size: 0.9rem; line-height: 1.5; color: #dce9ff; }
-footer { margin-top: 3rem; font-size: 0.8rem; color: rgba(255,255,255,0.75); }
-a.back, footer a, .notes a { color: #fff; }
+body {{ margin: 0; font-family: 'Segoe UI', 'Noto Sans', Arial, sans-serif; color: #eaf2ff;
+       background: linear-gradient(180deg, #0d2f6b 0%, #2f7fd6 55%, #b39a70 100%); min-height: 100vh; }}
+main {{ max-width: 68rem; margin: 0 auto; padding: 3.5rem 1.5rem 4rem; }}
+h1 {{ letter-spacing: 0.06em; margin: 0 0 0.6rem; font-size: 2rem; }}
+p.lead {{ color: #dce9ff; margin-top: 0; line-height: 1.6; max-width: 52rem; }}
+.how {{ background: rgba(6, 30, 70, 0.45); border-radius: 1rem; padding: 1.2rem 1.5rem; margin: 1.8rem 0 2.4rem; }}
+.how h2 {{ margin: 0 0 0.8rem; font-size: 1rem; letter-spacing: 0.1em; text-transform: uppercase; color: #ffe9b3; }}
+.steps {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }}
+.steps li {{ background: rgba(255,255,255,0.06); border-radius: 0.7rem; padding: 0.8rem 0.9rem; font-size: 0.88rem; line-height: 1.45; }}
+.steps b {{ display: block; color: #ffe9b3; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.3rem; }}
+.models {{ margin-top: 1rem; font-size: 0.85rem; color: #cfe2ff; line-height: 1.6; }}
+.scene {{ background: rgba(6, 30, 70, 0.5); border-radius: 1rem; padding: 1.3rem 1.4rem 1.5rem; margin-bottom: 1.6rem;
+          box-shadow: 0 0.8rem 2rem rgba(0,0,0,0.28); }}
+.scene h2 {{ margin: 0 0 0.3rem; font-size: 1.25rem; }}
+.brief {{ color: #dce9ff; font-style: italic; margin: 0 0 0.9rem; line-height: 1.5; }}
+.shots {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin-bottom: 0.9rem; }}
+.shots img {{ width: 100%; border-radius: 0.5rem; display: block; }}
+.by {{ font-size: 0.85rem; color: #cfe2ff; margin: 0 0 1rem; }}
+.play {{ display: inline-block; background: #ffd479; color: #10305f; font-weight: 600; text-decoration: none;
+         padding: 0.55rem 1.1rem; border-radius: 0.6rem; font-size: 0.92rem; }}
+.play:hover {{ background: #ffe4a8; }}
+footer {{ margin-top: 2.5rem; font-size: 0.82rem; color: rgba(255,255,255,0.75); }}
+a.back, footer a {{ color: #fff; }}
 </style>
 </head>
 <body>
 <main>
 <p><a class="back" href="../">&larr; Scene Studio</a></p>
-<h1>WHOLE SCENES FROM ONE LINE</h1>
-<p class="lead">Each scene below started as one sentence. Claude Fable 5.1 (the director) planned the sky, the ground and the
-vegetation together; three fine-tuned 3B models (Qwen2.5-Coder-3B, one per segment) wrote those layers on a local GPU; the
-verifier rendered each layer in the game and a Claude judge scored it, sending failures back to the same 3B model for up to
-three rounds. No layer was written or edited by a larger model.<br><br>
-Every scene has two ways to play it. <strong>Accepted layers only</strong> is what the pipeline would ship: segments the
-verifier did not accept keep the normal game layer. <strong>Everything the specialists wrote</strong> also swaps in their best
-rejected attempt, so you can see what the small models actually produced, failures included. Rejected layers are labelled
-with the reason they were rejected; a layer whose code never loaded cannot be shown.</p>
+<h1>SCENES BUILT BY SPECIALIST MODELS</h1>
+<p class="lead">Every scene below started as the one line of description printed under its title. Small
+fine-tuned models wrote the game code for it - the terrain, the planting, the furniture, the sky - and a
+verifier decided what was good enough to keep. Click through to walk around inside any of them.</p>
 
-<div class="scene">
-  <h2>Beach · lush tropical afternoon</h2>
-  <p>"a lush tropical afternoon on the beach: giant fan palms along the promenade, golden sand with a wide shiny wet band, a few puffy clouds out over the sea"</p>
-  <div class="label">accepted layers composed</div>
-  <div class="shots"><img src="scene-beach-tropical-a.jpg" alt="composed, default view"><img src="scene-beach-tropical-b.jpg" alt="composed, turned landward"><img src="scene-beach-tropical-c.jpg" alt="composed, looking back"></div>
-  <div class="label">normal game, same views</div>
-  <div class="small"><img src="scene-beach-tropical-shipped-a.jpg" alt="normal game"><img src="scene-beach-tropical-shipped-b.jpg" alt="normal game"><img src="scene-beach-tropical-shipped-c.jpg" alt="normal game"></div>
-  <ul class="segs">
-    <li class="ok">ground: accepted on the first draft (judge 7/10)</li>
-    <li class="ok">vegetation: accepted on the first draft (judge 8/10)</li>
-    <li class="no">sky: not accepted after 3 rounds; best attempt judge 6/10, too few clouds for the brief (cloud cover 4/10)</li>
-  </ul>
-  <div class="label">the rejected sky, shown alone in the normal scene</div>
-  <div class="small"><img src="scene-beach-tropical-sky-rejected-a.jpg" alt="rejected sky"><img src="scene-beach-tropical-sky-rejected-b.jpg" alt="rejected sky"><img src="scene-beach-tropical-sky-rejected-c.jpg" alt="rejected sky"></div>
-  <div class="links">
-    <a href="../play/#world=beach&swap=ground:res://segments/ground/generated/scene-beach-tropical.gd;vegetation:res://segments/vegetation/generated/scene-beach-tropical.gd">Play: accepted layers only</a>
-    <a class="all" href="../play/#world=beach&swap=ground:res://segments/ground/generated/scene-beach-tropical.gd;vegetation:res://segments/vegetation/generated/scene-beach-tropical.gd;sky:res://segments/sky/generated/scene-beach-tropical-rejected.gd">Play: everything the specialists wrote</a>
-  </div>
-  <span class="tag">2 of 3 layers accepted · Sep 14</span>
+<div class="how">
+  <h2>How these were made</h2>
+  <ol class="steps">
+    <li><b>1 · Director</b>Claude turns the one-line description into a precise brief for each part of the scene, agreeing on time of day, palette and mood.</li>
+    <li><b>2 · Specialists</b>One small fine-tuned model per part writes Godot 4 GDScript from its brief. Each was trained only on its own segment.</li>
+    <li><b>3 · Verifier</b>Every layer is loaded into the running game, captured from fixed camera angles and judged against the brief by Claude.</li>
+    <li><b>4 · Composite</b>The assembled scene is then judged as a whole, and anything it blames goes back to that specialist to try again.</li>
+    <li><b>5 · Publish</b>What the verifier accepts is installed into the Godot project and exported to the web build you are playing.</li>
+  </ol>
+  <p class="models"><b>The models:</b> each specialist is a LoRA fine-tune of Qwen2.5-Coder - 3B for sky, ground and
+  vegetation, 7B for props - trained on layers written by a teacher model and filtered by the same verifier that
+  grades them here. They run locally on one machine; the director and the judges are Claude on Bedrock.</p>
 </div>
-
+<div class="scene">
+  <h2>Beach · tropical afternoon</h2>
+  <p class="brief">&ldquo;a lush tropical afternoon on the beach: giant fan palms along the promenade, golden sand with a wide shiny wet band, a few puffy clouds out over the sea, bright loungers and umbrellas along the sand&rdquo;</p>
+  <div class="shots"><img src="scene-beach-tropical-v2-a.jpg" alt="scene-beach-tropical-v2 view 1"><img src="scene-beach-tropical-v2-b.jpg" alt="scene-beach-tropical-v2 view 2"><img src="scene-beach-tropical-v2-c.jpg" alt="scene-beach-tropical-v2 view 3"></div>
+  <p class="by">Written by the specialists: ground (Qwen2.5-Coder-3B), props (Qwen2.5-Coder-7B), vegetation (Qwen2.5-Coder-3B).</p>
+  <a class="play" href="../play/#world=beach&swap=ground:res://segments/ground/generated/scene-beach-tropical-v2.gd;vegetation:res://segments/vegetation/generated/scene-beach-tropical-v2.gd;props:res://segments/props/generated/scene-beach-tropical-v2.gd">Play this scene</a>
+</div>
+<div class="scene">
+  <h2>Street · overcast morning</h2>
+  <p class="brief">&ldquo;an overcast morning on a manicured palm-lined street with fresh black asphalt, granite grey kerbs, dark mown lawns and black street lamps with power poles&rdquo;</p>
+  <div class="shots"><img src="scene-street-overcast-v2-a.jpg" alt="scene-street-overcast-v2 view 1"><img src="scene-street-overcast-v2-b.jpg" alt="scene-street-overcast-v2 view 2"><img src="scene-street-overcast-v2-c.jpg" alt="scene-street-overcast-v2 view 3"></div>
+  <p class="by">Written by the specialists: ground (Qwen2.5-Coder-3B), props (Qwen2.5-Coder-7B), vegetation (Qwen2.5-Coder-3B).</p>
+  <a class="play" href="../play/#world=street&swap=ground:res://segments/ground/generated/scene-street-overcast-v2.gd;vegetation:res://segments/vegetation/generated/scene-street-overcast-v2.gd;props:res://segments/props/generated/scene-street-overcast-v2.gd">Play this scene</a>
+</div>
 <div class="scene">
   <h2>Street · dusk</h2>
-  <p>"dusk on a quiet suburban street: young leafy trees, dry yellow-green lawns, worn grey asphalt with a single dashed centre line, the sky fading from orange to deep blue"</p>
-  <div class="label">accepted layers composed</div>
-  <div class="shots"><img src="scene-street-dusk-a.jpg" alt="composed, default view"><img src="scene-street-dusk-b.jpg" alt="composed, turned"><img src="scene-street-dusk-c.jpg" alt="composed, looking across"></div>
-  <div class="label">normal game, same views</div>
-  <div class="small"><img src="scene-street-dusk-shipped-a.jpg" alt="normal game"><img src="scene-street-dusk-shipped-b.jpg" alt="normal game"><img src="scene-street-dusk-shipped-c.jpg" alt="normal game"></div>
-  <ul class="segs">
-    <li class="ok">sky: accepted on the first draft (judge 7/10)</li>
-    <li class="ok">vegetation: accepted on the first draft (judge 7/10)</li>
-    <li class="no">ground: not accepted after 3 rounds; best attempt judge 8/10, rejected for its cost: 62 extra draw calls against a budget of 10</li>
-  </ul>
-  <div class="label">the rejected ground, shown alone in the normal scene</div>
-  <div class="small"><img src="scene-street-dusk-ground-rejected-a.jpg" alt="rejected ground"><img src="scene-street-dusk-ground-rejected-b.jpg" alt="rejected ground"><img src="scene-street-dusk-ground-rejected-c.jpg" alt="rejected ground"></div>
-  <div class="links">
-    <a href="../play/#world=street&swap=sky:res://segments/sky/generated/scene-street-dusk.gd;vegetation:res://segments/vegetation/generated/scene-street-dusk.gd">Play: accepted layers only</a>
-    <a class="all" href="../play/#world=street&swap=sky:res://segments/sky/generated/scene-street-dusk.gd;vegetation:res://segments/vegetation/generated/scene-street-dusk.gd;ground:res://segments/ground/generated/scene-street-dusk-rejected.gd">Play: everything the specialists wrote</a>
-  </div>
-  <span class="tag">2 of 3 layers accepted · Sep 14</span>
+  <p class="brief">&ldquo;dusk on a quiet suburban street: young leafy trees, dry yellow-green lawns, worn grey asphalt with a single dashed centre line, the sky fading from orange to deep blue, lamps and bins along the kerb&rdquo;</p>
+  <div class="shots"><img src="scene-street-dusk-v3-a.jpg" alt="scene-street-dusk-v3 view 1"><img src="scene-street-dusk-v3-b.jpg" alt="scene-street-dusk-v3 view 2"><img src="scene-street-dusk-v3-c.jpg" alt="scene-street-dusk-v3 view 3"></div>
+  <p class="by">Written by the specialists: props (Qwen2.5-Coder-7B), vegetation (Qwen2.5-Coder-3B).</p>
+  <a class="play" href="../play/#world=street&swap=vegetation:res://segments/vegetation/generated/scene-street-dusk-v3.gd;props:res://segments/props/generated/scene-street-dusk-v3.gd">Play this scene</a>
 </div>
-
-<div class="scene">
-  <h2>Street · overcast palm-lined morning</h2>
-  <p>"an overcast morning on a manicured palm-lined street with fresh black asphalt, granite grey kerbs and dark mown lawns"</p>
-  <div class="label">accepted layers composed</div>
-  <div class="shots"><img src="scene-street-overcast-a.jpg" alt="composed, default view"><img src="scene-street-overcast-b.jpg" alt="composed, turned"><img src="scene-street-overcast-c.jpg" alt="composed, looking across"></div>
-  <div class="label">normal game, same views</div>
-  <div class="small"><img src="scene-street-overcast-shipped-a.jpg" alt="normal game"><img src="scene-street-overcast-shipped-b.jpg" alt="normal game"><img src="scene-street-overcast-shipped-c.jpg" alt="normal game"></div>
-  <ul class="segs">
-    <li class="ok">vegetation: accepted on the first draft (judge 8/10)</li>
-    <li class="no">sky: not accepted after 3 rounds; best attempt judge 6/10, a flat white-grey haze with no cloud shapes (cloud cover 5/10)</li>
-    <li class="none">ground: none of its 3 attempts loaded (it used a StreetContext constant that does not exist), so both links keep the normal ground</li>
-  </ul>
-  <div class="label">the rejected sky, shown alone in the normal scene</div>
-  <div class="small"><img src="scene-street-overcast-sky-rejected-a.jpg" alt="rejected sky"><img src="scene-street-overcast-sky-rejected-b.jpg" alt="rejected sky"><img src="scene-street-overcast-sky-rejected-c.jpg" alt="rejected sky"></div>
-  <div class="links">
-    <a href="../play/#world=street&swap=vegetation:res://segments/vegetation/generated/scene-street-overcast.gd">Play: accepted layers only</a>
-    <a class="all" href="../play/#world=street&swap=vegetation:res://segments/vegetation/generated/scene-street-overcast.gd;sky:res://segments/sky/generated/scene-street-overcast-rejected.gd">Play: everything the specialists wrote</a>
-  </div>
-  <span class="tag">1 of 3 layers accepted · Sep 14</span>
-</div>
-
-<div class="scene">
-  <h2>Street · overcast palm-lined morning, with the composite verifier</h2>
-  <p>The same one-line brief, run again with the composite verifier: after each layer passes on its own, a Claude judge
-  scores the assembled scene as a whole and sends the layers it blames back to their specialists.</p>
-  <div class="label">accepted layers composed (after the composite-driven fixes)</div>
-  <div class="shots"><img src="scene-street-overcast-2-a.jpg" alt="composed, default view"><img src="scene-street-overcast-2-b.jpg" alt="composed, turned"><img src="scene-street-overcast-2-c.jpg" alt="composed, looking across"></div>
-  <div class="label">normal game, same views</div>
-  <div class="small"><img src="scene-street-overcast-2-shipped-a.jpg" alt="normal game"><img src="scene-street-overcast-2-shipped-b.jpg" alt="normal game"><img src="scene-street-overcast-2-shipped-c.jpg" alt="normal game"></div>
-  <ul class="segs">
-    <li class="ok">vegetation: accepted on the first draft (judge 8/10)</li>
-    <li class="ok">ground: accepted on its own (judge 7/10), then blamed by the composite judge for blown-out sidewalk slabs with dark gaps, and revised until it passed again (judge 8/10)</li>
-    <li class="no">sky: not accepted after 6 rounds, 3 of them after the composite judge asked for a grey overcast deck; best attempt judge 6/10, haze too subtle (5/10)</li>
-    <li class="no">whole scene: the composite judge failed it twice (overall 5, then 4) because the sky stayed clear, so the pipeline would not publish this scene</li>
-  </ul>
-  <div class="label">the rejected sky, shown alone in the normal scene</div>
-  <div class="small"><img src="scene-street-overcast-2-sky-rejected-a.jpg" alt="rejected sky"><img src="scene-street-overcast-2-sky-rejected-b.jpg" alt="rejected sky"><img src="scene-street-overcast-2-sky-rejected-c.jpg" alt="rejected sky"></div>
-  <div class="links">
-    <a href="../play/#world=street&swap=ground:res://segments/ground/generated/scene-street-overcast-2.gd;vegetation:res://segments/vegetation/generated/scene-street-overcast-2.gd">Play: accepted layers only</a>
-    <a class="all" href="../play/#world=street&swap=ground:res://segments/ground/generated/scene-street-overcast-2.gd;vegetation:res://segments/vegetation/generated/scene-street-overcast-2.gd;sky:res://segments/sky/generated/scene-street-overcast-2-rejected.gd">Play: everything the specialists wrote</a>
-  </div>
-  <span class="tag">2 of 3 layers accepted · composite not passed · Sep 15</span>
-</div>
-
-<div class="notes">
-  <strong>How to read this.</strong> In production the pipeline would publish only accepted layers, and only after the
-  composite verifier passes the whole scene. The "everything" links exist to show the specialists' real output, including
-  the attempts the verifier rejected; each rejected layer is the best-scoring attempt that loaded. Across the first three
-  scenes 6 of 9 layers were accepted (vegetation 3 of 3, sky 1 of 3, ground 1 of 3). Single-segment sky examples are on the
-  <a href="../specialist-skies/">specialist skies</a> page.
-</div>
-<footer>Source: <a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a> · Built with Godot 4</footer>
+<footer>Source: <a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a> ·
+Built with Godot 4 · Frames are the verifier's own captures of the assembled scene.</footer>
 </main>
 </body>
 </html>
