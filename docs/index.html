@@ -4,35 +4,70 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scene Studio</title>
-<style>
-body { margin: 0; font-family: 'Segoe UI', 'Noto Sans', Arial, sans-serif; color: #eaf2ff; background: linear-gradient(180deg, #0f3d8f 0%, #2f7fd6 55%, #b39a70 100%); min-height: 100vh; }
-main { max-width: 56rem; margin: 0 auto; padding: 4rem 1.5rem; }
-h1 { letter-spacing: 0.08em; margin: 0 0 0.4rem; }
-p.lead { color: #cfe2ff; margin-top: 0; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1.2rem; margin-top: 2rem; }
-.card { display: block; text-decoration: none; color: inherit; background: rgba(6, 30, 70, 0.55); border-radius: 1rem; padding: 1.4rem; box-shadow: 0 0.8rem 2rem rgba(0,0,0,0.3); transition: transform 0.15s; }
-.card:hover { transform: translateY(-3px); }
-.card h2 { margin: 0 0 0.4rem; font-size: 1.25rem; }
-.card p { margin: 0; color: #dce9ff; font-size: 0.92rem; line-height: 1.4; }
-.card .tag { display: inline-block; margin-top: 0.7rem; font-size: 0.75rem; color: #ffe9b3; }
-.soon { opacity: 0.55; }
-footer { margin-top: 3rem; font-size: 0.8rem; color: rgba(255,255,255,0.75); }
-footer a { color: #fff; }
-</style>
+<meta name="description" content="Procedural game scenes built layer by layer in Godot, playable in the browser — including scenes written by small fine-tuned models.">
+<link rel="stylesheet" href="assets/gallery.css">
 </head>
 <body>
 <main>
-<h1>SCENE STUDIO</h1>
-<p class="lead">Procedural game scenes built layer by layer in Godot, running in the browser.</p>
-<div class="grid">
-  <a class="card" href="play/#world=beach"><h2>Beach Walk</h2><p>A resort shoreline: surf, sand, hotels, palms, a crowd on the same rig as the player. Walk, jog, jump, look around.</p><span class="tag">world=beach</span></a>
-  <a class="card" href="play/#world=beach&inspect"><h2>Beach Walk · character orbit</h2><p>Orbit the walker up close.</p><span class="tag">inspect</span></a>
-  <a class="card" href="play/#world=beach&inspect&crowd"><h2>Beach Walk · crowd orbit</h2><p>Orbit the lounger rows.</p><span class="tag">inspect crowd</span></a>
-  <a class="card" href="play/#world=street"><h2>Street Drive</h2><p>A suburban street in a small yellow hatchback: parked cars, traffic, houses, palms, pedestrians. Up to accelerate, Down to brake, Left / Right to steer.</p><span class="tag">world=street</span></a>
-  <a class="card" href="specialist-skies/"><h2>Specialist skies</h2><p>Five skies written by a fine-tuned 3B model from one-line scene descriptions, each accepted by the verifier. Click one to play it.</p><span class="tag">3B specialist · SFT</span></a>
-  <a class="card" href="specialist-scenes/"><h2>Whole scenes from one line</h2><p>The director plans sky, ground and vegetation together; three local 3B specialists write the layers. Three scenes, with what was and wasn't accepted.</p><span class="tag">3 specialists · director loop</span></a>
-</div>
-<footer>Source: <a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a> · Bodies and animations: Quaternius (CC0) · Built with Godot 4</footer>
+<p class="eyebrow">Godot &middot; in the browser</p>
+<h1>Scene Studio</h1>
+<p class="lead">Procedural game scenes built layer by layer &mdash; terrain, water, planting, furniture, crowds &mdash;
+and, increasingly, written by small models trained on one layer each.</p>
+
+<section class="how" style="margin-top:3rem">
+  <h2>Built by models</h2>
+  <div class="grid">
+    <a class="card" href="specialist-scenes/">
+      <div class="card-body">
+        <h2>Whole scenes from one line &rarr;</h2>
+        <p>A director turns one line of description into a brief per segment; separate fine-tuned models write the
+        ground, the planting and the furniture; a verifier decides what ships.</p>
+      </div>
+    </a>
+    <a class="card" href="specialist-skies/">
+      <div class="card-body">
+        <h2>Specialist skies &rarr;</h2>
+        <p>Five skies written by a fine-tuned 3B model from one-line descriptions, each one accepted by the
+        verifier that renders and judges it.</p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="how">
+  <h2>Play the hand-built worlds</h2>
+  <div class="grid">
+    <a class="card" href="play/#world=beach">
+      <div class="card-body">
+        <h2>Beach Walk &rarr;</h2>
+        <p>A resort shoreline: surf, sand, hotels, palms and a crowd on the same rig as the player.
+        Walk, jog, jump, look around.</p>
+      </div>
+    </a>
+    <a class="card" href="play/#world=street">
+      <div class="card-body">
+        <h2>Street Drive &rarr;</h2>
+        <p>A suburban street in a small yellow hatchback: parked cars, traffic, houses and pedestrians.
+        Up to accelerate, Down to brake, Left and Right to steer.</p>
+      </div>
+    </a>
+    <a class="card" href="play/#world=beach&inspect">
+      <div class="card-body">
+        <h2>Character orbit &rarr;</h2>
+        <p>Orbit the walker up close to see the rig, the skin and hair shaders, and the animation set.</p>
+      </div>
+    </a>
+    <a class="card" href="play/#world=beach&inspect&crowd">
+      <div class="card-body">
+        <h2>Crowd orbit &rarr;</h2>
+        <p>Orbit the lounger rows, where the crowd layer seats people on the spots the props layer exposes.</p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<footer>Bodies and animations: Quaternius (CC0) &middot; Built with Godot&nbsp;4 &middot;
+<a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a></footer>
 </main>
 </body>
 </html>

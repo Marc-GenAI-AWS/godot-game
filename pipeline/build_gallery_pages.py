@@ -18,67 +18,50 @@ RUNS = ROOT / "runs"
 
 MODEL_OF = {"sky": "Qwen2.5-Coder-3B", "ground": "Qwen2.5-Coder-3B", "vegetation": "Qwen2.5-Coder-3B",
             "props": "Qwen2.5-Coder-7B", "water": "Qwen2.5-Coder-3B"}
-TITLES = {"scene-beach-tropical-v2": "Beach · tropical afternoon",
-          "scene-street-dusk-v3": "Street · dusk",
-          "scene-street-overcast-v2": "Street · overcast morning"}
+# titled by what the models built and you can see, not by the weather in the original one-liner
+TITLES = {"scene-beach-tropical-v2": "Beach &middot; golden sand, fan palms and loungers",
+          "scene-street-dusk-v3": "Street &middot; dry lawns and kerbside lamps",
+          "scene-street-overcast-v2": "Street &middot; fresh asphalt, palms and power poles"}
 
 HEAD = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scene Studio · Scenes built by specialist models</title>
-<style>
-body {{ margin: 0; font-family: 'Segoe UI', 'Noto Sans', Arial, sans-serif; color: #eaf2ff;
-       background: linear-gradient(180deg, #0d2f6b 0%, #2f7fd6 55%, #b39a70 100%); min-height: 100vh; }}
-main {{ max-width: 68rem; margin: 0 auto; padding: 3.5rem 1.5rem 4rem; }}
-h1 {{ letter-spacing: 0.06em; margin: 0 0 0.6rem; font-size: 2rem; }}
-p.lead {{ color: #dce9ff; margin-top: 0; line-height: 1.6; max-width: 52rem; }}
-.how {{ background: rgba(6, 30, 70, 0.45); border-radius: 1rem; padding: 1.2rem 1.5rem; margin: 1.8rem 0 2.4rem; }}
-.how h2 {{ margin: 0 0 0.8rem; font-size: 1rem; letter-spacing: 0.1em; text-transform: uppercase; color: #ffe9b3; }}
-.steps {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }}
-.steps li {{ background: rgba(255,255,255,0.06); border-radius: 0.7rem; padding: 0.8rem 0.9rem; font-size: 0.88rem; line-height: 1.45; }}
-.steps b {{ display: block; color: #ffe9b3; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.3rem; }}
-.models {{ margin-top: 1rem; font-size: 0.85rem; color: #cfe2ff; line-height: 1.6; }}
-.scene {{ background: rgba(6, 30, 70, 0.5); border-radius: 1rem; padding: 1.3rem 1.4rem 1.5rem; margin-bottom: 1.6rem;
-          box-shadow: 0 0.8rem 2rem rgba(0,0,0,0.28); }}
-.scene h2 {{ margin: 0 0 0.3rem; font-size: 1.25rem; }}
-.brief {{ color: #dce9ff; font-style: italic; margin: 0 0 0.9rem; line-height: 1.5; }}
-.shots {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin-bottom: 0.9rem; }}
-.shots img {{ width: 100%; border-radius: 0.5rem; display: block; }}
-.by {{ font-size: 0.85rem; color: #cfe2ff; margin: 0 0 1rem; }}
-.play {{ display: inline-block; background: #ffd479; color: #10305f; font-weight: 600; text-decoration: none;
-         padding: 0.55rem 1.1rem; border-radius: 0.6rem; font-size: 0.92rem; }}
-.play:hover {{ background: #ffe4a8; }}
-footer {{ margin-top: 2.5rem; font-size: 0.82rem; color: rgba(255,255,255,0.75); }}
-a.back, footer a {{ color: #fff; }}
-</style>
+<title>Scenes built by specialist models · Scene Studio</title>
+<meta name="description" content="Playable Godot scenes written by small fine-tuned models: a director turns one line into per-segment briefs, specialists write the code, a verifier decides what ships.">
+<link rel="stylesheet" href="../assets/gallery.css">
 </head>
 <body>
 <main>
-<p><a class="back" href="../">&larr; Scene Studio</a></p>
-<h1>SCENES BUILT BY SPECIALIST MODELS</h1>
-<p class="lead">Every scene below started as the one line of description printed under its title. Small
-fine-tuned models wrote the game code for it - the terrain, the planting, the furniture, the sky - and a
-verifier decided what was good enough to keep. Click through to walk around inside any of them.</p>
+<a class="nav" href="../">&larr; Scene Studio</a>
 
-<div class="how">
-  <h2>How these were made</h2>
+<p class="eyebrow">Specialist models</p>
+<h1>Playable scenes, written by small fine-tuned models</h1>
+<p class="lead">Each scene below started as a single line of description. A director split that line into a
+brief for every part of the scene, small fine-tuned models wrote the Godot code from those briefs, and a
+verifier decided what was good enough to keep. Open any of them and walk around.</p>
+
+<section class="how">
+  <h2>How they were made</h2>
   <ol class="steps">
-    <li><b>1 · Director</b>Claude turns the one-line description into a precise brief for each part of the scene, agreeing on time of day, palette and mood.</li>
-    <li><b>2 · Specialists</b>One small fine-tuned model per part writes Godot 4 GDScript from its brief. Each was trained only on its own segment.</li>
-    <li><b>3 · Verifier</b>Every layer is loaded into the running game, captured from fixed camera angles and judged against the brief by Claude.</li>
-    <li><b>4 · Composite</b>The assembled scene is then judged as a whole, and anything it blames goes back to that specialist to try again.</li>
-    <li><b>5 · Publish</b>What the verifier accepts is installed into the Godot project and exported to the web build you are playing.</li>
+    <li><b><span class="n">1</span>Director</b>Claude turns one line of description into a precise brief for each part of the scene, agreeing on time of day, palette and mood.</li>
+    <li><b><span class="n">2</span>Specialists</b>One small fine-tuned model per part writes Godot&nbsp;4 GDScript from its brief. Each is trained on its own segment only.</li>
+    <li><b><span class="n">3</span>Verifier</b>Every layer is loaded into the running game, captured from fixed camera angles and judged against the brief.</li>
+    <li><b><span class="n">4</span>Composite</b>The assembled scene is judged as a whole; whatever it blames goes back to that specialist to try again.</li>
+    <li><b><span class="n">5</span>Publish</b>What the verifier accepts is installed in the project and exported to the web build you are playing.</li>
   </ol>
-  <p class="models"><b>The models:</b> each specialist is a LoRA fine-tune of Qwen2.5-Coder - 3B for sky, ground and
-  vegetation, 7B for props - trained on layers written by a teacher model and filtered by the same verifier that
-  grades them here. They run locally on one machine; the director and the judges are Claude on Bedrock.</p>
-</div>
+  <p class="models"><strong>The models.</strong> Every specialist is a LoRA fine-tune of Qwen2.5-Coder &mdash; 3B for
+  sky, ground and vegetation, 7B for props &mdash; trained on layers written by a teacher model and filtered by the
+  same verifier that grades them here. They run locally on a single machine; the director and the judges are Claude.</p>
+</section>
+
+<div class="scenes">
 """
 
-FOOT = """<footer>Source: <a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a> ·
-Built with Godot 4 · Frames are the verifier's own captures of the assembled scene.</footer>
+FOOT = """</div>
+<footer>Frames are the verifier\u2019s own captures of the assembled scene &middot;
+Built with Godot&nbsp;4 &middot; <a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a></footer>
 </main>
 </body>
 </html>
@@ -95,15 +78,28 @@ def card(run: str, out: Path) -> str:
         from PIL import Image
         Image.open(src).convert("RGB").save(dest, quality=88)
         names.append(dest.name)
-    segs = sorted(rep["accepted"])
-    by = ", ".join(f"{s} ({MODEL_OF.get(s, 'specialist')})" for s in segs)
-    shots = "".join(f'<img src="{n}" alt="{run} view {i + 1}">' for i, n in enumerate(names))
     title = TITLES.get(run, run.replace("scene-", "").replace("-v2", "").replace("-", " ").title())
-    return (f'<div class="scene">\n  <h2>{title}</h2>\n'
-            f'  <p class="brief">&ldquo;{rep["scene_brief"]}&rdquo;</p>\n'
-            f'  <div class="shots">{shots}</div>\n'
-            f'  <p class="by">Written by the specialists: {by}.</p>\n'
-            f'  <a class="play" href="../play/{rep["play"]}">Play this scene</a>\n</div>\n')
+    # one large frame beside two stacked ones reads as a scene rather than a filmstrip
+    hero, rest = names[0], names[1:]
+    stack = "".join(f'<img src="{n}" alt="{title}, view {i + 2}" loading="lazy">' for i, n in enumerate(rest))
+    # quote the brief each model was actually given, so the caption always matches the picture
+    plan = json.loads((RUNS / run / "plan.json").read_text())
+    rows = ""
+    for seg in sorted(rep["accepted"]):
+        text = (plan.get("segments", {}).get(seg) or {}).get("text", "")
+        size = MODEL_OF.get(seg, "specialist").split("-")[-1]
+        rows += (f'      <div class="seg"><span class="seg-name">{seg}<span class="size">{size}</span></span>'
+                 f'<span class="seg-brief">{text}</span></div>\n')
+    return (f'<article class="scene">\n'
+            f'  <div class="shots"><img src="{hero}" alt="{title}" loading="lazy">'
+            f'<div class="stack">{stack}</div></div>\n'
+            f'  <div class="scene-body">\n    <h2>{title}</h2>\n'
+            f'    <p class="kicker">What the director asked each model for</p>\n'
+            f'    <div class="segs">\n{rows}    </div>\n'
+            f'    <div class="meta">\n'
+            f'      <a class="play" href="../play/{rep["play"]}">Play this scene'
+            f'<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M1 0l8 5-8 5z"/></svg></a>\n'
+            f'    </div>\n  </div>\n</article>\n')
 
 
 def main():
