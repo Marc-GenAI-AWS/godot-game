@@ -19,13 +19,86 @@ verifier decided what was good enough to keep. Open any of them and walk around.
 
 <section class="how">
   <h2>How they were made</h2>
-  <ol class="steps">
-    <li><b><span class="n">1</span>Director</b>Claude turns one line of description into a precise brief for each part of the scene, agreeing on time of day, palette and mood.</li>
-    <li><b><span class="n">2</span>Specialists</b>One small fine-tuned model per part writes Godot&nbsp;4 GDScript from its brief. Each is trained on its own segment only.</li>
-    <li><b><span class="n">3</span>Verifier</b>Every layer is loaded into the running game, captured from fixed camera angles and judged against the brief.</li>
-    <li><b><span class="n">4</span>Composite</b>The assembled scene is judged as a whole; whatever it blames goes back to that specialist to try again.</li>
-    <li><b><span class="n">5</span>Publish</b>What the verifier accepts is installed in the project and exported to the web build you are playing.</li>
-  </ol>
+  <svg class="flow" viewBox="0 0 1120 480" role="img" aria-label="How the models and the scenes are made">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<text class="lane" x="25" y="28">Making a specialist <tspan class="cadence">&mdash; once per segment</tspan></text>
+<rect class="box" x="25" y="40" width="150" height="86" rx="10"/>
+<text class="name" x="37" y="64">Briefs</text>
+<text class="small" x="37" y="83">hundreds of them:</text>
+<text class="small" x="37" y="97">time of day, weather,</text>
+<text class="small" x="37" y="111">palette, density</text>
+<line class="arrow" x1="181" y1="83.0" x2="201" y2="83.0" marker-end="url(#ar)"/>
+<rect class="box" x="209" y="40" width="150" height="86" rx="10"/>
+<text class="name" x="221" y="64">Teacher</text>
+<text class="small" x="221" y="83">a large model writes</text>
+<text class="small" x="221" y="97">two candidate layers</text>
+<text class="small" x="221" y="111">for each brief</text>
+<line class="arrow" x1="365" y1="83.0" x2="385" y2="83.0" marker-end="url(#ar)"/>
+<rect class="box" x="393" y="40" width="150" height="86" rx="10"/>
+<text class="name" x="405" y="64">Verifier</text>
+<text class="small" x="405" y="83">renders each layer</text>
+<text class="small" x="405" y="97">in the game and</text>
+<text class="small" x="405" y="111">judges it</text>
+<line class="arrow" x1="549" y1="83.0" x2="569" y2="83.0" marker-end="url(#ar)"/>
+<rect class="box" x="577" y="40" width="150" height="86" rx="10"/>
+<text class="name" x="589" y="64">Dataset</text>
+<text class="small" x="589" y="83">only the layers</text>
+<text class="small" x="589" y="97">that passed become</text>
+<text class="small" x="589" y="111">training examples</text>
+<line class="arrow" x1="733" y1="83.0" x2="753" y2="83.0" marker-end="url(#ar)"/>
+<rect class="box" x="761" y="40" width="150" height="86" rx="10"/>
+<text class="name" x="773" y="64">Fine-tune</text>
+<text class="small" x="773" y="83">LoRA on</text>
+<text class="small" x="773" y="97">Qwen2.5-Coder</text>
+<text class="small" x="773" y="111">3B or 7B</text>
+<line class="arrow" x1="917" y1="83.0" x2="937" y2="83.0" marker-end="url(#ar)"/>
+<rect class="box" x="945" y="40" width="150" height="86" rx="10"/>
+<text class="name" x="957" y="64">Specialist</text>
+<text class="small" x="957" y="83">one small model</text>
+<text class="small" x="957" y="97">that writes only</text>
+<text class="small" x="957" y="111">this one layer</text>
+<text class="lane" x="25" y="238">Making a scene <tspan class="cadence">&mdash; every time</tspan></text>
+<rect class="box" x="25" y="250" width="150" height="86" rx="10"/>
+<text class="name" x="37" y="274">One line</text>
+<text class="small" x="37" y="293">"a lush tropical</text>
+<text class="small" x="37" y="307">afternoon on the</text>
+<text class="small" x="37" y="321">beach..."</text>
+<line class="arrow" x1="181" y1="293.0" x2="201" y2="293.0" marker-end="url(#ar)"/>
+<rect class="box" x="209" y="250" width="150" height="86" rx="10"/>
+<text class="name" x="221" y="274">Director</text>
+<text class="small" x="221" y="293">a local 8B turns it</text>
+<text class="small" x="221" y="307">into a precise brief</text>
+<text class="small" x="221" y="321">per segment</text>
+<line class="arrow" x1="365" y1="293.0" x2="385" y2="293.0" marker-end="url(#ar)"/>
+<rect class="box" x="393" y="250" width="150" height="86" rx="10"/>
+<text class="name" x="405" y="274">Specialists</text>
+<text class="small" x="405" y="293">one per layer writes</text>
+<text class="small" x="405" y="307">Godot code: sky,</text>
+<text class="small" x="405" y="321">ground, plants, props</text>
+<line class="arrow" x1="549" y1="293.0" x2="569" y2="293.0" marker-end="url(#ar)"/>
+<rect class="box" x="577" y="250" width="150" height="86" rx="10"/>
+<text class="name" x="589" y="274">Verifier</text>
+<text class="small" x="589" y="293">renders, captures,</text>
+<text class="small" x="589" y="307">judges against</text>
+<text class="small" x="589" y="321">the brief</text>
+<line class="arrow" x1="733" y1="293.0" x2="753" y2="293.0" marker-end="url(#ar)"/>
+<rect class="box" x="761" y="250" width="150" height="86" rx="10"/>
+<text class="name" x="773" y="274">Composite</text>
+<text class="small" x="773" y="293">judges the whole</text>
+<text class="small" x="773" y="307">assembled scene,</text>
+<text class="small" x="773" y="321">names what is wrong</text>
+<line class="arrow" x1="917" y1="293.0" x2="937" y2="293.0" marker-end="url(#ar)"/>
+<rect class="box" x="945" y="250" width="150" height="86" rx="10"/>
+<text class="name" x="957" y="274">Playable</text>
+<text class="small" x="957" y="293">accepted layers ship</text>
+<text class="small" x="957" y="307">into the web build</text>
+<text class="small" x="957" y="321">you can walk around</text>
+<path class="feedback" d="M652.0 338 V360 H468.0 V342" marker-end="url(#ar)"/>
+<text class="fb" x="560.0" y="355" text-anchor="middle">evidence &rarr; revise</text>
+<path class="feedback" d="M836.0 338 V386 H468.0 V342" marker-end="url(#ar)"/>
+<text class="fb" x="652.0" y="381" text-anchor="middle">blame &rarr; revise</text>
+<text class="foot" x="25" y="472">The same verifier that filtered the training data decides what ships &mdash; small models write, a judge accepts.</text>
+</svg>
   <p class="models"><strong>The models.</strong> Every specialist is a LoRA fine-tune of Qwen2.5-Coder &mdash; 3B for
   sky, ground and vegetation, 7B for props &mdash; trained on layers written by a teacher model and filtered by the
   same verifier that grades them here. They run locally on a single machine; the director and the judges are Claude.</p>

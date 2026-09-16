@@ -23,6 +23,61 @@ TITLES = {"scene-beach-tropical-v2": "Beach &middot; golden sand, fan palms and 
           "scene-street-dusk-v3": "Street &middot; dry lawns and kerbside lamps",
           "scene-street-overcast-v2": "Street &middot; fresh asphalt, palms and power poles"}
 
+# Two lanes: how a specialist is made, and how a scene is made with it. Drawn from this table rather
+# than hand-written markup so the wording stays easy to edit.
+LANES = [
+    ("Making a specialist", "once per segment", [
+        ("Briefs", ["hundreds of them:", "time of day, weather,", "palette, density"]),
+        ("Teacher", ["a large model writes", "two candidate layers", "for each brief"]),
+        ("Verifier", ["renders each layer", "in the game and", "judges it"]),
+        ("Dataset", ["only the layers", "that passed become", "training examples"]),
+        ("Fine-tune", ["LoRA on", "Qwen2.5-Coder", "3B or 7B"]),
+        ("Specialist", ["one small model", "that writes only", "this one layer"]),
+    ]),
+    ("Making a scene", "every time", [
+        ("One line", ['"a lush tropical', 'afternoon on the', 'beach..."']),
+        ("Director", ["a local 8B turns it", "into a precise brief", "per segment"]),
+        ("Specialists", ["one per layer writes", "Godot code: sky,", "ground, plants, props"]),
+        ("Verifier", ["renders, captures,", "judges against", "the brief"]),
+        ("Composite", ["judges the whole", "assembled scene,", "names what is wrong"]),
+        ("Playable", ["accepted layers ship", "into the web build", "you can walk around"]),
+    ]),
+]
+BOX_W, BOX_H, GAP, LANE_H = 150, 86, 34, 210
+
+
+def diagram_svg() -> str:
+    w = 25 * 2 + BOX_W * 6 + GAP * 5
+    h = 60 + LANE_H * len(LANES)
+    out = [f'<svg class="flow" viewBox="0 0 {w} {h}" role="img" aria-label="How the models and the scenes are made">',
+           '<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">'
+           '<path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>']
+    for li, (title, cadence, boxes) in enumerate(LANES):
+        top = 40 + li * LANE_H
+        out.append(f'<text class="lane" x="25" y="{top - 12}">{title} <tspan class="cadence">&mdash; {cadence}</tspan></text>')
+        for bi, (name, lines) in enumerate(boxes):
+            x = 25 + bi * (BOX_W + GAP)
+            out.append(f'<rect class="box" x="{x}" y="{top}" width="{BOX_W}" height="{BOX_H}" rx="10"/>')
+            out.append(f'<text class="name" x="{x + 12}" y="{top + 24}">{name}</text>')
+            for i, line in enumerate(lines):
+                out.append(f'<text class="small" x="{x + 12}" y="{top + 43 + i * 14}">{line}</text>')
+            if bi < len(boxes) - 1:
+                x1, x2 = x + BOX_W + 6, x + BOX_W + GAP - 8
+                out.append(f'<line class="arrow" x1="{x1}" y1="{top + BOX_H / 2}" x2="{x2}" y2="{top + BOX_H / 2}" marker-end="url(#ar)"/>')
+        if li == 1:      # the loop: evidence and blame go back to the specialists
+            sx = 25 + 3 * (BOX_W + GAP) + BOX_W / 2          # verifier
+            cx = 25 + 4 * (BOX_W + GAP) + BOX_W / 2          # composite
+            tx = 25 + 2 * (BOX_W + GAP) + BOX_W / 2          # specialists
+            for src, label, drop in ((sx, "evidence &rarr; revise", 24), (cx, "blame &rarr; revise", 50)):
+                y = top + BOX_H + drop
+                out.append(f'<path class="feedback" d="M{src} {top + BOX_H + 2} V{y} H{tx} V{top + BOX_H + 6}" marker-end="url(#ar)"/>')
+                out.append(f'<text class="fb" x="{(src + tx) / 2}" y="{y - 5}" text-anchor="middle">{label}</text>')
+    out.append('<text class="foot" x="25" y="' + str(h - 8) + '">The same verifier that filtered the training data decides what ships &mdash; '
+               'small models write, a judge accepts.</text>')
+    out.append("</svg>")
+    return "\n".join(out)
+
+
 HEAD = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,13 +99,7 @@ verifier decided what was good enough to keep. Open any of them and walk around.
 
 <section class="how">
   <h2>How they were made</h2>
-  <ol class="steps">
-    <li><b><span class="n">1</span>Director</b>Claude turns one line of description into a precise brief for each part of the scene, agreeing on time of day, palette and mood.</li>
-    <li><b><span class="n">2</span>Specialists</b>One small fine-tuned model per part writes Godot&nbsp;4 GDScript from its brief. Each is trained on its own segment only.</li>
-    <li><b><span class="n">3</span>Verifier</b>Every layer is loaded into the running game, captured from fixed camera angles and judged against the brief.</li>
-    <li><b><span class="n">4</span>Composite</b>The assembled scene is judged as a whole; whatever it blames goes back to that specialist to try again.</li>
-    <li><b><span class="n">5</span>Publish</b>What the verifier accepts is installed in the project and exported to the web build you are playing.</li>
-  </ol>
+  __DIAGRAM__
   <p class="models"><strong>The models.</strong> Every specialist is a LoRA fine-tune of Qwen2.5-Coder &mdash; 3B for
   sky, ground and vegetation, 7B for props &mdash; trained on layers written by a teacher model and filtered by the
   same verifier that grades them here. They run locally on a single machine; the director and the judges are Claude.</p>
@@ -111,7 +160,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("*.jpg"):     # the old page's rejected / shipped thumbnails
         old.unlink()
-    html = HEAD + "".join(card(s, out) for s in a.scenes) + FOOT
+    html = HEAD.replace("__DIAGRAM__", diagram_svg()) + "".join(card(s, out) for s in a.scenes) + FOOT
     (out / "index.html").write_text(html)
     print(f"wrote {out / 'index.html'} with {len(a.scenes)} scenes")
 
