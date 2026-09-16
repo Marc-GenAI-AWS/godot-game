@@ -119,14 +119,47 @@ def build_brief(seg: str, raw: dict, world: str, bid: str, fixes: list) -> dict:
     raise ValueError(f"the director has no brief schema for segment {seg}")
 
 
-def direct(scene_brief: str, segments: list, run: str = "") -> dict:
+_LOCAL_DIRECTOR = {}
+
+
+def plan_locally(backend: str, system: str, user: str, max_new_tokens: int = 2000) -> tuple:
+    """A trained local director, as 'hf:<base dir>' or 'hf:<base dir>+<adapter dir>'. Loaded once and
+    kept, since the director is called once per scene and the loop reloads specialists between segments."""
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    spec = backend[len("hf:"):]
+    if spec not in _LOCAL_DIRECTOR:
+        base, _, adapter = spec.partition("+")
+        tok = AutoTokenizer.from_pretrained(base)
+        model = AutoModelForCausalLM.from_pretrained(base, torch_dtype=torch.bfloat16, device_map="cuda")
+        if adapter:
+            from peft import PeftModel
+            model = PeftModel.from_pretrained(model, adapter)
+        model.eval()
+        _LOCAL_DIRECTOR[spec] = (tok, model)
+    tok, model = _LOCAL_DIRECTOR[spec]
+    msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    enc = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt",
+                                  enable_thinking=False).to(model.device)
+    with torch.no_grad():
+        gen = model.generate(enc, max_new_tokens=max_new_tokens, do_sample=False,
+                             pad_token_id=tok.pad_token_id or tok.eos_token_id)
+    text = tok.decode(gen[0][enc.shape[1]:], skip_special_tokens=True)
+    return text, {"local": spec, "outputTokens": int(gen.shape[1] - enc.shape[1])}
+
+
+def direct(scene_brief: str, segments: list, run: str = "", backend: str = None) -> dict:
     system = system_prompt(segments)
     user = "Scene brief: " + scene_brief
-    text, usage = converse(DIRECTOR_MODEL, system, [{"text": user}], max_tokens=2500)
+    if backend and backend.startswith("hf:"):
+        text, usage = plan_locally(backend, system, user)
+    else:
+        text, usage = converse(DIRECTOR_MODEL, system, [{"text": user}], max_tokens=2500)
     try:   # full record for training a local director later (calllog.py); logged before parsing so bad replies are kept too
         from calllog import log_call
         log_call("director", {"type": "plan", "run": run, "scene_brief": scene_brief, "segments": segments,
-                              "model": DIRECTOR_MODEL, "system": system, "user": user, "reply": text, "usage": usage})
+                              "model": backend if backend and backend.startswith("hf:") else DIRECTOR_MODEL,
+                              "system": system, "user": user, "reply": text, "usage": usage})
     except Exception as e:
         print(f"  calllog: director call not logged ({str(e)[:160]})", flush=True)
     plan = parse_json(text)
@@ -213,6 +246,7 @@ def main():
     ap.add_argument("--model")
     ap.add_argument("--rounds", type=int, default=3)
     ap.add_argument("--segments", default="sky")
+    ap.add_argument("--director", help="a trained local director: hf:<base dir>[+<adapter dir>] (default: Claude on Bedrock)")
     ap.add_argument("--composite", action="store_true", help="judge the assembled scene and revise the segments it blames")
     ap.add_argument("--composite-rounds", type=int, default=1, help="composite revision cycles after the first composite verdict")
     a = ap.parse_args()
@@ -221,8 +255,8 @@ def main():
     segments = a.segments.split(",")
     backends = parse_backends(a.backend, segments)
 
-    print("director:", DIRECTOR_MODEL)
-    plan = direct(a.scene_brief, segments, run=out.name)
+    print("director:", a.director or DIRECTOR_MODEL)
+    plan = direct(a.scene_brief, segments, run=out.name, backend=a.director)
     (out / "plan.json").write_text(json.dumps(plan, indent=2))
     print(" ", plan.get("summary", ""))
     for f in plan["fixes"]:
