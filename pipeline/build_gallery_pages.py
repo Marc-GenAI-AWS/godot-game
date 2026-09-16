@@ -153,7 +153,7 @@ def card(run: str, out: Path) -> str:
             f'    <p class="kicker">What the director asked each model for</p>\n'
             f'    <div class="segs">\n{rows}    </div>\n'
             f'    <div class="meta">\n'
-            f'      <a class="play" href="../play/{rep["play"]}">Play this scene'
+            f'      <a class="play" href="../play/{rep["play"]}">Play game'
             f'<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M1 0l8 5-8 5z"/></svg></a>\n'
             f'    </div>\n  </div>\n</article>\n')
 
