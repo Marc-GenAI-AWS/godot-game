@@ -18,10 +18,15 @@ RUNS = ROOT / "runs"
 
 MODEL_OF = {"sky": "Qwen2.5-Coder-3B", "ground": "Qwen2.5-Coder-3B", "vegetation": "Qwen2.5-Coder-3B",
             "props": "Qwen2.5-Coder-7B", "water": "Qwen2.5-Coder-3B"}
-# titled by what the models built and you can see, not by the weather in the original one-liner
-TITLES = {"scene-beach-tropical-v2": "Beach &middot; golden sand, fan palms and loungers",
-          "scene-street-dusk-v3": "Street &middot; dry lawns and kerbside lamps",
-          "scene-street-overcast-v2": "Street &middot; fresh asphalt, palms and power poles"}
+# titled by what the models built and you can see in the frames
+TITLES = {"v4-beach-noon": "Beach &middot; clear tropical noon",
+          "v4-beach-dawn": "Beach &middot; first light on a quiet shore",
+          "v4-beach-golden": "Beach &middot; golden hour, packed with loungers",
+          "v4-beach-overcast": "Beach &middot; overcast, grey volcanic sand",
+          "v4-street-morning": "Street &middot; bright morning, fresh tarmac",
+          "v4-street-dusk": "Street &middot; dusk, dry lawns and power poles",
+          "v4-street-overcast": "Street &middot; overcast, clipped hedges",
+          "v4-street-hazy": "Street &middot; hazy afternoon, double yellow lines"}
 
 # Two lanes: how a specialist is made, and how a scene is made with it. Drawn from this table rather
 # than hand-written markup so the wording stays easy to edit.
@@ -102,7 +107,9 @@ verifier decided what was good enough to keep. Open any of them and walk around.
   __DIAGRAM__
   <p class="models"><strong>The models.</strong> Every specialist is a LoRA fine-tune of Qwen2.5-Coder &mdash; 3B for
   sky, ground and vegetation, 7B for props &mdash; trained on layers written by a teacher model and filtered by the
-  same verifier that grades them here. They run locally on a single machine; the director and the judges are Claude.</p>
+  same verifier that grades them here. The director that splits the description into per-part briefs is a fine-tuned
+  Qwen3-8B, trained the same way. Every model that plans or writes a scene runs locally on one machine; Claude is
+  only the judge that decides what is good enough to keep.</p>
 </section>
 
 <div class="scenes">
