@@ -98,6 +98,30 @@ def plan_one(row: dict, segments: list, model: str, run: str) -> dict:
     return out
 
 
+def revise_one(row: dict, model: str, run: str) -> dict:
+    """Re-plan a scene the verifier rejected, told exactly what was wrong - the same
+    evidence loop the specialists get, and it costs one call instead of a new brief."""
+    segments = row["segments"]
+    system = system_prompt(segments)
+    user = ("Scene brief: " + row["scene_brief"] +
+            "\n\nYour previous plan is below. The checker's findings follow it. Fix exactly those and keep "
+            "everything else. Reply with the full JSON plan again.\n\n" +
+            json.dumps(row.get("plan") or {}, indent=1) +
+            "\n\nFindings:\n- " + "\n- ".join(row["problems"]))
+    text, usage = converse(model, system, [{"text": user}], max_tokens=2500)
+    out = {"id": row["id"] + "r", "scene_brief": row["scene_brief"], "intent": row["intent"], "segments": segments,
+           "model": model, "usage": usage, "reply": text, "mode": "revise", "parent": row["id"]}
+    try:
+        plan = parse_json(text)
+    except Exception as e:
+        out.update({"plan": None, "problems": [f"reply is not JSON ({str(e)[:80]})"], "pass": False})
+        return out
+    problems = check_plan(plan, row["intent"], segments)
+    out.update({"plan": plan, "problems": problems, "pass": not problems})
+    print(f"  {out['id']}: {'PASS' if not problems else 'still fails - ' + '; '.join(problems)[:90]}", flush=True)
+    return out
+
+
 def canonical(plan: dict, segments: list) -> str:
     """The plan as the director should have written it: same schema, stable key order."""
     raw = plan.get("segments") or {}
@@ -106,7 +130,9 @@ def canonical(plan: dict, segments: list) -> str:
 
 
 def build_sft(run_dir: Path, out: Path, val_frac: float):
-    rows = [r for r in read_jsonl(run_dir / "planned.jsonl") if r.get("pass")]
+    planned = list(read_jsonl(run_dir / "planned.jsonl"))
+    revised = list(read_jsonl(run_dir / "planned_rev.jsonl")) if (run_dir / "planned_rev.jsonl").exists() else []
+    rows = [r for r in planned + revised if r.get("pass")]
     examples = [{"id": r["id"], "messages": [
         {"role": "system", "content": system_prompt(r["segments"])},
         {"role": "user", "content": "Scene brief: " + r["scene_brief"]},
@@ -117,7 +143,7 @@ def build_sft(run_dir: Path, out: Path, val_frac: float):
     write_jsonl(out / "train.jsonl", examples[n_val:])
     write_jsonl(out / "heldout_briefs.jsonl", [{"id": r["id"], "text": r["scene_brief"], "intent": r["intent"]}
                                                for r in rows[:n_val]])
-    stats = {"planned": len(list(read_jsonl(run_dir / "planned.jsonl"))), "passed": len(rows),
+    stats = {"planned": len(planned), "revised": len(revised), "passed": len(rows),
              "train": len(examples) - n_val, "val": n_val}
     (out / "stats.json").write_text(json.dumps(stats, indent=2))
     print(json.dumps(stats))
@@ -128,6 +154,7 @@ def main():
     ap.add_argument("--briefs")
     ap.add_argument("--out", required=True)
     ap.add_argument("--build-sft", help="a run directory with planned.jsonl")
+    ap.add_argument("--revise", help="a run directory: re-plan its failures with the findings as evidence")
     ap.add_argument("--segments", default=",".join(SEGMENTS))
     ap.add_argument("--model", default=DIRECTOR_MODEL)
     ap.add_argument("--workers", type=int, default=6)
@@ -136,6 +163,15 @@ def main():
     out = Path(a.out)
     if a.build_sft:
         build_sft(Path(a.build_sft), out, a.val_frac)
+        return
+    if a.revise:
+        run_dir = Path(a.revise)
+        fails = [r for r in read_jsonl(run_dir / "planned.jsonl") if not r.get("pass")]
+        print(f"re-planning {len(fails)} rejected plans")
+        with ThreadPoolExecutor(max_workers=a.workers) as ex:
+            revised = list(ex.map(lambda r: revise_one(r, a.model, run_dir.name), fails))
+        write_jsonl(run_dir / "planned_rev.jsonl", revised)
+        print(f"{sum(1 for r in revised if r['pass'])}/{len(revised)} fixed -> {run_dir / 'planned_rev.jsonl'}")
         return
     segments = a.segments.split(",")
     rows = read_jsonl(a.briefs)
