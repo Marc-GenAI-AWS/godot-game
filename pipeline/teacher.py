@@ -8,6 +8,7 @@ produced each one (the same prompt format the specialist is trained on).
 """
 import argparse
 import json
+import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -42,6 +43,31 @@ def warn_if_capped(cid: str, usage: dict, cap: int):
         print(f"  {cid}: hit the {cap}-token output cap, likely truncated", flush=True)
 
 
+# The teacher can be a local OpenAI-compatible server instead of Bedrock: generation is then free,
+# so a weaker model is answered by generating more candidates and letting the verifier choose.
+#   TEACHER_BACKEND=local:http://amalia:8000/v1  (or --backend on the command line)
+TEACHER_BACKEND = os.environ.get("TEACHER_BACKEND", "bedrock")
+
+
+def generate_one(system: str, prompt: str, model: str, cap: int, temperature=None) -> tuple:
+    """One completion from whichever teacher is configured. Returns (text, usage)."""
+    if TEACHER_BACKEND.startswith("local:"):
+        import urllib.request
+        url = TEACHER_BACKEND[len("local:"):].rstrip("/") + "/chat/completions"
+        body = {"model": os.environ.get("TEACHER_LOCAL_MODEL", "teacher"), "max_tokens": cap,
+                "temperature": 0.4 if temperature is None else temperature,
+                "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]}
+        req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=1800) as r:
+            out = json.load(r)
+        u = out.get("usage") or {}
+        return (out["choices"][0]["message"]["content"],
+                {"inputTokens": u.get("prompt_tokens"), "outputTokens": u.get("completion_tokens"),
+                 "backend": TEACHER_BACKEND})
+    return converse(model, system, [{"text": prompt}], max_tokens=cap, temperature=temperature)
+
+
 def revise_prompt(brief: dict, previous: str, evidence: str) -> str:
     return (user_prompt(brief) +
             "\n\nYour previous attempt is below. The verifier's evidence follows it. "
@@ -55,7 +81,7 @@ def generate(brief, k, out_dir, model, temperature):
     for i in range(k):
         prompt = user_prompt(brief)
         cap = max_tokens_for(brief)
-        text, usage = converse(model, system, [{"text": prompt}], max_tokens=cap, temperature=temperature)
+        text, usage = generate_one(system, prompt, model, cap, temperature)
         code = extract_code(text)
         cid = f"{brief['id']}_{i}"
         warn_if_capped(cid, usage, cap)
@@ -74,7 +100,7 @@ def revise(row, out_dir, model, temperature):
     evidence = row.get("evidence", "")
     prompt = revise_prompt(brief, previous, evidence)
     cap = max_tokens_for(brief)
-    text, usage = converse(model, system, [{"text": prompt}], max_tokens=cap, temperature=temperature)
+    text, usage = generate_one(system, prompt, model, cap, temperature)
     code = extract_code(text)
     cid = row["candidate"] + "r"
     warn_if_capped(cid, usage, cap)
@@ -87,6 +113,7 @@ def revise(row, out_dir, model, temperature):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--backend", help="local:http://host:port/v1 for a local teacher (default: Bedrock)")
     ap.add_argument("--briefs")
     ap.add_argument("--revise", help="verified.jsonl; failed rows get one revision each")
     ap.add_argument("--out", required=True)
@@ -95,6 +122,8 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.7)
     ap.add_argument("--workers", type=int, default=4)
     a = ap.parse_args()
+    if a.backend:
+        globals()["TEACHER_BACKEND"] = a.backend
     out_dir = Path(a.out)
     (out_dir / "candidates").mkdir(parents=True, exist_ok=True)
     rows = []
