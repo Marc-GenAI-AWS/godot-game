@@ -16,17 +16,21 @@ from pathlib import Path
 
 import boto3
 
-REGION = os.environ.get("AWS_REGION", "us-east-2")
 ROLE = os.environ.get("SAGEMAKER_ROLE", "arn:aws:iam::605134472325:role/service-role/AmazonSageMaker-ExecutionRole-20260429T204999")
-BUCKET = os.environ.get("SAGEMAKER_BUCKET", "amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l")
 PREFIX = "scene-studio/director"
-BASE_S3 = f"s3://{BUCKET}/{PREFIX}/base/qwen3.8-27b/"
+# us-east-2 is where the specialists train, but its multi-GPU quota is one instance and it ran out of
+# capacity on 2026-09-15; us-west-2 allows four and already holds the base weights natively.
+BUCKETS = {"us-east-2": "amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l",
+           "us-west-2": "sagemaker-us-west-2-605134472325"}
+BASES = {"us-east-2": f"s3://{BUCKETS['us-east-2']}/{PREFIX}/base/qwen3.8-27b/",
+         "us-west-2": "s3://sagemaker-us-west-2-605134472325/threejs-specialist/base/qwen3.8-27b/"}
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True, help="dir with train.jsonl / val.jsonl from director_data.py --build-sft")
-    ap.add_argument("--base", default=BASE_S3)
+    ap.add_argument("--region", default=os.environ.get("AWS_REGION", "us-east-2"), choices=sorted(BUCKETS))
+    ap.add_argument("--base")
     ap.add_argument("--instance", default="ml.g6e.12xlarge")   # 4 x L40S 48 GB: 52 GB of bf16 weights plus activations
     ap.add_argument("--epochs", type=float, default=3.0)
     ap.add_argument("--max-len", type=int, default=8192)
@@ -36,13 +40,16 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
+    region = a.region
+    bucket = BUCKETS[region]
+    base = a.base or BASES[region]
     stamp = time.strftime("%Y%m%d-%H%M")
     job = f"scene-director-{'smoke' if a.max_steps > 0 else 'sft'}-{stamp}"
-    s3_out = f"s3://{BUCKET}/{PREFIX}/models"
+    s3_out = f"s3://{bucket}/{PREFIX}/models"
     hp = {"epochs": a.epochs, "lr": 1e-4, "max-len": a.max_len, "lora-r": a.lora_r, "merge": 0}
     if a.max_steps > 0:
         hp["max-steps"] = a.max_steps
-    print(f"job          {job}\ninstance     {a.instance}\nbase         {a.base}\n"
+    print(f"job          {job}\nregion       {region}\ninstance     {a.instance}\nbase         {base}\n"
           f"data         {a.data}\noutput       {s3_out}\nhyperparams  {hp}")
     if a.dry_run:
         print("dry run: nothing launched")
@@ -50,10 +57,10 @@ def main():
 
     import sagemaker
     from sagemaker.pytorch import PyTorch
-    sess = sagemaker.Session(boto3.Session(region_name=REGION))
+    sess = sagemaker.Session(boto3.Session(region_name=region))
     data = Path(a.data)
-    train_uri = sess.upload_data(str(data / "train.jsonl"), bucket=BUCKET, key_prefix=f"{PREFIX}/datasets/{stamp}/train")
-    val_uri = sess.upload_data(str(data / "val.jsonl"), bucket=BUCKET, key_prefix=f"{PREFIX}/datasets/{stamp}/val")
+    train_uri = sess.upload_data(str(data / "train.jsonl"), bucket=bucket, key_prefix=f"{PREFIX}/datasets/{stamp}/train")
+    val_uri = sess.upload_data(str(data / "val.jsonl"), bucket=bucket, key_prefix=f"{PREFIX}/datasets/{stamp}/val")
     # the job's source dir must carry requirements.txt, and the director's pins differ from the specialists'
     src = Path(tempfile.mkdtemp(prefix="director-src-"))
     here = Path(__file__).parent
@@ -77,7 +84,7 @@ def main():
         sagemaker_session=sess,
         disable_profiler=True,
     )
-    est.fit({"train": train_uri.rsplit("/", 1)[0], "val": val_uri.rsplit("/", 1)[0], "base": a.base},
+    est.fit({"train": train_uri.rsplit("/", 1)[0], "val": val_uri.rsplit("/", 1)[0], "base": base},
             job_name=job, wait=False)
     print(f"launched {job}; adapter will land under {s3_out}/{job}/output/model.tar.gz")
 
