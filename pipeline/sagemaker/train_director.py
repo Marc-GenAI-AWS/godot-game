@@ -100,7 +100,9 @@ def main():
     ds = ds.remove_columns(["messages"])
     targets = lora_targets(model, a.targets)
     print("lora targets:", targets, flush=True)
-    sft = SFTConfig(
+    # TRL 1.x renamed and dropped several SFTConfig arguments (warmup_ratio among them). Keep only the
+    # ones this version accepts and say which were dropped, rather than chasing the rename per release.
+    wanted = dict(
         output_dir=a.out + "/checkpoints",
         num_train_epochs=a.epochs,
         max_steps=a.max_steps,
@@ -115,10 +117,20 @@ def main():
         bf16=gpu,
         max_length=a.max_len,
         completion_only_loss=True,
+        # TRL's default "chunked_nll" keeps the full-vocabulary logits off the GPU, but it patches the
+        # model's forward, which breaks once accelerate has sharded the model and wrapped forward in a
+        # functools.partial. Keep it whenever the model is on one GPU; fall back only when sharded.
+        loss_type="nll" if n_gpu > 1 else "chunked_nll",
         packing=False,
         report_to=[],
         eval_strategy="epoch" if "val" in ds else "no",
     )
+    import dataclasses
+    accepted = {f.name for f in dataclasses.fields(SFTConfig)} if dataclasses.is_dataclass(SFTConfig) else set(wanted)
+    dropped = sorted(k for k in wanted if k not in accepted)
+    if dropped:
+        print(f"SFTConfig in trl {trl.__version__} does not take: {dropped}", flush=True)
+    sft = SFTConfig(**{k: v for k, v in wanted.items() if k in accepted})
     lora = LoraConfig(r=a.lora_r, lora_alpha=a.lora_r * 2, lora_dropout=0.05, task_type="CAUSAL_LM",
                       target_modules=targets)
     trainer = SFTTrainer(model=model, args=sft, train_dataset=ds["train"], eval_dataset=ds.get("val"),
