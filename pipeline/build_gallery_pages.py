@@ -43,36 +43,36 @@ LANES = [
         ("Playable", ["accepted layers ship", "into the web build", "you can walk around"]),
     ]),
 ]
-BOX_W, BOX_H, GAP, LANE_H = 150, 86, 34, 210
+BOX_W, BOX_H, GAP, LANE_H = 186, 104, 40, 250
 
 
 def diagram_svg() -> str:
-    w = 25 * 2 + BOX_W * 6 + GAP * 5
-    h = 60 + LANE_H * len(LANES)
+    w = 28 * 2 + BOX_W * 6 + GAP * 5
+    h = 66 + LANE_H * len(LANES)
     out = [f'<svg class="flow" viewBox="0 0 {w} {h}" role="img" aria-label="How the models and the scenes are made">',
            '<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">'
            '<path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>']
     for li, (title, cadence, boxes) in enumerate(LANES):
-        top = 40 + li * LANE_H
-        out.append(f'<text class="lane" x="25" y="{top - 12}">{title} <tspan class="cadence">&mdash; {cadence}</tspan></text>')
+        top = 46 + li * LANE_H
+        out.append(f'<text class="lane" x="28" y="{top - 14}">{title} <tspan class="cadence">&mdash; {cadence}</tspan></text>')
         for bi, (name, lines) in enumerate(boxes):
-            x = 25 + bi * (BOX_W + GAP)
+            x = 28 + bi * (BOX_W + GAP)
             out.append(f'<rect class="box" x="{x}" y="{top}" width="{BOX_W}" height="{BOX_H}" rx="10"/>')
-            out.append(f'<text class="name" x="{x + 12}" y="{top + 24}">{name}</text>')
+            out.append(f'<text class="name" x="{x + 14}" y="{top + 28}">{name}</text>')
             for i, line in enumerate(lines):
-                out.append(f'<text class="small" x="{x + 12}" y="{top + 43 + i * 14}">{line}</text>')
+                out.append(f'<text class="small" x="{x + 14}" y="{top + 52 + i * 17}">{line}</text>')
             if bi < len(boxes) - 1:
                 x1, x2 = x + BOX_W + 6, x + BOX_W + GAP - 8
                 out.append(f'<line class="arrow" x1="{x1}" y1="{top + BOX_H / 2}" x2="{x2}" y2="{top + BOX_H / 2}" marker-end="url(#ar)"/>')
         if li == 1:      # the loop: evidence and blame go back to the specialists
-            sx = 25 + 3 * (BOX_W + GAP) + BOX_W / 2          # verifier
-            cx = 25 + 4 * (BOX_W + GAP) + BOX_W / 2          # composite
-            tx = 25 + 2 * (BOX_W + GAP) + BOX_W / 2          # specialists
-            for src, label, drop in ((sx, "evidence &rarr; revise", 24), (cx, "blame &rarr; revise", 50)):
+            sx = 28 + 3 * (BOX_W + GAP) + BOX_W / 2          # verifier
+            cx = 28 + 4 * (BOX_W + GAP) + BOX_W / 2          # composite
+            tx = 28 + 2 * (BOX_W + GAP) + BOX_W / 2          # specialists
+            for src, label, drop in ((sx, "evidence &rarr; revise", 28), (cx, "blame &rarr; revise", 58)):
                 y = top + BOX_H + drop
                 out.append(f'<path class="feedback" d="M{src} {top + BOX_H + 2} V{y} H{tx} V{top + BOX_H + 6}" marker-end="url(#ar)"/>')
                 out.append(f'<text class="fb" x="{(src + tx) / 2}" y="{y - 5}" text-anchor="middle">{label}</text>')
-    out.append('<text class="foot" x="25" y="' + str(h - 8) + '">The same verifier that filtered the training data decides what ships &mdash; '
+    out.append('<text class="foot" x="28" y="' + str(h - 10) + '">The same verifier that filtered the training data decides what ships &mdash; '
                'small models write, a judge accepts.</text>')
     out.append("</svg>")
     return "\n".join(out)

@@ -170,14 +170,17 @@ footer a:hover { color: var(--text); }
 }
 
 /* pipeline diagram */
-.flow { width: 100%; height: auto; margin: 0 0 1.6rem; color: var(--faint); }
+/* the diagram breaks out of the text column so it renders larger than the prose width */
+.flow { display: block; height: auto; color: var(--faint); margin: 0 auto 1.8rem;
+        width: min(calc(100vw - 3rem), 84rem);
+        margin-left: calc(50% - min(calc(50vw - 1.5rem), 42rem)); }
 .flow .box { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
-.flow .name { fill: var(--text); font: 600 13px ui-sans-serif, "Segoe UI", Arial, sans-serif; }
-.flow .small { fill: var(--muted); font: 11px ui-sans-serif, "Segoe UI", Arial, sans-serif; }
-.flow .lane { fill: var(--accent); font: 600 11px ui-sans-serif, "Segoe UI", Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+.flow .name { fill: var(--text); font: 600 15px ui-sans-serif, "Segoe UI", Arial, sans-serif; }
+.flow .small { fill: var(--muted); font: 12.5px ui-sans-serif, "Segoe UI", Arial, sans-serif; }
+.flow .lane { fill: var(--accent); font: 600 12px ui-sans-serif, "Segoe UI", Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
 .flow .cadence { fill: var(--faint); letter-spacing: .08em; }
 .flow .arrow { stroke: var(--line-strong); stroke-width: 1.5; color: var(--line-strong); }
 .flow .feedback { fill: none; stroke: rgba(224,164,88,.55); stroke-width: 1.2; stroke-dasharray: 4 3; color: rgba(224,164,88,.55); }
-.flow .fb { fill: var(--accent); font: 10px ui-sans-serif, "Segoe UI", Arial, sans-serif; opacity: .85; }
-.flow .foot { fill: var(--faint); font: 11px ui-sans-serif, "Segoe UI", Arial, sans-serif; }
+.flow .fb { fill: var(--accent); font: 11.5px ui-sans-serif, "Segoe UI", Arial, sans-serif; opacity: .85; }
+.flow .foot { fill: var(--faint); font: 12px ui-sans-serif, "Segoe UI", Arial, sans-serif; }
 @media (max-width: 52rem) { .flow { min-width: 44rem; } .how { overflow-x: auto; } }
