@@ -644,7 +644,10 @@ def main():
             with ThreadPoolExecutor(max(1, a.workers)) as ex:
                 list(ex.map(rejudge, pending))
         results.extend(already.values())
-        rows = [r0 for r0 in rows if r0["candidate"] not in already]
+        # --candidates may be the run's briefs rather than candidate rows (they carry no "candidate"
+        # key): a re-judge still has everything it needs from disk, so keep going instead of losing
+        # the work at the last line, as a sky re-judge did on Sep 15 after paying for 30 judge calls
+        rows = [r0 for r0 in rows if r0.get("candidate") not in already and "candidate" in r0]
         print(f"rescore: {len(already)} rescored from disk, {len(rows)} to re-verify", flush=True)
     if a.resume and (out_dir / a.name).exists():
         for r0 in read_jsonl(out_dir / a.name):
