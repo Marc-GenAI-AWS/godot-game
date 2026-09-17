@@ -152,6 +152,40 @@ def sample_props(n: int, seed: int, times=None, weather=None):
     return out
 
 
+
+# --- characters -------------------------------------------------------------
+# A characters layer does not model people: it populates the scene from the CC0 rig in
+# game/segments/characters (skinned_people.gd). What a brief can vary is the mix - who is
+# there, what they wear, how they are built and how they are spread through the scene.
+# These values are read from the game, so a brief that names one is implementable.
+CHAR_SEX = ["F", "M"]
+CHAR_HAIR = {"F": ["long", "buns", "buzzed"], "M": ["buzz", "parted"]}
+CHAR_BODY_TYPES = ["slim", "average", "tall", "short", "stocky"]
+CHAR_OUTFITS = {
+    "beach": {"F": ["T_F_bikini_pink", "T_F_bikini_teal", "T_F_bikini_black", "T_F_bikini_floral",
+                    "T_F_onepiece_red", "T_F_onepiece_navy"],
+              "M": ["T_M_trunks_blue", "T_M_trunks_red", "T_M_trunks_floral", "T_M_trunks_black"]},
+    "street": {"F": ["T_F_tee_white_jeans", "T_F_tee_red_shorts", "T_F_tee_navy_chinos",
+                     "T_F_tee_green_shorts", "T_F_tee_black_jeans"],
+               "M": ["T_M_tee_white_jeans", "T_M_tee_red_shorts", "T_M_tee_navy_chinos",
+                     "T_M_tee_green_shorts", "T_M_tee_black_jeans"]},
+}
+CHAR_SKIN_TINTS = 5      # indices into SKIN_TINTS in skinned_people.gd
+CHAR_HAIR_TINTS = 5
+CHAR_DENSITY = ["sparse", "normal", "dense"]
+CHAR_SPREAD = ["evenly spread", "clustered in small groups", "gathered near the water",
+               "strung along the path", "thinning out with distance"]
+
+
+def characters_brief(bid: str, world: str, density: str, spread: str, body_mix: str,
+                     outfit_mix: str, hair_mix: str, skin_mix: str, look: str) -> dict:
+    """A characters brief exactly as a specialist would be trained on it."""
+    return {"id": bid, "segment": "characters", "contract": CONTRACT_VERSION, "world": world,
+            "density": density, "spread": spread, "body_mix": body_mix, "outfit_mix": outfit_mix,
+            "hair_mix": hair_mix, "skin_mix": skin_mix, "look": look,
+            "text": f"{look.capitalize()} crowd on the {world}: {density} density, {spread}, "
+                    f"{body_mix}, {outfit_mix}, {hair_mix}, {skin_mix}."}
+
 SAND_TONES = ["dark warm tan", "golden", "pale white coral sand", "grey volcanic", "pinkish shell sand"]
 ROAD_TONES = ["fresh black asphalt", "worn grey asphalt", "brownish sun-baked asphalt", "patched and faded asphalt"]
 
@@ -223,6 +257,8 @@ VOCAB = {
     "ground": {"beach": {"tone": SAND_TONES, "wet_band": SAND_WET, "shells": SAND_SHELLS, "grain": SAND_GRAIN},
                "street": {"tone": ROAD_TONES, "markings": ROAD_MARKINGS, "kerb": ROAD_KERBS, "sidewalk": ROAD_SIDEWALKS,
                           "lawn": ROAD_LAWNS}},
+    "characters": {"world_outfits": CHAR_OUTFITS, "sex": CHAR_SEX, "hair": CHAR_HAIR,
+                   "body_type": CHAR_BODY_TYPES, "density": CHAR_DENSITY, "spread": CHAR_SPREAD},
     "props": {"beach": {"density": DENSITY, "palette": PROPS_BEACH_PALETTES, "towels": PROPS_TOWELS,
                         "umbrellas": PROPS_UMBRELLAS, "clutter": PROPS_CLUTTER},
               "street": {"density": DENSITY, "palette": PROPS_STREET_PALETTES, "items": PROPS_ITEMS,
