@@ -504,6 +504,27 @@ func _coast_selftest() -> void:
 	var inside: Vector3 = c.constrain(Vector3(-120.0, 0.0, -75.0))   # middle of a block
 	print("COASTTEST inside a block -> pushed to (%.1f, %.1f)" % [inside.x, inside.z])
 	print("COASTTEST parked cars you can drive: %d" % ctx.parked_cars.size())
+	# Can a car actually get from the avenue to the sea? Walking corridors are one thing; a hotel
+	# standing across the road is another, and that is exactly what the beach's own layers did -
+	# they were written for a shore with nothing behind it, so their row ran unbroken through
+	# every crossing. Sample each roadway and ask whether anything is parked in it.
+	var clear_min := 1000.0
+	var clear_at := Vector3.ZERO
+	var blocked := 0
+	for cz: float in CoastContext.CROSS_Z:
+		var sx := -50.0
+		while sx > CoastContext.AVENUE_X:
+			var probe := Vector3(sx, 0.0, cz)
+			var near: Array = ctx.nearest_obstacle(probe)
+			if float(near[0]) < clear_min:
+				clear_min = float(near[0])
+				clear_at = probe
+			if float(near[0]) < 0.0:
+				blocked += 1
+			sx -= 1.0
+	print("COASTTEST roadway samples inside an obstacle: %d" % blocked)
+	print("COASTTEST tightest clearance %.1f m at x=%.0f z=%.0f" % [clear_min, clear_at.x, clear_at.z])
+	ok = ok and blocked == 0
 	ok = ok and reach == CoastContext.CROSS_Z.size() and ctx.parked_cars.size() > 0
 	print("COASTTEST %s" % ("DONE" if ok else "FAILED"))
 	get_tree().quit(0 if ok else 1)

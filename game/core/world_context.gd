@@ -135,6 +135,14 @@ func add_parked_car(node: Node3D) -> void:
 		host.add_parked_car(node)
 
 
+# Is there a road at this world position? Layers that scatter scenery ask before they place
+# something, so a world that has roads running through what used to be open ground can keep its
+# streets clear without those layers knowing anything about them. No roads by default, so the
+# beach and street worlds are unaffected.
+func road_here(_x: float, _z: float, _margin := 0.0) -> bool:
+	return false
+
+
 # Where a vehicle may go. The base world does not care; a street holds it to the asphalt.
 func constrain_vehicle(p: Vector3) -> Vector3:
 	return p

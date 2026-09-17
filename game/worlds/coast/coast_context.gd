@@ -176,6 +176,13 @@ func constrain_vehicle(p: Vector3) -> Vector3:
 	return snap_to_road(p, CROSS_HALF - 1.0, StreetContext.ROAD_HALF - 1.0)
 
 
+# The beach's own layers - the hotel row, the promenade furniture, the hedges - were written for
+# a shore with nothing behind it, and they run unbroken along Z. Here three streets cross them, so
+# they ask this before placing anything and leave the crossings open.
+func road_here(x: float, z: float, margin := 0.0) -> bool:
+	return on_road(x, z, CROSS_WALK + margin, 12.1 + margin)
+
+
 func wetness_at(p: Vector3) -> float:
 	if p.x < BLUFF_X:
 		return 0.0        # no wet sand in town

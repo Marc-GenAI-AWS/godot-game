@@ -18,7 +18,8 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 	var z := -L + rng.randf_range(0.0, 6.0)
 	while z < 0.0:
 		var x := BeachContext.BOARDWALK_X - 2.5 + rng.randf_range(-0.6, 0.6)
-		crowns.append(Palm.build(chunk, Vector3(x, ctx.ground_height(x, z) - 0.2, z), rng, ctx, true))
+		if not ctx.road_here(x, (chunk.global_transform * Vector3(0.0, 0.0, z)).z, 2.0):
+			crowns.append(Palm.build(chunk, Vector3(x, ctx.ground_height(x, z) - 0.2, z), rng, ctx, true))
 		z += rng.randf_range(5.5, 8.5)
 	# a few fuller coconut palms on the sand
 	for i in 3:
@@ -31,7 +32,8 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 	while hz < 0.0:
 		var len := rng.randf_range(6.0, 14.0)
 		var hx := BeachContext.BOARDWALK_X - 8.6
-		hedges.add_box_at(Vector3(1.2, 1.0, len), Color(0.15, 0.4, 0.17), Vector3(hx, ctx.ground_height(hx, hz) + 0.9, hz + len * 0.5))
+		if not ctx.road_here(hx, (chunk.global_transform * Vector3(0.0, 0.0, hz + len * 0.5)).z, len * 0.5 + 1.0):
+			hedges.add_box_at(Vector3(1.2, 1.0, len), Color(0.15, 0.4, 0.17), Vector3(hx, ctx.ground_height(hx, hz) + 0.9, hz + len * 0.5))
 		hz += len + rng.randf_range(3.0, 10.0)
 	hedges.instance(chunk, "Hedges", 0.95)
 

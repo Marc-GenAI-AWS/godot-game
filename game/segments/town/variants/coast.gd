@@ -115,10 +115,10 @@ func _blocks(walls: MeshBatch, roofs: MeshBatch, glass: MeshBatch, rng: RandomNu
 	var walk: float = CoastContext.CROSS_WALK
 	var zs: Array = CoastContext.CROSS_Z.duplicate()
 	zs.sort()
+	zs.reverse()                                     # -40, -100, -160: descending, like Z itself
 	var z_edges: Array = [0.0]                       # the chunk wraps, so its ends are edges too
 	z_edges.append_array(zs)
-	z_edges.append(-WorldContext.CHUNK)
-	z_edges.reverse()                                # descending: 0, -40, -100, -160, -200
+	z_edges.append(-WorldContext.CHUNK)              # 0, -40, -100, -160, -200
 	var x_edges: Array = [CoastContext.TOWN_EDGE_X - 6.0, CoastContext.MID_X, CoastContext.AVENUE_X + 13.0]
 	for xi in x_edges.size() - 1:
 		for zi in z_edges.size() - 1:

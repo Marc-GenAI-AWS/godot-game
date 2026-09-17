@@ -34,6 +34,11 @@ func _hotels(parent: Node3D, rng: RandomNumberGenerator) -> void:
 		var fh := 3.1
 		var h := floors * fh
 		var x := bx - 9.0 - rng.randf_range(0.0, 6.0) - d * 0.5
+		# Leave the crossing open where a world puts a street through the hotel row. Advance past
+		# the gap rather than `continue`, which in a while loop skips the increment and hangs.
+		if ctx.road_here(x, (parent.global_transform * Vector3(0.0, 0.0, z + w * 0.5)).z, w * 0.5 + 2.0):
+			z += w + rng.randf_range(1.5, 6.0)
+			continue
 		var c: Color = creams[rng.randi() % creams.size()] if rng.randf() < 0.65 else pastels[rng.randi() % pastels.size()]
 		var b := Node3D.new()
 		b.position = Vector3(x, ctx.ground_height(x, z) - 0.5, z + w * 0.5)
@@ -119,15 +124,19 @@ func _boardwalk(parent: Node3D, rng: RandomNumberGenerator) -> void:
 	var z := -L + 2.0
 	var i := 0
 	while z < 0.0:
-		var opening := (i % 8) == 4
+		# a street crossing the promenade is an opening in the railing, like the ramps - but it
+		# also takes the posts with it, which a ramp does not: a post in the road is a bollard
+		var road: bool = ctx.road_here(bx + 0.6, (parent.global_transform * Vector3(0.0, 0.0, z + 1.75)).z, 2.5)
+		var opening: bool = (i % 8) == 4 or road
 		if not opening:
 			batch.add_box_at(Vector3(0.06, 0.08, 3.5), Color(0.3, 0.3, 0.32), Vector3(bx + 0.6, y + 1.55, z + 1.75))
 			var rz := z
 			while rz < z + 3.5:
 				ctx.add_obstacle(parent.global_transform * Vector3(bx + 0.6, 0, rz), 0.5)
 				rz += 0.8
-		batch.add_box_at(Vector3(0.1, 1.1, 0.1), Color(0.3, 0.3, 0.32), Vector3(bx + 0.6, y + 1.05, z))
-		if i % 4 == 0:
+		if not road:
+			batch.add_box_at(Vector3(0.1, 1.1, 0.1), Color(0.3, 0.3, 0.32), Vector3(bx + 0.6, y + 1.05, z))
+		if i % 4 == 0 and not ctx.road_here(bx - 5.0, (parent.global_transform * Vector3(0.0, 0.0, z)).z, 4.0):
 			ctx.add_obstacle(parent.global_transform * Vector3(bx - 7.5, 0, z), 0.35)
 			ctx.add_obstacle(parent.global_transform * Vector3(bx - 5.6, 0, z + 4.0), 1.1)
 			ctx.add_obstacle(parent.global_transform * Vector3(bx - 1.0, 0, z - 2.0), 0.5)
