@@ -117,13 +117,16 @@ verifier decided what was good enough to keep. Open any of them and walk around.
   <div class="hero-body">
     <p class="eyebrow">Play it</p>
     <h2>One game, with every layer the models wrote in it</h2>
-    <p>The scenes below are fixed compositions, but they all run in the same game. Right-click anywhere and
-    you can swap the sky, the ground, the planting or the furniture for any layer a specialist has written,
-    change the character&rsquo;s outfit and hair, or reset to the hand-built original &mdash; nothing reloads,
-    only the layer you picked is rebuilt. A scene a model writes tomorrow shows up in that menu on its own.</p>
-    <p class="hero-more">The beach and the street are also joined into one continuous place. Walk off the sand,
-    up the steps to the promenade and inland through the town to the avenue &mdash; and any car you find parked
-    along the way is one you can get into and drive. Press <kbd>E</kbd> beside it.</p>
+    <details class="hero-detail">
+      <summary>What you can do in it</summary>
+      <p>The scenes below are fixed compositions, but they all run in the same game. Right-click anywhere and
+      you can swap the sky, the ground, the planting or the furniture for any layer a specialist has written,
+      change the character&rsquo;s outfit and hair, or reset to the hand-built original &mdash; nothing reloads,
+      only the layer you picked is rebuilt. A scene a model writes tomorrow shows up in that menu on its own.</p>
+      <p>The beach and the street are also joined into one continuous place. Walk off the sand, up the steps to
+      the promenade and inland through the town to the avenue &mdash; and any car you find parked along the way
+      is one you can get into and drive. Press <kbd>E</kbd> beside it.</p>
+    </details>
     <div class="hero-play">
       <a class="play" href="../play/#world=coast">One world<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M1 0l8 5-8 5z"/></svg></a>
       <a class="play ghost" href="../play/#world=beach">Beach walk<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M1 0l8 5-8 5z"/></svg></a>

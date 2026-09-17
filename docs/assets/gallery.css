@@ -97,8 +97,26 @@ h1 {
 .hero-body .eyebrow { margin-bottom: 0.6rem; }
 .hero-body h2 { margin: 0 0 0.8rem; font-size: 1.5rem; font-weight: 640; letter-spacing: -0.015em; }
 .hero-body p { margin: 0; color: var(--muted); font-size: 0.95rem; max-width: 68ch; }
-.hero-more { margin-top: 0.9rem !important; }
-.hero-more kbd {
+/* The description is collapsed on load: the screenshot and the buttons are what the page is for,
+   and two paragraphs of prose above the scene grid pushed it off the first screen. */
+.hero-detail { margin-top: 1rem; }
+.hero-detail > summary {
+  cursor: pointer; width: fit-content; list-style: none;
+  display: flex; align-items: center; gap: 0.45rem;
+  font-size: 0.82rem; font-weight: 600; color: var(--accent);
+  letter-spacing: 0.02em; padding: 0.2rem 0; transition: color 0.15s;
+}
+.hero-detail > summary::-webkit-details-marker { display: none; }
+.hero-detail > summary::before {
+  content: ""; width: 0.42rem; height: 0.42rem; flex: none;
+  border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor;
+  transform: rotate(-45deg); transition: transform 0.18s;
+}
+.hero-detail[open] > summary::before { transform: rotate(45deg); }
+.hero-detail > summary:hover { color: #eab873; }
+.hero-detail > p { margin-top: 0.8rem !important; }
+
+.hero-more kbd, .hero-detail kbd {
   font: inherit; font-size: 0.85em; font-weight: 600; color: var(--text);
   border: 1px solid var(--line-strong); border-radius: 4px; padding: 0.05rem 0.35rem;
   background: rgba(255, 255, 255, 0.05);
