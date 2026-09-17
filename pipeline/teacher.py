@@ -15,8 +15,18 @@ from pathlib import Path
 from common import PIPE, TEACHER_MODEL, converse, extract_code, read, read_jsonl, write_jsonl
 
 
+# Notes appended to the contract for generation only, never for training. The specialists are
+# trained on the contract alone, and build_sft re-reads it fresh, so coaching the teacher here
+# cannot drift the prompt format the specialists learned.
+USE_NOTES = False
+
+
 def contract_for(segment: str) -> str:
-    return read(PIPE / "contract" / f"{segment}.md")
+    text = read(PIPE / "contract" / f"{segment}.md")
+    notes = PIPE / "contract" / "teacher_notes" / f"{segment}.md"
+    if USE_NOTES and notes.exists():
+        text += "\n\n" + read(notes)
+    return text
 
 
 def user_prompt(brief: dict) -> str:
@@ -114,6 +124,8 @@ def revise(row, out_dir, model, temperature):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--backend", help="local:http://host:port/v1 for a local teacher (default: Bedrock)")
+    ap.add_argument("--notes", action="store_true",
+                    help="append contract/teacher_notes/<segment>.md to the system prompt (generation only)")
     ap.add_argument("--briefs")
     ap.add_argument("--revise", help="verified.jsonl; failed rows get one revision each")
     ap.add_argument("--out", required=True)
@@ -124,6 +136,8 @@ def main():
     a = ap.parse_args()
     if a.backend:
         globals()["TEACHER_BACKEND"] = a.backend
+    if a.notes:
+        globals()["USE_NOTES"] = True
     out_dir = Path(a.out)
     (out_dir / "candidates").mkdir(parents=True, exist_ok=True)
     rows = []
