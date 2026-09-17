@@ -10,7 +10,8 @@ const BODIES := {
 	"F": {"scene": "res://segments/characters/assets/Superhero_Female_FullBody.gltf", "body": "Superhero_Female", "eyes": "Eyes", "brows": "Eyebrows",
 		"hairs": {"long": ["res://segments/characters/assets/Hair_Long.gltf", "Hair_Long"], "buns": ["res://segments/characters/assets/Hair_Buns.gltf", "Hair_Buns"],
 			"parted": ["res://segments/characters/assets/Hair_SimpleParted.gltf", "Hair_SimpleParted"], "buzz": ["res://segments/characters/assets/Hair_BuzzedFemale.gltf", "Hair_BuzzedFemale"]},
-		"outfits": ["T_F_bikini_pink", "T_F_bikini_teal", "T_F_bikini_black", "T_F_bikini_floral", "T_F_onepiece_red", "T_F_onepiece_navy"]},
+		# one-piece swimsuits only, in the colours the bikinis used (Marc, 2026-09-17)
+		"outfits": ["T_F_onepiece_red", "T_F_onepiece_navy", "T_F_onepiece_black", "T_F_onepiece_teal", "T_F_onepiece_pink", "T_F_onepiece_floral"]},
 	"M": {"scene": "res://segments/characters/assets/Superhero_Male_FullBody.gltf", "body": "SuperHero_Male", "eyes": "Eyes", "brows": "Eyebrows",
 		"hairs": {"buzz": ["res://segments/characters/assets/Hair_Buzzed.gltf", "Hair_Buzzed"], "parted": ["res://segments/characters/assets/Hair_SimpleParted.gltf", "Hair_SimpleParted"]},
 		"outfits": ["T_M_trunks_blue", "T_M_trunks_red", "T_M_trunks_floral", "T_M_trunks_black"]},

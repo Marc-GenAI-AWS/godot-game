@@ -84,15 +84,23 @@ top_band = (np.isin(region, [5, 6]) & (y > 0.705 * H) & (y < 0.77 * H)) | grey_t
 bot_band = (np.isin(region, [1, 2, 3]) & (y > 0.455 * H) & (y < 0.545 * H)) | grey_bot
 one_piece = (np.isin(region, [1, 4, 5, 6]) & (y > 0.455 * H) & (y < 0.79 * H)) | grey
 mt, mb, mo = clean(top_band), clean(bot_band), clean(one_piece)
+# One-piece swimsuits only (Marc, 2026-09-17: no bikinis in the game). The colours are the ones
+# the bikinis used, so the crowd keeps the same spread of six; `mt`/`mb` - the separate top and
+# bottom bands - are left above because the male trunks below use `mb`'s equivalent.
+#
+# Each variant reseeds from its own name, so the fabric noise of one does not depend on what is
+# listed before it. Without that, editing this list rewrites every texture after the edit.
 variants = [
-    ("F_bikini_pink", [(mt, fabric([0.95, 0.35, 0.55], rng)), (mb, fabric([0.95, 0.35, 0.55], rng))]),
-    ("F_bikini_teal", [(mt, fabric([0.15, 0.65, 0.65], rng)), (mb, fabric([0.15, 0.65, 0.65], rng))]),
-    ("F_bikini_black", [(mt, fabric([0.08, 0.08, 0.1], rng)), (mb, fabric([0.08, 0.08, 0.1], rng))]),
-    ("F_bikini_floral", [(mt, fabric([0.2, 0.4, 0.8], rng, "floral")), (mb, fabric([0.2, 0.4, 0.8], rng, "floral"))]),
-    ("F_onepiece_red", [(mo, fabric([0.85, 0.15, 0.2], rng))]),
-    ("F_onepiece_navy", [(mo, fabric([0.1, 0.18, 0.45], rng, "stripes"))]),
+    ("F_onepiece_red", [(mo, [0.85, 0.15, 0.2], None)]),
+    ("F_onepiece_navy", [(mo, [0.1, 0.18, 0.45], "stripes")]),
+    ("F_onepiece_black", [(mo, [0.08, 0.08, 0.1], None)]),
+    ("F_onepiece_teal", [(mo, [0.15, 0.65, 0.65], None)]),
+    ("F_onepiece_pink", [(mo, [0.95, 0.35, 0.55], None)]),
+    ("F_onepiece_floral", [(mo, [0.2, 0.4, 0.8], "floral")]),
 ]
-for name, mc in variants:
+for name, spec in variants:
+    vr = np.random.default_rng(abs(hash(name)) % (2 ** 31))
+    mc = [(mask, fabric(col, vr, pat) if pat else fabric(col, vr)) for mask, col, pat in spec]
     Image.fromarray((paint(arr, mc, [1.0, 0.97, 0.93]) * 255).astype(np.uint8)).resize((512, 512), Image.LANCZOS).save(OUT + "T_%s.png" % name)
     print("wrote", name)
 # ---------------- male ----------------

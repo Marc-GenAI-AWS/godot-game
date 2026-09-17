@@ -46,13 +46,13 @@ Clothing is the point of these briefs. "outfit_mix" is the field that matters mo
 garments and colours from the list above and say how they are distributed. Be specific about
 proportions and about what is absent.
 
-  good: "black and navy one-pieces on most of the women, two floral bikinis, trunks nearly all blue"
+  good: "black and navy one-pieces on most of the women, two floral ones, trunks nearly all blue"
   good: "white tees over jeans dominate, one red tee, no shorts at all"
   weak: "colourful swimwear"                      (names nothing)
   weak: "a mix of outfits"                        (says nothing)
-  weak: "T_F_bikini_pink on half the women"       (asset ids belong in code, not a brief)
+  weak: "T_F_onepiece_pink on half the women"     (asset ids belong in code, not a brief)
 
-Write every brief the way you would say it to a person: "pink bikinis", not "T_F_bikini_pink".
+Write every brief the way you would say it to a person: "pink one-pieces", not "T_F_onepiece_pink".
 
 Give every brief a different clothing story: one colour dominating, two colours clashing, a single
 outfit repeated across the crowd, deliberately drab, one bright figure among muted ones, colours
@@ -87,13 +87,13 @@ def parse_array(text: str) -> list:
     return json.loads(m.group(0))
 
 
-GARMENT_WORDS = {"bikini": "bikini", "onepiece": "one-piece", "trunks": "trunks",
+GARMENT_WORDS = {"onepiece": "one-piece", "trunks": "trunks",
                  "tee": "tee", "jeans": "jeans", "chinos": "chinos", "shorts": "shorts"}
 
 
 def plain_words(text: str) -> str:
     """Turn any asset id that slipped through into the words a person would use:
-    T_F_bikini_pink -> "pink bikini", T_M_tee_white_jeans -> "white tee with jeans"."""
+    T_F_onepiece_pink -> "pink one-piece", T_M_tee_white_jeans -> "white tee with jeans"."""
     def one(m):
         parts = m.group(0).split("_")[2:]          # drop the T_F_ / T_M_ prefix
         garment = GARMENT_WORDS.get(parts[0], parts[0])
@@ -121,6 +121,7 @@ def check(raw: dict, world: str) -> list:
                       ("hat", "no hat assets"), ("cap", "no hat assets"), ("sunglass", "no eyewear assets"),
                       ("surfboard", "props layer, not characters"), ("dog", "no animal assets"),
                       ("wetsuit", "no wetsuit outfit"),
+                      ("bikini", "the game has one-piece swimsuits only"),
                       ("elderly", "one adult body per sex"), ("teen", "one adult body per sex")):
         if word in blob:
             bad.append(f"mentions {word!r}: {why}")
@@ -139,7 +140,7 @@ def check(raw: dict, world: str) -> list:
         if body not in CHAR_BODY_TYPES:
             bad.append(f"body type {body!r} does not exist (have: {CHAR_BODY_TYPES})")
     # clothing is the point: the outfit mix has to name real garments, not gesture at "colourful swimwear"
-    garments = {"beach": ["bikini", "one-piece", "onepiece", "trunks", "swimsuit"],
+    garments = {"beach": ["one-piece", "onepiece", "trunks", "swimsuit"],
                 "street": ["tee", "t-shirt", "jeans", "chinos", "shorts"]}[world]
     colours = ["pink", "teal", "black", "floral", "red", "navy", "blue", "white", "green"]
     om = str(raw.get("outfit_mix", "")).lower()

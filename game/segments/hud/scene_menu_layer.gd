@@ -121,7 +121,7 @@ func _outfits(sex: String) -> Array:
 	# the coast world starts you on the sand, so swimwear belongs in its wardrobe too
 	var w := ctx.world_title.to_lower()
 	var beach: bool = w.contains("beach") or w.contains("coast")
-	var f_beach := ["bikini_pink", "bikini_teal", "bikini_black", "bikini_floral", "onepiece_red", "onepiece_navy"]
+	var f_beach := ["onepiece_red", "onepiece_navy", "onepiece_black", "onepiece_teal", "onepiece_pink", "onepiece_floral"]
 	var m_beach := ["trunks_blue", "trunks_red", "trunks_floral", "trunks_black"]
 	var casual := ["tee_white_jeans", "tee_red_shorts", "tee_navy_chinos", "tee_green_shorts", "tee_black_jeans"]
 	if sex == "F":

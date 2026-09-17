@@ -22,7 +22,12 @@ grey_top |= _rest & (yy < 1300)
 grey_shorts |= _rest & (yy >= 1300)
 # garments by body height, clean edges from the interpolated height map
 shorts = (np.isin(region, [1, 2, 3, 4]) & (y > 0.755) & (y < 1.045)) | grey_shorts
-top = (np.isin(region, [5, 6]) & (y > 1.215) & (y < 1.40)) | grey_top
+# A vest rather than a bikini top (Marc, 2026-09-17): the band now runs from the shorts'
+# waistband up, instead of starting at 1.215 and leaving the midriff bare. Same floral fabric,
+# so she is still the same character.
+# region 4 is the lower abdomen - the swimsuit mask in paint_variants.py uses [1, 4, 5, 6] for
+# the same reason. Without it the vest stops above the navel.
+top = (np.isin(region, [4, 5, 6]) & (y > 1.045) & (y < 1.40)) | grey_top
 def clean(mask, blur=3.0):
     im = Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(blur))
     return (np.asarray(im).astype(np.float32) / 255.0 > 0.5).astype(np.float32)
@@ -60,5 +65,5 @@ if tat_zone.any():
     motif = (d < 0.45) | ((d < 1.0) & (np.sin(ang * 5.0) > 0.55)) | ((d > 1.05) & (d < 1.2))
     out = np.where((motif & tat_zone)[..., None], out * 0.25 + np.array([0.05, 0.04, 0.06]), out)
     print("tattoo at", int(cx), int(cy))
-Image.fromarray((out * 255).astype(np.uint8)).resize((1024, 1024), Image.LANCZOS).save("/home/marc/dev/graphics-gen/game/core/characters/assets/T_Player_BaseColor.png")
+Image.fromarray((out * 255).astype(np.uint8)).resize((1024, 1024), Image.LANCZOS).save("/home/marc/dev/graphics-gen/game/segments/characters/assets/T_Player_BaseColor.png")
 print("shorts px", int(ms.sum()), "top px", int(mt.sum()))

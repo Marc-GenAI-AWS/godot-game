@@ -162,8 +162,8 @@ CHAR_SEX = ["F", "M"]
 CHAR_HAIR = {"F": ["long", "buns", "buzzed"], "M": ["buzz", "parted"]}
 CHAR_BODY_TYPES = ["slim", "average", "tall", "short", "stocky"]
 CHAR_OUTFITS = {
-    "beach": {"F": ["T_F_bikini_pink", "T_F_bikini_teal", "T_F_bikini_black", "T_F_bikini_floral",
-                    "T_F_onepiece_red", "T_F_onepiece_navy"],
+    "beach": {"F": ["T_F_onepiece_red", "T_F_onepiece_navy", "T_F_onepiece_black",
+                    "T_F_onepiece_teal", "T_F_onepiece_pink", "T_F_onepiece_floral"],
               "M": ["T_M_trunks_blue", "T_M_trunks_red", "T_M_trunks_floral", "T_M_trunks_black"]},
     "street": {"F": ["T_F_tee_white_jeans", "T_F_tee_red_shorts", "T_F_tee_navy_chinos",
                      "T_F_tee_green_shorts", "T_F_tee_black_jeans"],

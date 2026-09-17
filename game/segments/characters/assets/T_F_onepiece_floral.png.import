@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ddt28tr8p3h7k"
-path="res://.godot/imported/T_F_bikini_pink.png-8ed345f4e8e1e21104bdf2e80ddd3a10.ctex"
+uid="uid://c48rchqeewrd7"
+path="res://.godot/imported/T_F_onepiece_floral.png-262a8154826f3038ed04dc9d6c929123.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://segments/characters/assets/T_F_bikini_pink.png"
-dest_files=["res://.godot/imported/T_F_bikini_pink.png-8ed345f4e8e1e21104bdf2e80ddd3a10.ctex"]
+source_file="res://segments/characters/assets/T_F_onepiece_floral.png"
+dest_files=["res://.godot/imported/T_F_onepiece_floral.png-262a8154826f3038ed04dc9d6c929123.ctex"]
 
 [params]
 
