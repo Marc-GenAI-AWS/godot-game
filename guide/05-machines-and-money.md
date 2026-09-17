@@ -16,10 +16,10 @@ parked beyond the screen edge — minimising it would stop rendering under
 GNOME.
 
 **amalia** — the GPU host. RTX PRO 6000 Max-Q, reached over Tailscale
-(`ssh amalia`, 192.168.4.29 on the LAN). Its only job is the shared
-**Qwen3.8-27B on vLLM at `http://192.168.4.29:8001/v1`** (model id
-`qwen38-27b`), used by this project and by Marc's ThreeJS project. Standing
-rule from Marc: **nothing else gets loaded onto that card.**
+(`ssh amalia`). Its only job is the shared **Qwen3.8-27B on vLLM**, port 8001,
+model id `qwen38-27b`, used by this project and by Marc's ThreeJS project. Its
+address is `VLLM_HOST` in `pipeline/aws.env`. Standing rule from Marc:
+**nothing else gets loaded onto that card.**
 
 Two things to know about it:
 
@@ -40,15 +40,25 @@ before your first shell there.
 
 ## AWS
 
-Account **605134472325**, user `marc-smus`. Two regions in play: `us-west-2`
-is the default, and `us-east-2` is where most training actually ran, because
-capacity in us-west-2 kept running out.
+Two regions are in play: `us-west-2` is the default, and `us-east-2` is where
+most training actually ran, because capacity in us-west-2 kept running out.
+
+**The account id, the role ARN and the bucket names are not in this repository
+— it is public.** They live in `pipeline/aws.env`, which is gitignored;
+`pipeline/aws.env.example` documents every field. Both the Python entry points
+(through `common.load_env()`) and the shell scripts read it, and anything you
+export yourself wins over the file. A script that needs a value you have not
+set stops and tells you which one and where to put it, rather than falling back
+to somebody else's account.
+
+```bash
+cp pipeline/aws.env.example pipeline/aws.env    # then fill it in
+```
 
 | What | Where |
 |---|---|
-| SageMaker role | `arn:aws:iam::605134472325:role/service-role/AmazonSageMaker-ExecutionRole-20260429T204999` |
-| Bucket (us-west-2) | `sagemaker-us-west-2-605134472325`, prefix `scene-studio/` |
-| Bucket (us-east-2) | `amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l`, prefix `scene-studio/` |
+| SageMaker role | `SAGEMAKER_ROLE` — needs S3 access to the buckets, and Bedrock for `pipeline_def.py` |
+| Buckets | `SAGEMAKER_BUCKET` (us-west-2) and `SAGEMAKER_BUCKET_US_EAST_2`, prefix `scene-studio/` |
 | Training artifacts | `s3://<bucket>/scene-studio/<segment>/models/<job>/output/model.tar.gz` |
 | Judge + director call logs | synced hourly from `pipeline/runs/_calls` by the `scene-calllog-archive` user unit |
 
@@ -59,9 +69,10 @@ Bedrock models are reached by **inference-profile id**, not bare model id
 throughput isn't supported", and Claude 5 models reject a `temperature`
 parameter.
 
-Override any of it with environment variables: `AWS_REGION`,
-`SAGEMAKER_ROLE`, `SAGEMAKER_BUCKET`, `TEACHER_MODEL`, `JUDGE_MODEL`,
-`DIRECTOR_MODEL`, `GODOT_BIN`, `GODOT_MEM_GB`.
+Every knob is an environment variable, settable in `aws.env` or inline:
+`AWS_REGION`, `SAGEMAKER_ROLE`, `SAGEMAKER_BUCKET`,
+`SAGEMAKER_BUCKET_US_EAST_2`, `AWS_ACCOUNT`, `VLLM_HOST`, `TEACHER_MODEL`,
+`JUDGE_MODEL`, `DIRECTOR_MODEL`, `GODOT_BIN`, `GODOT_MEM_GB`, `MODELS_DIR`.
 
 ## What things cost
 
@@ -110,12 +121,13 @@ The current best model per segment:
 ## Access a new person needs
 
 - The `Marc-GenAI-AWS` GitHub org/account, for the repo and the Pages site.
-- AWS account 605134472325 with Bedrock model access in us-east-2/us-west-2
-  and SageMaker training permissions, or their own account plus the env
-  variables above.
+- The AWS account, with Bedrock model access in us-east-2/us-west-2 and
+  SageMaker training permissions — or their own account, which is only a
+  matter of filling in `pipeline/aws.env`.
 - SSH to navani and amalia (Tailscale).
 - Nothing else. There are no API keys in the repo and no secrets in the
-  scripts; everything authenticates through the AWS CLI profile and `gh`.
+  scripts; everything authenticates through the AWS CLI profile and `gh`, and
+  every account-specific value is in the untracked `pipeline/aws.env`.
 
 ## Licences
 

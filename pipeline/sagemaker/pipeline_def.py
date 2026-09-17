@@ -16,11 +16,16 @@ local commands exactly, so the pipeline can be debugged on the dev box first.
 """
 import argparse
 import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common import need_env  # noqa: E402  (pipeline/aws.env is loaded on import)
 
 REGION = os.environ.get("AWS_REGION", "us-west-2")
-ROLE = os.environ.get("SAGEMAKER_ROLE", "arn:aws:iam::605134472325:role/service-role/AmazonSageMaker-ExecutionRole-20260429T204999")
-BUCKET = os.environ.get("SAGEMAKER_BUCKET", "sagemaker-us-west-2-605134472325")
-ACCOUNT = os.environ.get("AWS_ACCOUNT", "605134472325")
+ROLE = need_env("SAGEMAKER_ROLE", "the execution role every step assumes")
+BUCKET = need_env("SAGEMAKER_BUCKET", "where the pipeline's artifacts go")
+ACCOUNT = need_env("AWS_ACCOUNT", "used to build the verifier image's ECR URI")
 PREFIX = "scene-studio"
 VERIFIER_IMAGE = os.environ.get("VERIFIER_IMAGE", f"{ACCOUNT}.dkr.ecr.{REGION}.amazonaws.com/scene-verifier:latest")
 

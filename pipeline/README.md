@@ -54,6 +54,12 @@ pipeline/
 
 ## Running it locally
 
+First: `cp pipeline/aws.env.example pipeline/aws.env` and fill it in. That file
+is gitignored and holds every account-specific value (role ARN, buckets,
+account id, the vLLM host) — this repository is public, so none of them are in
+the source. `common.load_env()` reads it on import and the shell scripts source
+it; anything already exported wins.
+
 ```
 pipeline/.venv/bin/python pipeline/briefs.py sky --n 24 --out pipeline/runs/sky1/briefs.jsonl
 pipeline/.venv/bin/python pipeline/teacher.py --briefs pipeline/runs/sky1/briefs.jsonl --out pipeline/runs/sky1 --k 2

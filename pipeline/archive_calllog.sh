@@ -4,7 +4,9 @@
 # Idempotent (aws s3 sync): run it after each data run.
 set -euo pipefail
 P=$(cd "$(dirname "$0")" && pwd)
-BUCKET=${SAGEMAKER_BUCKET:-amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l}
+# account-specific values (bucket, role, LAN hosts) live in pipeline/aws.env - see aws.env.example
+set -a; [ -f "$P/aws.env" ] && . "$P/aws.env"; set +a
+BUCKET=${SAGEMAKER_BUCKET_US_EAST_2:-${SAGEMAKER_BUCKET:?set it in pipeline/aws.env}}
 REGION=${AWS_REGION:-us-east-2}
 DEST=s3://$BUCKET/call-logs
 [ -d "$P/runs/_frames" ] && aws s3 sync "$P/runs/_frames" "$DEST/frames" --region "$REGION" --only-show-errors

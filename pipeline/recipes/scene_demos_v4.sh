@@ -5,11 +5,11 @@
 # Eight scenes chosen for variety, the way the anchor page showed off the range: four beach, four street,
 # across dawn, morning, noon, golden hour, afternoon, dusk, overcast and hazy.
 set -uo pipefail
-P=/home/marc/dev/graphics-gen/pipeline
+P=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)   # pipeline/
 cd $P
 export DISPLAY=:0 XAUTHORITY=/run/user/1000/gdm/Xauthority AWS_REGION=us-east-2
-B="sky=hf:/home/marc/models/scene-sky-sft-20260916-1021,ground=hf:/home/marc/models/scene-ground-sft-20260915-1449,vegetation=hf:/home/marc/models/scene-vegetation-sft-20260914-2028,props=hf:/home/marc/models/scene-props-sft-20260915-1443"
-D="hf:/home/marc/models/qwen3-8b+/home/marc/models/director-8b-adapter"
+B="sky=hf:${MODELS_DIR:-$HOME/models}/scene-sky-sft-20260916-1021,ground=hf:${MODELS_DIR:-$HOME/models}/scene-ground-sft-20260915-1449,vegetation=hf:${MODELS_DIR:-$HOME/models}/scene-vegetation-sft-20260914-2028,props=hf:${MODELS_DIR:-$HOME/models}/scene-props-sft-20260915-1443"
+D="hf:${MODELS_DIR:-$HOME/models}/qwen3-8b+${MODELS_DIR:-$HOME/models}/director-8b-adapter"
 declare -a NAMES=(v4-beach-noon v4-beach-dawn v4-beach-golden v4-beach-overcast
                   v4-street-morning v4-street-dusk v4-street-overcast v4-street-hazy)
 declare -a BRIEFS=(

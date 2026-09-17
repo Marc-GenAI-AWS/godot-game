@@ -5,9 +5,11 @@
 # two candidates each, revisions, then sky1 + sky2 (re-judged) + sky3 combined on the SAME 30 held-out
 # briefs as every earlier sky eval, and the 3B retrained at 14336 tokens.
 set -uo pipefail
-P=/home/marc/dev/graphics-gen/pipeline
+P=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)   # pipeline/
 cd $P
-export DISPLAY=:0 XAUTHORITY=/run/user/1000/gdm/Xauthority AWS_REGION=us-east-2 SAGEMAKER_BUCKET=amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l
+# account-specific values (bucket, role, LAN hosts) live in pipeline/aws.env - see aws.env.example
+set -a; [ -f "$P/aws.env" ] && . "$P/aws.env"; set +a
+export DISPLAY=:0 XAUTHORITY=/run/user/1000/gdm/Xauthority AWS_REGION=us-east-2 SAGEMAKER_BUCKET=${SAGEMAKER_BUCKET_US_EAST_2:?set it in pipeline/aws.env}
 HELDOUT=runs/sky12/sft/heldout_briefs.jsonl
 count() { echo "$(grep -c '"pass": true' $1 2>/dev/null) / $(grep -c . $1 2>/dev/null)"; }
 mkdir -p runs/sky3

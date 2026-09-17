@@ -9,15 +9,19 @@ ml.g6e.2xlarge (L40S 48 GB) is the comfortable choice. Spot is on by default.
 """
 import argparse
 import os
+import sys
 import time
 from pathlib import Path
 
 import boto3
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "pipeline"))
+from common import need_env  # noqa: E402  (pipeline/aws.env is loaded on import)
+
 REGION = os.environ.get("AWS_REGION", "us-west-2")
-ROLE = os.environ.get("SAGEMAKER_ROLE", "arn:aws:iam::605134472325:role/service-role/AmazonSageMaker-ExecutionRole-20260429T204999")
-BUCKET = os.environ.get("SAGEMAKER_BUCKET", "sagemaker-us-west-2-605134472325")
+ROLE = need_env("SAGEMAKER_ROLE", "the execution role the training job assumes")
+BUCKET = need_env("SAGEMAKER_BUCKET", "where the dataset and the model artifact go")
 PREFIX = "scene-studio"
 
 

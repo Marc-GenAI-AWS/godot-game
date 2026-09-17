@@ -10,7 +10,39 @@ ROOT = Path(__file__).resolve().parent.parent
 GAME = ROOT / "game"
 PIPE = ROOT / "pipeline"
 RUNS = PIPE / "runs"
-GODOT = Path(os.environ.get("GODOT_BIN", "/home/marc/opt/godot/Godot_v4.7.2-stable_linux.arm64"))
+
+
+def load_env(path: Path = None) -> None:
+    """Read pipeline/aws.env into the environment without overriding what is already set.
+
+    Account ids, role ARNs, bucket names and LAN addresses identify an environment, and this
+    repository is public, so they live in one untracked file instead of in the source. Anything
+    already exported wins, so a script can still override a single value inline.
+    """
+    p = path or PIPE / "aws.env"
+    if not p.exists():
+        return
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        os.environ.setdefault(k.strip(), v.strip())
+
+
+def need_env(name: str, why: str) -> str:
+    """An account-specific setting with no sensible default: say where it comes from."""
+    v = os.environ.get(name)
+    if not v:
+        raise SystemExit(f"{name} is not set ({why}).\n"
+                         f"Copy {PIPE / 'aws.env.example'} to {PIPE / 'aws.env'} and fill it in, "
+                         f"or export {name} yourself.")
+    return v
+
+
+load_env()
+
+GODOT = Path(os.environ.get("GODOT_BIN", str(Path.home() / "opt/godot/Godot_v4.7.2-stable_linux.arm64")))
 REGION = os.environ.get("AWS_REGION", "us-west-2")
 
 # Bedrock inference profiles (on-demand invocation needs the profile id).

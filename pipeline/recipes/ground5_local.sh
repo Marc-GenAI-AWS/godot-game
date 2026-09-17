@@ -6,11 +6,11 @@
 # Ground is the target because it is the thinnest segment (239 examples) and the only specialist that
 # does not clearly beat its teacher one-shot (32% vs 34%).
 set -uo pipefail
-P=/home/marc/dev/graphics-gen/pipeline
+P=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)   # pipeline/
 cd $P
 export DISPLAY=:0 XAUTHORITY=/run/user/1000/gdm/Xauthority AWS_REGION=us-east-2
 count() { echo "$(grep -c '"pass": true' $1 2>/dev/null) / $(grep -c . $1 2>/dev/null)"; }
-LOCAL=local:http://192.168.4.29:8000/v1
+LOCAL=local:${LOCAL_TEACHER_HOST:-http://127.0.0.1:8000/v1}
 
 echo "== $(date +%T) local teacher writes 2 candidates for each of 72 briefs"
 .venv/bin/python teacher.py --briefs runs/ground5_local/briefs.jsonl --out runs/ground5_local \

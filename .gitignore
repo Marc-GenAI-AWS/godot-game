@@ -20,3 +20,5 @@ game/segments/*/generated/*-rejected.gd
 game/segments/*/generated/*-rejected.gd.uid
 __pycache__/
 pipeline/.venv-train/
+# account-specific settings (account id, role ARN, buckets, LAN hosts); see aws.env.example
+pipeline/aws.env

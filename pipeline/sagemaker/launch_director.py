@@ -10,20 +10,24 @@ the specialists stay on 4.x.
 import argparse
 import os
 import shutil
+import sys
 import tempfile
 import time
 from pathlib import Path
 
 import boto3
 
-ROLE = os.environ.get("SAGEMAKER_ROLE", "arn:aws:iam::605134472325:role/service-role/AmazonSageMaker-ExecutionRole-20260429T204999")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common import need_env  # noqa: E402  (pipeline/aws.env is loaded on import)
+
+ROLE = need_env("SAGEMAKER_ROLE", "the execution role the training job assumes")
 PREFIX = "scene-studio/director"
 # us-east-2 is where the specialists train, but its multi-GPU quota is one instance and it ran out of
 # capacity on 2026-09-15; us-west-2 allows four and already holds the base weights natively.
-BUCKETS = {"us-east-2": "amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l",
-           "us-west-2": "sagemaker-us-west-2-605134472325"}
+BUCKETS = {"us-east-2": need_env("SAGEMAKER_BUCKET_US_EAST_2", "the us-east-2 training bucket"),
+           "us-west-2": need_env("SAGEMAKER_BUCKET", "the us-west-2 training bucket")}
 BASES = {"us-east-2": f"s3://{BUCKETS['us-east-2']}/{PREFIX}/base/qwen3.8-27b/",
-         "us-west-2": "s3://sagemaker-us-west-2-605134472325/threejs-specialist/base/qwen3.8-27b/"}
+         "us-west-2": f"s3://{BUCKETS['us-west-2']}/threejs-specialist/base/qwen3.8-27b/"}
 
 
 def main():

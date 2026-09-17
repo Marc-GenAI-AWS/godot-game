@@ -1,7 +1,7 @@
 """Generate segment briefs with a model instead of a hand-written sampler.
 
     PYTHONPATH=. .venv/bin/python brief_gen.py --segment characters --world beach --n 12 \
-        --host http://192.168.4.29:8001/v1 --model qwen38-27b --out runs/charbriefs1
+        --host $VLLM_HOST --model qwen38-27b --out runs/charbriefs1
 
 briefs.py samples from vocabularies written by hand, so its brief space is small and finite -
 street ground is 324 combinations, and a 72-brief run mostly repeats what the specialist has
@@ -14,6 +14,7 @@ reached for. The hand-written sampler is the baseline to beat on variety, not on
 """
 import argparse
 import json
+import os
 import re
 import time
 import urllib.request
@@ -156,7 +157,8 @@ def main():
     ap.add_argument("--n", type=int, default=12, help="briefs per request")
     ap.add_argument("--batches", type=int, default=1)
     ap.add_argument("--temperature", type=float, default=0.95)
-    ap.add_argument("--host", default="http://192.168.4.29:8001/v1")
+    # the shared vLLM server; set VLLM_HOST in pipeline/aws.env rather than hard-coding a LAN address
+    ap.add_argument("--host", default=os.environ.get("VLLM_HOST", "http://127.0.0.1:8001/v1"))
     ap.add_argument("--model", default="qwen38-27b")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()

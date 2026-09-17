@@ -9,7 +9,10 @@ SEG=$1; RUN=$2
 N=$(grep -vc '"mode": "repair"' runs/$RUN/sft/train.jsonl 2>/dev/null || echo 0)
 MIN=${MIN_EXAMPLES:-100}   # below this an adapter cannot approach the teacher (sky needed ~250); don't spend on it
 if [ "$N" -lt "$MIN" ]; then echo "== $SEG: only $N training examples in runs/$RUN (minimum $MIN); not training"; exit 0; fi
-export AWS_REGION=us-east-2 SAGEMAKER_BUCKET=amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l
+P=$(pwd)
+# account-specific values (bucket, role, LAN hosts) live in pipeline/aws.env - see aws.env.example
+set -a; [ -f "$P/aws.env" ] && . "$P/aws.env"; set +a
+export AWS_REGION=us-east-2 SAGEMAKER_BUCKET=${SAGEMAKER_BUCKET_US_EAST_2:?set it in pipeline/aws.env}
 B=s3://$SAGEMAKER_BUCKET/scene-studio/$SEG/models
 declare -A JOBS
 # One specialist size for every segment (decision 2026-09-13): 3B. Override with MODELS="a b".

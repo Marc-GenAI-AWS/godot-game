@@ -4,7 +4,7 @@
 # verifier (JSON, world, every mentioned field translated to its exact trained value, sky consistent with
 # the stated time and weather) -> SFT rows. No GPU: this runs alongside the scene demos.
 set -uo pipefail
-P=/home/marc/dev/graphics-gen/pipeline
+P=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)   # pipeline/
 cd $P
 export AWS_REGION=us-east-2
 .venv/bin/python scene_briefs.py --n 400 --seed 21 --out runs/dir1/scene_briefs.jsonl

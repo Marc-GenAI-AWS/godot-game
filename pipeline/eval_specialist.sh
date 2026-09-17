@@ -7,7 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 SRC=$1; RUN=$2; BRIEFS=${3:-runs/sky1/sft/heldout_briefs.jsonl}; SEG=${4:-sky}
-MODELS=/home/marc/models; mkdir -p "$MODELS" runs/$RUN
+MODELS=${MODELS_DIR:-$HOME/models}; mkdir -p "$MODELS" runs/$RUN
 if [[ "$SRC" == s3://* ]]; then
   NAME=$(basename "$(dirname "$(dirname "$SRC")")")
   DIR=$MODELS/$NAME

@@ -5,10 +5,12 @@
 #   e.g. runs/retrain_len14k.sh ground ground234 Qwen/Qwen2.5-Coder-3B-Instruct eval-ground234-3b scene-props5-street scene-props-len14k
 # Sep 15: at 6144 tokens 207/239 ground234 examples lost the end of their answer (contract 5.0k tokens).
 set -uo pipefail
-P=/home/marc/dev/graphics-gen/pipeline
+P=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)   # pipeline/
 cd $P
 SEG=$1; RUN=$2; MODEL=$3; OLD=$4; shift 4; AFTER="$*"
-export DISPLAY=:0 XAUTHORITY=/run/user/1000/gdm/Xauthority AWS_REGION=us-east-2 SAGEMAKER_BUCKET=amazon-sagemaker-605134472325-us-east-2-6df5g199r0fy5l
+# account-specific values (bucket, role, LAN hosts) live in pipeline/aws.env - see aws.env.example
+set -a; [ -f "$P/aws.env" ] && . "$P/aws.env"; set +a
+export DISPLAY=:0 XAUTHORITY=/run/user/1000/gdm/Xauthority AWS_REGION=us-east-2 SAGEMAKER_BUCKET=${SAGEMAKER_BUCKET_US_EAST_2:?set it in pipeline/aws.env}
 tag=$(echo $MODEL | sed 's/.*Coder-//; s/-Instruct//' | tr 'A-Z.' 'a-zp')
 EVAL=eval-$RUN-$tag-len14k
 B=s3://$SAGEMAKER_BUCKET/scene-studio/$SEG/models
