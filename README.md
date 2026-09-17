@@ -6,12 +6,21 @@ and served by GitHub Pages.
 **Play:** https://marc-genai-aws.github.io/godot-game/ (landing page) ·
 Beach Walk: https://marc-genai-aws.github.io/godot-game/play/#world=beach
 
-Design note: [Specialised models for building game scenes](design/specialist-models.md)
-describes how the layered scenes become a training and agentic pipeline;
-[`pipeline/`](pipeline/README.md) is that pipeline, runnable: brief sampler,
-Claude teacher on Bedrock, the verifier (native GPU capture + Claude judge),
-SFT dataset builder, SageMaker training and pipeline definitions, and the
-director loop. First specialist: sky.
+The scenery is written by small fine-tuned models. A director model turns one
+line of English into a brief for each part of the scene; a specialist per part
+writes the Godot code; a verifier renders it, checks it and judges it, and
+decides what ships. Five specialists exist today (sky, ground, water,
+vegetation, props) and each one beats the frontier model that generated its
+training data.
+
+**New here? Start with [`guide/`](guide/README.md)** — six pages covering the
+game, retraining a specialist, the director loop, publishing, the machines and
+what they cost, and where the project stands today.
+
+Also: [`design/specialist-models.md`](design/specialist-models.md) is the
+original design note, [`pipeline/README.md`](pipeline/README.md) documents the
+pipeline file by file, and [`pipeline/recipes/`](pipeline/recipes/README.md)
+holds the scripts that produced the current models and scenes.
 
 ## Worlds
 
@@ -99,8 +108,13 @@ game/
     <name>_world.gd            make_context() / make_layers() / validators()
     <name>_context.gd          terrain, walkable area, constants
     brief.md                   reference digest and per-segment briefs
+guide/                         how to take this project over: the game, retraining a
+                               specialist, the director loop, publishing, machines and cost
+pipeline/                      briefs, teacher, verifier, datasets, SageMaker training,
+                               the director loop; recipes/ = the runs that made the models
 docs/                          GitHub Pages: index.html (landing), play/ (the build),
-                               beach/ (redirect for the old URL)
+                               specialist-scenes/ (the gallery), specialist-skies/,
+                               assets/, beach/ (redirect for the old URL)
 examples/                      reference clips (gitignored) and their study frames;
                                index.json tags each clip's scene family
 tools/                         Blender / Python pipeline: clip trimming, walk measurement,
@@ -128,6 +142,8 @@ only in variant files and under `worlds/beach/`.
    export, capture with `shots/cdp_gpu.py`, publish.
 
 ## Pipeline
+
+Full instructions are in [`guide/`](guide/README.md); the essentials:
 
 - Export: `godot --headless --path game --export-release Web docs/play/index.html`
   (GL Compatibility, single-threaded, so it runs on Pages without special headers).
