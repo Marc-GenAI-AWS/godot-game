@@ -18,4 +18,7 @@ func build() -> void:
 
 
 func tick(_delta: float) -> void:
-	label.text = "%s   %d fps   %s\n%s" % [ctx.world_title, Engine.get_frames_per_second(), ctx.hud_status, ctx.hud_hint]
+	var hint: String = ctx.hud_hint
+	if ctx.menu_available and not ctx.menu_used:
+		hint = "Right-click: change the scene   " + hint
+	label.text = "%s   %d fps   %s\n%s" % [ctx.world_title, Engine.get_frames_per_second(), ctx.hud_status, hint]

@@ -30,16 +30,40 @@ var variant := "quaternius"  # which player body to use (URL #mpfb)
 # without editing the world (--swap=sky=res://segments/sky/candidates/x.gd).
 var overrides := {}
 
+# Chosen from the right-click menu; empty means the layer's own default.
+var player_sex := ""
+var player_outfit := ""
+var player_hair := ""
+var player_pos := Vector3.ZERO      # carried across a rebuild so a swap does not teleport you
+var player_heading := 0.0
+var menu_available := false         # the right-click menu is present (not during captures)
+var menu_used := false              # stop advertising it once they have found it
+
+
+# segment -> the hand-built script the world asked for, so the right-click menu can
+# put a layer back to "Original" without knowing how the world was assembled.
+var defaults := {}
+# instance id -> segment, so main can label each layer by identity. A world creates its
+# layers in one order and may return them in another (the beach makes the player before
+# the fauna but lists them the other way round), so position is not a safe label.
+var built_of := {}
+
 
 func layer(segment: String, default_script: GDScript) -> SceneLayer:
+	defaults[segment] = default_script
+	var inst: SceneLayer = null
 	if overrides.has(segment):
 		var s = load(str(overrides[segment]))
 		if s is GDScript:
-			var inst = s.new()
-			if inst is SceneLayer:
-				return inst
-		push_error("override for '%s' is not a SceneLayer script: %s" % [segment, overrides[segment]])
-	return default_script.new()
+			var candidate = s.new()
+			if candidate is SceneLayer:
+				inst = candidate
+		if inst == null:
+			push_error("override for '%s' is not a SceneLayer script: %s" % [segment, overrides[segment]])
+	if inst == null:
+		inst = default_script.new()
+	built_of[inst.get_instance_id()] = segment
+	return inst
 
 # Palette published by the sky layer at build time; other layers read it.
 var sky_zenith := Color(0.1, 0.32, 0.82)

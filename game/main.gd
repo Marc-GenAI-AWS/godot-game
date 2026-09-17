@@ -24,6 +24,8 @@ var _drag_delta := Vector2.ZERO    # where the current injected drag ended
 var _fps_samples: Array[float] = []
 var _draw_calls := 0
 var _ready_time := 0.0
+var _world                      # the world class, so a runtime swap can reassemble it
+var _segment_of := {}           # layer node -> segment name, for swapping one layer in place
 
 
 func _ready() -> void:
@@ -62,14 +64,22 @@ func _ready() -> void:
 			shots.append(float(t))
 		if flags.has("script"):
 			_parse_script(str(flags["script"]))
+	_world = world
 	add_child(ctx)
 	ctx.make_textures()
 	for layer in world.make_layers(ctx):
 		var gname: String = layer.get_script().get_global_name()
 		layer.name = gname if gname != "" else str(layer.get_script().resource_path).get_file().get_basename()
+		layer.set_meta("segment", ctx.built_of.get(layer.get_instance_id(), ""))
 		add_child(layer)
 		layer.setup(ctx)
 		layers.append(layer)
+	if capture_dir == "" and not flags.has("nomenu"):
+		var menu := SceneMenuLayer.new()
+		menu.name = "SceneMenuLayer"
+		add_child(menu)
+		menu.setup(ctx)
+		layers.append(menu)
 	if capture_dir != "":
 		for l in layers:
 			if l is HudLayer:          # the judge should not read the HUD
@@ -78,6 +88,8 @@ func _ready() -> void:
 					(c as CanvasLayer).visible = false
 	if DisplayServer.get_name() == "headless" or flags.has("validate"):
 		world.validators(layers)
+	if flags.has("menutest"):
+		_menu_selftest.call_deferred()
 	print("world ready: ", world_name)   # capture harness syncs its clock to this line
 	_ready_time = ctx.time
 
@@ -249,3 +261,133 @@ func _write_stats() -> void:
 	f.store_string(JSON.stringify(stats, "  "))
 	f.close()
 	print("stats ", JSON.stringify(stats))
+
+
+# --- runtime scene editing (the right-click menu) ---------------------------
+# One layer is replaced in place rather than reassembling the world: rebuilding the
+# context reallocates every shared texture and mesh, which crashes the renderer when
+# two contexts briefly overlap. Only the handful of references between layers need
+# fixing up, and they are listed in _rewire().
+
+var _rebuilding := false
+
+
+func swap_segment(segment: String, path: String) -> void:
+	if _rebuilding:
+		return
+	if path == "":
+		ctx.overrides.erase(segment)
+	else:
+		ctx.overrides[segment] = path
+	_replace_layer(segment)
+	# the crowd sits on the furniture's spots, so it has to be rebuilt behind new furniture
+	if segment == "props":
+		_replace_layer("crowd")
+	_rewire()
+
+
+func dress_player(sex: String, outfit: String) -> void:
+	ctx.player_sex = sex
+	ctx.player_outfit = outfit
+	_replace_layer("player")
+	_rewire()
+
+
+func set_player_hair(style: String) -> void:
+	ctx.player_hair = style
+	_replace_layer("player")
+	_rewire()
+
+
+func reset_scene() -> void:
+	var touched := ctx.overrides.keys()
+	ctx.overrides.clear()
+	ctx.player_sex = ""
+	ctx.player_outfit = ""
+	ctx.player_hair = ""
+	for segment in touched:
+		_replace_layer(segment)
+	_replace_layer("player")
+	if touched.has("props"):
+		_replace_layer("crowd")
+	_rewire()
+
+
+# Build the segment afresh from the current overrides and put it where the old one was.
+func _replace_layer(segment: String) -> void:
+	if not ctx.defaults.has(segment):
+		return
+	var old: SceneLayer = null
+	var at := -1
+	for i in layers.size():
+		if layers[i].get_meta("segment", "") == segment:
+			old = layers[i]
+			at = i
+			break
+	var fresh := ctx.layer(segment, ctx.defaults[segment])
+	fresh.set_meta("segment", segment)
+	var gname: String = fresh.get_script().get_global_name()
+	fresh.name = gname if gname != "" else str(fresh.get_script().resource_path).get_file().get_basename()
+	if old != null:
+		remove_child(old)
+		old.queue_free()
+		layers[at] = fresh
+	else:
+		layers.append(fresh)
+	add_child(fresh)
+	if at >= 0:
+		move_child(fresh, at)
+	fresh.setup(ctx)
+
+
+# The only references layers hold to each other.
+func _rewire() -> void:
+	var by_segment := {}
+	for l in layers:
+		by_segment[l.get_meta("segment", "")] = l
+	var crowd = by_segment.get("crowd")
+	var furniture = by_segment.get("props")
+	if crowd != null and furniture != null and "furniture" in crowd:
+		crowd.furniture = furniture
+	var camera = by_segment.get("camera")
+	var player = by_segment.get("player")
+	if camera != null and player != null and "player_layer" in camera:
+		camera.player_layer = player
+
+
+# Exercises the right-click menu's actions without a GUI: --menutest boots the world,
+# swaps a generated layer in, dresses the player, resets, and reports. The menu has no
+# other headless coverage, and a broken swap is invisible until someone clicks it.
+func _menu_selftest() -> void:
+	await get_tree().create_timer(1.0).timeout
+	var menu: SceneMenuLayer = null
+	for l in layers:
+		if l is SceneMenuLayer:
+			menu = l
+	print("MENUTEST layers=%d menu=%s" % [layers.size(), menu != null])
+	if menu == null:
+		get_tree().quit(1)
+		return
+	for seg in ["sky", "ground", "vegetation", "props"]:
+		var found: Array = menu._generated(seg)
+		print("MENUTEST %s options=%d" % [seg, found.size()])
+		if found.size() > 0:
+			swap_segment(seg, found[0])
+			await get_tree().create_timer(1.0).timeout
+			print("MENUTEST after %s swap layers=%d override=%s" % [seg, layers.size(), str(ctx.overrides.get(seg, "")).get_file()])
+			if seg == "props":
+				for l in layers:
+					if l.get_meta("segment", "") == "crowd" and l.has_method("validate_contacts"):
+						l.validate_contacts()
+	var before: Vector3 = ctx.player_pos
+	dress_player("M", "trunks_blue")
+	await get_tree().create_timer(1.0).timeout
+	print("MENUTEST dressed sex=%s outfit=%s kept_position=%s" % [ctx.player_sex, ctx.player_outfit, str(ctx.player_pos != Vector3.ZERO and before != Vector3.ZERO)])
+	set_player_hair("buzz")
+	await get_tree().create_timer(1.0).timeout
+	print("MENUTEST hair=%s" % ctx.player_hair)
+	reset_scene()
+	await get_tree().create_timer(1.0).timeout
+	print("MENUTEST reset overrides=%d outfit=%s" % [ctx.overrides.size(), "'" + ctx.player_outfit + "'"])
+	print("MENUTEST DONE")
+	get_tree().quit(0)

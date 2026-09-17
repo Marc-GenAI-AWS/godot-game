@@ -43,7 +43,37 @@ var hair_pivot: Node3D
 var hair_pivot2: Node3D
 
 
+const MENU_BODIES := {"F": ["res://segments/characters/assets/Superhero_Female_FullBody.gltf", "Superhero_Female"],
+					  "M": ["res://segments/characters/assets/Superhero_Male_FullBody.gltf", "SuperHero_Male"]}
+const MENU_HAIR := {"long": ["res://segments/characters/assets/Hair_Long.gltf", "Hair_Long"],
+					"buns": ["res://segments/characters/assets/Hair_Buns.gltf", "Hair_Buns"],
+					"parted": ["res://segments/characters/assets/Hair_SimpleParted.gltf", "Hair_SimpleParted"],
+					"buzz": ["res://segments/characters/assets/Hair_Buzzed.gltf", "Hair_Buzzed"],
+					"none": ["", ""]}
+
+
+# The right-click menu writes its choices onto the context; apply them before building
+# so a swap dresses the player without touching any other layer.
+func _apply_menu_choices() -> void:
+	if ctx.player_sex != "" and MENU_BODIES.has(ctx.player_sex):
+		body_scene = MENU_BODIES[ctx.player_sex][0]
+		body_mesh_name = MENU_BODIES[ctx.player_sex][1]
+	if ctx.player_hair != "" and MENU_HAIR.has(ctx.player_hair):
+		hair_scene = MENU_HAIR[ctx.player_hair][0]
+		var names: Array[String] = ["Eyebrows"]
+		if hair_scene != "":
+			names = [MENU_HAIR[ctx.player_hair][1], "Eyebrows"]
+		hair_mesh_names = names
+		extend_hair = ctx.player_hair == "long"
+	if ctx.player_outfit != "":
+		var sex: String = ctx.player_sex if ctx.player_sex != "" else "F"
+		var tex := "res://segments/characters/assets/T_%s_%s.png" % [sex, ctx.player_outfit]
+		if ResourceLoader.exists(tex):
+			painted_texture = tex
+
+
 func build() -> void:
+	_apply_menu_choices()
 	body = (load(body_scene) as PackedScene).instantiate()
 	body.name = "Player"
 	skel = body.find_child("*Skeleton*", true, false) as Skeleton3D
@@ -78,7 +108,11 @@ func build() -> void:
 	if extend_hair:
 		_extend_hair()
 
-	body.position = Vector3(-4.5, ctx.ground_height(-4.5, 0.0), 0.0)
+	if ctx.player_pos != Vector3.ZERO:
+		body.position = ctx.player_pos
+		body.rotation.y = ctx.player_heading
+	else:
+		body.position = Vector3(-4.5, ctx.ground_height(-4.5, 0.0), 0.0)
 	add_child(body)
 	ctx.player = body
 	player = null
@@ -170,6 +204,9 @@ func _jump() -> void:
 
 
 func tick(delta: float) -> void:
+	if body != null:                      # so a menu swap can put you back where you were
+		ctx.player_pos = body.position
+		ctx.player_heading = body.rotation.y
 	var steer := 0.0
 	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
 		steer += 1.0
