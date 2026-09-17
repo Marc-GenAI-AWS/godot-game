@@ -5,7 +5,7 @@ extends Node3D
 # the tick loop. Worlds live in worlds/<name>/<name>_world.gd and expose
 # make_context() / make_layers() / validators().
 
-var WORLDS := {"beach": BeachWorld, "street": StreetWorld}
+var WORLDS := {"beach": BeachWorld, "street": StreetWorld, "coast": CoastWorld}
 const DEFAULT_WORLD := "beach"
 
 var ctx: WorldContext
@@ -44,6 +44,24 @@ func _ready() -> void:
 		ctx.variant = str(flags["variant"])
 	if flags.has("crowd"):
 		ctx.inspect_offset = Vector3(-14.2, 0.0, -6.0)
+	if flags.has("eye"):
+		# --eye=<distance>,<height> pulls the chase camera back for an overview. The coast world
+		# is 250 m across, and no ground-level shot shows how its districts sit together.
+		var e := str(flags["eye"]).split(",")
+		if e.size() >= 2:
+			ctx.camera_profile["dist"] = float(e[0])
+			ctx.camera_profile["height"] = float(e[1])
+			ctx.camera_profile["look"] = float(e[1]) * 0.35
+	if flags.has("at"):
+		# --at=x,z (and optionally a heading in radians) drops the player anywhere in the world.
+		# A world you can walk across in two minutes did not need this; the coast world is 250 m
+		# wide, so a screenshot of the town is otherwise a two-minute scripted walk.
+		var parts := str(flags["at"]).split(",")
+		if parts.size() >= 2:
+			ctx.player_pos = Vector3(float(parts[0]), 0.0, float(parts[1]))
+			ctx.player_pos.y = ctx.walk_height(ctx.player_pos.x, ctx.player_pos.z)
+		if parts.size() >= 3:
+			ctx.player_heading = float(parts[2])
 	if flags.has("swap"):
 		for pair in str(flags["swap"]).split(";"):
 			var kv2 := pair.split(":", true, 1)   # segment:res://path (the path has its own colon)
@@ -92,6 +110,8 @@ func _ready() -> void:
 		_menu_selftest.call_deferred()
 	if flags.has("menushot"):
 		_menu_shot.call_deferred(str(flags["menushot"]))
+	if flags.has("coasttest"):
+		_coast_selftest.call_deferred()
 	print("world ready: ", world_name)   # capture harness syncs its clock to this line
 	_ready_time = ctx.time
 
@@ -427,3 +447,46 @@ func _menu_shot(path: String) -> void:
 	img.save_png(path)
 	print("MENUSHOT %s %dx%d" % [path, img.get_width(), img.get_height()])
 	get_tree().quit(0)
+
+
+# Is the coast world actually one place? Walking from the surf to the avenue is 244 m through
+# three districts, and the two ways it can silently fail are a constrain() that will not let you
+# leave your own district and a walk_height() step you fall through. This samples the route the
+# way the player walks it, one metre at a time.
+func _coast_selftest() -> void:
+	var c := ctx as CoastContext
+	if c == null:
+		print("COASTTEST not a coast world")
+		get_tree().quit(1)
+		return
+	var z: float = CoastContext.CROSS_Z
+	var x := 3.0
+	var worst_step := 0.0
+	var worst_at := 0.0
+	var blocked_at := 1000.0
+	var prev: float = c.walk_height(x, z)
+	while x > CoastContext.AVENUE_X:
+		var want := Vector3(x - 1.0, 0.0, z)
+		var got: Vector3 = c.constrain(want)
+		if absf(got.x - want.x) > 0.01:          # the corridor refused to let us go further
+			blocked_at = want.x
+			break
+		x = got.x
+		var h: float = c.walk_height(x, z)
+		var step: float = absf(h - prev)
+		if step > worst_step:
+			worst_step = step
+			worst_at = x
+		prev = h
+	print("COASTTEST reached x=%.1f (avenue is %.1f)%s" % [x, CoastContext.AVENUE_X,
+		  "" if blocked_at > 999.0 else "  BLOCKED at %.1f" % blocked_at])
+	print("COASTTEST largest height step %.2f m at x=%.1f" % [worst_step, worst_at])
+	# stepping off the connector in town must hold you on the street, not fling you across it
+	var off: Vector3 = c.constrain(Vector3(-150.0, 0.0, z + 40.0))
+	print("COASTTEST off the kerb in town: z %.1f -> %.1f, x held at %.1f" % [z + 40.0, off.z, off.x])
+	# and away from the connector the beach must still be a dead end at the hedges
+	var sea: Vector3 = c.constrain(Vector3(-61.0, 0.0, 0.0))
+	print("COASTTEST on the beach away from the connector, x=-61 clamps to %.1f" % sea.x)
+	var ok: bool = x <= CoastContext.AVENUE_X + 1.0 and worst_step < 0.5
+	print("COASTTEST %s" % ("DONE" if ok else "FAILED"))
+	get_tree().quit(0 if ok else 1)

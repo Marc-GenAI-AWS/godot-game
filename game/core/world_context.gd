@@ -74,6 +74,14 @@ var fog_color := Color(0.72, 0.82, 0.94)
 
 # Soft collisions: static obstacle circles in a z-bucket hash, plus a
 # per-frame list of moving ones (strollers). resolve() pushes a point out.
+# How wide the street's lawn base plane is. Full width when the street is the whole world;
+# a district narrows it so it stops before the neighbouring terrain (see CoastWorld).
+var lawn_width := 400.0
+
+# Set when this context belongs to a district hosted inside another world.
+var host: WorldContext = null
+var host_origin := Vector3.ZERO
+
 var _obstacles := {}          # bucket (int) -> Array of [Vector3, radius]
 var dynamic_obstacles: Array = []   # [Vector3, radius], rebuilt each frame
 const OB_BUCKET := 8.0
@@ -91,6 +99,11 @@ func add_obstacle(pos: Vector3, radius: float) -> void:
 	if not _obstacles.has(b):
 		_obstacles[b] = []
 	_obstacles[b].append([pos, radius])
+	# Inside a district (see DistrictLayer) the same obstacle is registered twice: here in local
+	# coordinates, so this district's own crowd walks around it, and in the host world, so the
+	# player does too. Without the second registration you walk through the district's hedges.
+	if host != null:
+		host.add_obstacle(pos + host_origin, radius)
 
 
 func resolve_obstacles(pos: Vector3, radius: float) -> Vector3:

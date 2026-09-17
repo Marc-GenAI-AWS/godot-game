@@ -50,7 +50,7 @@ func build() -> void:
 	concrete_mat.roughness = 0.95
 	concrete_mat.vertex_color_use_as_albedo = true
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(400.0, WorldContext.CHUNK * 3.6)
+	pm.size = Vector2(ctx.lawn_width, WorldContext.CHUNK * 3.6)   # narrowed when the street is a district
 	pm.material = lawn_mat
 	var mi := MeshInstance3D.new()
 	mi.mesh = pm

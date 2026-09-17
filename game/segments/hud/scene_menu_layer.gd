@@ -91,7 +91,11 @@ func _generated(segment: String) -> Array:
 	var dir := DirAccess.open("res://segments/%s/generated" % segment)
 	if dir == null:
 		return out
-	var world: String = "beach" if ctx.world_title.to_lower().contains("beach") else "street"
+	# The coast world is hosted by the beach, so its swappable layers are the beach's; the street
+	# ones live inside the avenue district and are not the host's to replace. Offering them here
+	# would hand a StreetGround a CoastContext, and its `ctx as StreetContext` is null.
+	var t := ctx.world_title.to_lower()
+	var world: String = "beach" if (t.contains("beach") or t.contains("coast")) else "street"
 	var other: String = "street" if world == "beach" else "beach"
 	for f in dir.get_files():
 		var name := f.trim_suffix(".remap")           # exported builds list .gd.remap
@@ -114,7 +118,9 @@ func _title(path: String) -> String:
 
 
 func _outfits(sex: String) -> Array:
-	var beach: bool = ctx.world_title.to_lower().contains("beach")
+	# the coast world starts you on the sand, so swimwear belongs in its wardrobe too
+	var w := ctx.world_title.to_lower()
+	var beach: bool = w.contains("beach") or w.contains("coast")
 	var f_beach := ["bikini_pink", "bikini_teal", "bikini_black", "bikini_floral", "onepiece_red", "onepiece_navy"]
 	var m_beach := ["trunks_blue", "trunks_red", "trunks_floral", "trunks_black"]
 	var casual := ["tee_white_jeans", "tee_red_shorts", "tee_navy_chinos", "tee_green_shorts", "tee_black_jeans"]
