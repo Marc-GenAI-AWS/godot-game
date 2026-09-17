@@ -19,7 +19,7 @@ extends SceneLayer
 # the world instead, like the gulls do.
 
 const LANE := 1.9                  # lane centres either side of the middle, as on the avenue
-const N_CARS := 14
+const N_CARS := 26
 const JUNCTION := 9.0              # half width of the box a car must find empty before entering
 const TURN_RATE := 2.6             # radians per second while swinging through a junction
 const CRUISE := [8.0, 13.5]
@@ -99,6 +99,11 @@ func _drive(car: Dictionary, index: int, delta: float, y: float) -> void:
 		target = 0.0
 	elif _junction_ahead(car, node.position) and not _junction_clear(car, index, node.position):
 		target = 0.0
+		car["held"] = float(car.get("held", 0.0)) + delta
+		if float(car["held"]) > 4.0:                 # nobody went: somebody has to, or it is a jam
+			target = car["cruise"] * 0.4
+	else:
+		car["held"] = 0.0
 	car["speed"] = move_toward(car["speed"], target, (7.0 if target > car["speed"] else 12.0) * delta)
 	node.position += f * car["speed"] * delta
 	node.position.y = y
@@ -183,7 +188,12 @@ func _junction_clear(car: Dictionary, index: int, pos: Vector3) -> bool:
 			continue                                # too far away, or stopped and not claiming it
 		if (j - opos).normalized().dot(_forward(other)) < 0.5:
 			continue                                # not heading into it
-		if od < d - 0.05 or (absf(od - d) <= 0.05 and i < index):
+		# Only yield to somebody who will actually be there before us. Yielding to anyone merely
+		# closer queued the whole grid solid once there were 26 cars: A waits for B, B is stuck
+		# behind C, C waits for A.
+		var their_eta: float = od / maxf(float(other["speed"]), 0.1)
+		var my_eta: float = d / maxf(float(car["speed"]), 0.1)
+		if their_eta < my_eta - 0.15 or (absf(their_eta - my_eta) <= 0.15 and i < index):
 			return false                            # they have the better claim
 	# the player always has right of way: they are not reading this code
 	if ctx.player != null and ctx.player.position.distance_to(j) < JUNCTION * 0.7:

@@ -29,6 +29,7 @@ static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
 	var fauna := ctx.layer("fauna", BeachFauna)
 	var town := ctx.layer("town", CoastTown)
 	var traffic := ctx.layer("vehicles", CoastTraffic)
+	var townsfolk := ctx.layer("townsfolk", CoastCrowd)
 	var avenue := _avenue(ctx)
 	# On foot by default, but with a car parked on the inland street by the promenade: the point
 	# of one world is that you can walk off the beach and drive away. &variant=walk keeps the
@@ -49,7 +50,7 @@ static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
 	camera.player_layer = player
 	ctx.hud_hint = "Up: faster   Down: slower   Left / Right: steer   Space: jump   Drag: look around   (the avenue is inland)"
 	var out: Array[SceneLayer] = [sky, ocean, sand, tracks, architecture, vegetation, furniture,
-								  crowd, town, traffic, avenue, player, fauna, camera, hud]
+								  crowd, town, traffic, townsfolk, avenue, player, fauna, camera, hud]
 	return out
 
 

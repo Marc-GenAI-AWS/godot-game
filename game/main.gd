@@ -114,6 +114,8 @@ func _ready() -> void:
 		_coast_selftest.call_deferred()
 	if flags.has("traffictest"):
 		_traffic_selftest.call_deferred()
+	if flags.has("crowdtest"):
+		_crowd_selftest.call_deferred()
 	print("world ready: ", world_name)   # capture harness syncs its clock to this line
 	_ready_time = ctx.time
 
@@ -561,4 +563,70 @@ func _traffic_selftest() -> void:
 	print("TRAFFICTEST cars that barely moved: %d" % still)
 	var ok: bool = turns > 0 and off_road == 0 and still <= 1
 	print("TRAFFICTEST %s" % ("DONE" if ok else "FAILED"))
+	get_tree().quit(0 if ok else 1)
+
+
+# The claim worth testing about the town crowd is that they wait for cars. Stepping the crowd and
+# the traffic together at a fixed rate makes a minute of town take a second, and counts what
+# actually happened at the kerbs.
+func _crowd_selftest() -> void:
+	await get_tree().create_timer(1.0).timeout
+	var c: CoastCrowd = null
+	var t: CoastTraffic = null
+	for l in layers:
+		if l is CoastCrowd:
+			c = l
+		if l is CoastTraffic:
+			t = l
+	if c == null or t == null:
+		print("CROWDTEST missing a layer")
+		get_tree().quit(1)
+		return
+	var dt := 1.0 / 60.0
+	var waits := 0
+	var crossings := 0
+	var gave_up := 0
+	var off := 0
+	var states: Array = []
+	var moved := {}
+	for person in c.people:
+		states.append(str(person["state"]))
+	for step in 3600:
+		ctx.tick(dt)
+		t.tick(dt)
+		c.tick(dt)
+		for i in c.people.size():
+			var person: Dictionary = c.people[i]
+			var now := str(person["state"])
+			if now != states[i]:
+				if now == "wait":
+					waits += 1
+				elif now == "cross":
+					crossings += 1
+				elif now == "walk" and states[i] == "wait":
+					gave_up += 1
+				states[i] = now
+			if now == "wait":
+				moved[i] = float(moved.get(i, 0.0)) + dt      # time actually spent at the kerb
+			var pos: Vector3 = (person["node"] as Node3D).position
+			if not CoastContext.on_road(pos.x, pos.z, CoastCrowd.WALK_OFFSET + 2.5):
+				off += 1
+	var stuck := 0
+	for person in c.people:
+		if str(person["state"]) == "wait" and float(person["wait"]) > CoastCrowd.PATIENCE:
+			stuck += 1
+	print("CROWDTEST %d people, one minute, alongside %d cars" % [c.people.size(), t.cars.size()])
+	print("CROWDTEST stepped to a kerb to cross: %d" % waits)
+	print("CROWDTEST crossings started once the road was clear: %d" % crossings)
+	print("CROWDTEST gave up waiting and walked on: %d" % gave_up)
+	var total := 0.0
+	var longest := 0.0
+	for k in moved:
+		total += float(moved[k])
+		longest = maxf(longest, float(moved[k]))
+	print("CROWDTEST time held at kerbs by traffic: %.1f s in total, longest single person %.1f s" % [total, longest])
+	print("CROWDTEST person-frames off the streets: %d (of %d)" % [off, c.people.size() * 3600])
+	print("CROWDTEST still stuck at a kerb at the end: %d" % stuck)
+	var ok: bool = waits > 0 and crossings > 0 and off == 0 and stuck == 0
+	print("CROWDTEST %s" % ("DONE" if ok else "FAILED"))
 	get_tree().quit(0 if ok else 1)
