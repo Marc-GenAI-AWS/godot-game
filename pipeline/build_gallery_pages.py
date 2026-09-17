@@ -112,6 +112,24 @@ verifier decided what was good enough to keep. Open any of them and walk around.
   only the judge that decides what is good enough to keep.</p>
 </section>
 
+<section class="hero">
+  <div class="hero-shot"><img src="../assets/game-menu.jpg" alt="The beach walk with the right-click menu open, showing the model-written skies, grounds, planting and furniture, and the wardrobe split into women's and men's outfits"></div>
+  <div class="hero-body">
+    <p class="eyebrow">Play it</p>
+    <h2>One game, with every layer the models wrote in it</h2>
+    <p>The scenes below are fixed compositions, but they all run in the same game. Right-click anywhere and
+    you can swap the sky, the ground, the planting or the furniture for any layer a specialist has written,
+    change the character&rsquo;s outfit and hair, or reset to the hand-built original &mdash; nothing reloads,
+    only the layer you picked is rebuilt. A scene a model writes tomorrow shows up in that menu on its own.</p>
+    <div class="hero-play">
+      <a class="play" href="../play/#world=beach">Beach walk<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M1 0l8 5-8 5z"/></svg></a>
+      <a class="play ghost" href="../play/#world=street">Street drive<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M1 0l8 5-8 5z"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<p class="eyebrow section-lead">Eight scenes the models built</p>
+
 <div class="scenes">
 """
 

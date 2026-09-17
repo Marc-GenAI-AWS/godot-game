@@ -84,6 +84,30 @@ h1 {
 }
 .models strong { color: var(--text); font-weight: 600; }
 
+/* the playable game, above the scene grid. The screenshot is the point of this section - the
+   menu has to stay readable, so it runs the full width of the card rather than being cropped
+   into a column */
+.hero {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  overflow: hidden; margin: 0 0 3.5rem;
+}
+.hero-shot { border-bottom: 1px solid var(--line); }
+.hero-shot img { width: 100%; height: auto; display: block; }
+.hero-body { padding: 1.6rem 1.8rem 1.8rem; }
+.hero-body .eyebrow { margin-bottom: 0.6rem; }
+.hero-body h2 { margin: 0 0 0.8rem; font-size: 1.5rem; font-weight: 640; letter-spacing: -0.015em; }
+.hero-body p { margin: 0; color: var(--muted); font-size: 0.95rem; max-width: 68ch; }
+/* the scene cards push their single button to the right edge; here the two sit together */
+.hero-play { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.4rem; }
+.hero-play .play { margin-left: 0; }
+.play.ghost {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--line-strong);
+}
+.play.ghost:hover { background: rgba(255, 255, 255, 0.06); }
+
+.section-lead { color: var(--faint); margin: 0 0 1.2rem; }
+
 /* scenes: two across once there are more than a handful */
 .scenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(27rem, 1fr)); gap: 1.6rem; align-items: start; }
 
@@ -162,6 +186,7 @@ footer {
 }
 footer a { color: var(--muted); text-decoration: none; }
 footer a:hover { color: var(--text); }
+
 
 @media (max-width: 40rem) {
   .shots { grid-template-columns: 1fr; }

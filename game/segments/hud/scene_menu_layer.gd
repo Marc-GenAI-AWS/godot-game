@@ -52,19 +52,26 @@ func _fill() -> void:
 	wardrobe.name = "wardrobe"
 	wardrobe.id_pressed.connect(_on_pressed)
 	menu.add_child(wardrobe)
+	# a labelled separator, so it is obvious which half of the list is which
 	for sex in ["F", "M"]:
+		wardrobe.add_separator("Women" if sex == "F" else "Men")
 		for outfit in _outfits(sex):
 			_add(wardrobe, _outfit_title(outfit), ["outfit", sex, outfit])
-		if sex == "F":
-			wardrobe.add_separator()
 	menu.add_submenu_item("Character", "wardrobe")
 
 	var hair := PopupMenu.new()
 	hair.name = "hair"
 	hair.id_pressed.connect(_on_pressed)
 	menu.add_child(hair)
-	for h in ["long", "buns", "parted", "buzz", "none"]:
+	# the hair meshes are cut for one body or the other, so say which is which
+	hair.add_separator("Women")
+	for h in ["long", "buns"]:
 		_add(hair, h.capitalize(), ["hair", h, ""])
+	hair.add_separator("Men")
+	for h in ["parted", "buzz"]:
+		_add(hair, h.capitalize(), ["hair", h, ""])
+	hair.add_separator()
+	_add(hair, "None", ["hair", "none", ""])
 	menu.add_submenu_item("Hair", "hair")
 	menu.add_separator()
 	_add(menu, "Reset scene", ["reset", "", ""])
@@ -122,7 +129,8 @@ func _outfit_title(outfit: String) -> String:
 	var rest := " ".join(words.slice(1))
 	match garment:
 		"onepiece": garment = "one-piece"
-		"tee": return "%s tee" % rest.replace(" ", " with ")
+		# tee_white_jeans is two garments, so name both: "white tee with jeans"
+		"tee": return "%s tee with %s" % [" ".join(words.slice(1, words.size() - 1)), words[-1]]
 	return "%s %s" % [rest, garment]
 
 

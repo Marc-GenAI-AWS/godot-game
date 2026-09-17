@@ -90,6 +90,8 @@ func _ready() -> void:
 		world.validators(layers)
 	if flags.has("menutest"):
 		_menu_selftest.call_deferred()
+	if flags.has("menushot"):
+		_menu_shot.call_deferred(str(flags["menushot"]))
 	print("world ready: ", world_name)   # capture harness syncs its clock to this line
 	_ready_time = ctx.time
 
@@ -390,4 +392,38 @@ func _menu_selftest() -> void:
 	await get_tree().create_timer(1.0).timeout
 	print("MENUTEST reset overrides=%d outfit=%s" % [ctx.overrides.size(), "'" + ctx.player_outfit + "'"])
 	print("MENUTEST DONE")
+	get_tree().quit(0)
+
+
+# A frame for the project page, with the menu actually open. On the desktop a PopupMenu is
+# its own OS window, so a screen grab of the game window misses it; embedding sub-windows -
+# which is what the web build does anyway - puts the menu in the framebuffer we can save.
+func _menu_shot(path: String) -> void:
+	await get_tree().create_timer(3.0).timeout
+	get_viewport().gui_embed_subwindows = true
+	var menu_layer: SceneMenuLayer = null
+	for l in layers:
+		if l is SceneMenuLayer:
+			menu_layer = l
+	if menu_layer == null:
+		print("MENUSHOT no menu layer")
+		get_tree().quit(1)
+		return
+	menu_layer._fill()
+	var root: PopupMenu = menu_layer.menu
+	root.reset_size()
+	root.position = Vector2i(90, 110)
+	root.popup()
+	await get_tree().process_frame
+	var sub := root.get_node_or_null("wardrobe") as PopupMenu
+	if sub != null:
+		sub.reset_size()
+		sub.position = Vector2i(root.position.x + root.size.x + 2, max(8, 710 - sub.size.y))
+		sub.popup()
+	for i in 12:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	img.save_png(path)
+	print("MENUSHOT %s %dx%d" % [path, img.get_width(), img.get_height()])
 	get_tree().quit(0)
