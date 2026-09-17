@@ -29,7 +29,11 @@ FALLBACKS = {
 SEGMENTS = {
     # segment -> (world used for verification, capture shots, capture script)
     # drags are held (~s) past the shot so the camera has not eased back yet
-    "sky": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_0_-220~2.5,7:Drag_-320_0~2.5"},
+    # pass bar from Marc's labels (anchors/anchor3.jsonl, 2026-09-16): he accepted all 24 sampled layers,
+    # including every one the judge scored 5. Agreement with the judge is 6/24 at its own bar of 7 and
+    # 18/24 at 6; 6 is the conservative reading, since the set had no rejections to locate his floor.
+    "sky": {"world": "beach", "shots": "3,6,9", "script": "4:Drag_0_-220~2.5,7:Drag_-320_0~2.5",
+            "pass_bar": {"overall": 6, "min_attribute": 4}},
     # placement segments: default view, then the camera turned to the landward
     # side (negative dx turns left; the beach's promenade and furniture are on
     # the left) and slightly up so tall plants fit, then back along that side
