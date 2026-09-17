@@ -106,6 +106,40 @@ func add_obstacle(pos: Vector3, radius: float) -> void:
 		host.add_obstacle(pos + host_origin, radius)
 
 
+# Forget the static obstacles inside `radius` of `pos`. Used when a parked car becomes the one
+# you are driving: its parked footprint would otherwise stay behind as a wall in the road.
+func remove_obstacles_near(pos: Vector3, radius: float) -> int:
+	var gone := 0
+	for b in [int(floor(pos.z / OB_BUCKET)) - 1, int(floor(pos.z / OB_BUCKET)), int(floor(pos.z / OB_BUCKET)) + 1]:
+		if not _obstacles.has(b):
+			continue
+		var keep: Array = []
+		for ob in _obstacles[b]:
+			if Vector2(ob[0].x - pos.x, ob[0].z - pos.z).length() <= radius:
+				gone += 1
+			else:
+				keep.append(ob)
+		_obstacles[b] = keep
+	return gone
+
+
+# Cars standing still that the player may get into. Layers that park a car register it here;
+# inside a district the registration is forwarded, and since a car's global_position is already
+# world space, the host needs nothing but the node.
+var parked_cars: Array = []
+
+
+func add_parked_car(node: Node3D) -> void:
+	parked_cars.append(node)
+	if host != null:
+		host.add_parked_car(node)
+
+
+# Where a vehicle may go. The base world does not care; a street holds it to the asphalt.
+func constrain_vehicle(p: Vector3) -> Vector3:
+	return p
+
+
 func resolve_obstacles(pos: Vector3, radius: float) -> Vector3:
 	var b0 := int(floor(pos.z / OB_BUCKET))
 	for b in [b0 - 1, b0, b0 + 1]:

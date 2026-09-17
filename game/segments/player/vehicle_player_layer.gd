@@ -13,6 +13,7 @@ var kind := "hatch"
 var brake_latch := false
 var with_driver := false   # drive-only variant: bake a seated driver so the cabin isn't empty   # Down while rolling brakes to a stop; release and press again to reverse
 var paint := Color(0.95, 0.75, 0.1)
+var start_pos := Vector3.ZERO      # where the car is parked; the street sets its own lane
 var roof := Color(0.08, 0.08, 0.08)
 
 const MAX_SPEED := 26.0
@@ -32,7 +33,8 @@ func build() -> void:
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 99
 		Car.add_driver(car, rng, self)
-	car.position = Vector3((ctx as StreetContext).LANE_X, 0.0, 0.0)   # right-hand traffic
+	var sc := ctx as StreetContext
+	car.position = start_pos if start_pos != Vector3.ZERO else Vector3(sc.LANE_X if sc != null else 0.0, 0.0, 0.0)
 	add_child(car)
 	ctx.player = car
 	player = null
@@ -45,7 +47,6 @@ func _unhandled_input(_event: InputEvent) -> void:
 
 
 func tick(delta: float) -> void:
-	var sc: StreetContext = ctx as StreetContext
 	var throttle := 0.0
 	if Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W):
 		throttle += 1.0
@@ -97,7 +98,7 @@ func tick(delta: float) -> void:
 			keep.append(ob)
 	var saved: Array = ctx.dynamic_obstacles
 	ctx.dynamic_obstacles = keep
-	p = ctx.resolve_obstacles(sc.constrain_vehicle(p), 0.95)
+	p = ctx.resolve_obstacles(ctx.constrain_vehicle(p), 0.95)
 	ctx.dynamic_obstacles = saved
 	car.position = p
 	car.rotation.y = yaw
@@ -121,3 +122,20 @@ func tick(delta: float) -> void:
 	elif car.position.z >= 0.0:
 		car.position.z -= WorldContext.CHUNK
 		ctx.world_wrapped.emit(-WorldContext.CHUNK)
+
+
+# Take over a car that is already in the world - one of the parked ones. It is reparented here
+# keeping its global transform, so `car.position` stays world space the way the driving code
+# assumes, and the car we were in is left standing where the player got out.
+func adopt(node: Node3D) -> void:
+	if node == car:
+		return
+	if node.get_parent() != null:
+		node.reparent(self, true)
+	else:
+		add_child(node)
+	car = node
+	yaw = node.global_rotation.y
+	speed = 0.0
+	steer = 0.0
+	ctx.player = car

@@ -28,15 +28,28 @@ static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
 	var crowd: BeachCrowd = ctx.layer("crowd", BeachCrowd)
 	var fauna := ctx.layer("fauna", BeachFauna)
 	var town := ctx.layer("town", CoastTown)
+	var traffic := ctx.layer("vehicles", CoastTraffic)
 	var avenue := _avenue(ctx)
-	var player: PlayerLayer = ctx.layer("player", MpfbPlayerLayer if ctx.variant == "mpfb" else SkinnedPlayerLayer)
+	# On foot by default, but with a car parked on the inland street by the promenade: the point
+	# of one world is that you can walk off the beach and drive away. &variant=walk keeps the
+	# plain beach walker for capture recipes that expect it.
+	var player: PlayerLayer
+	if ctx.variant == "walk" or ctx.variant == "mpfb":
+		player = ctx.layer("player", MpfbPlayerLayer if ctx.variant == "mpfb" else SkinnedPlayerLayer)
+	else:
+		var d := DriverLayer.new()
+		d.walker_class = SkinnedPlayerLayer      # the beach body: you start on the sand, not the kerb
+		d.start_pos = Vector3(-96.0, CoastContext.plateau_y(), CoastContext.CROSS_Z[1] - 4.2)
+		d.start_yaw = PI * 0.5                      # nose inland, parked on the left kerb
+		player = d
+		ctx.built_of[d.get_instance_id()] = "player"
 	var camera: CameraLayer = ctx.layer("camera", CameraLayer)
 	var hud := ctx.layer("hud", HudLayer)
 	crowd.furniture = furniture
 	camera.player_layer = player
 	ctx.hud_hint = "Up: faster   Down: slower   Left / Right: steer   Space: jump   Drag: look around   (the avenue is inland)"
 	var out: Array[SceneLayer] = [sky, ocean, sand, tracks, architecture, vegetation, furniture,
-								  crowd, town, avenue, player, fauna, camera, hud]
+								  crowd, town, traffic, avenue, player, fauna, camera, hud]
 	return out
 
 

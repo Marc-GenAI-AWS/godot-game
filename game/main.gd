@@ -112,6 +112,8 @@ func _ready() -> void:
 		_menu_shot.call_deferred(str(flags["menushot"]))
 	if flags.has("coasttest"):
 		_coast_selftest.call_deferred()
+	if flags.has("traffictest"):
+		_traffic_selftest.call_deferred()
 	print("world ready: ", world_name)   # capture harness syncs its clock to this line
 	_ready_time = ctx.time
 
@@ -459,7 +461,7 @@ func _coast_selftest() -> void:
 		print("COASTTEST not a coast world")
 		get_tree().quit(1)
 		return
-	var z: float = CoastContext.CROSS_Z
+	var z: float = CoastContext.CROSS_Z[1]      # the middle inland street
 	var x := 3.0
 	var worst_step := 0.0
 	var worst_at := 0.0
@@ -488,5 +490,75 @@ func _coast_selftest() -> void:
 	var sea: Vector3 = c.constrain(Vector3(-61.0, 0.0, 0.0))
 	print("COASTTEST on the beach away from the connector, x=-61 clamps to %.1f" % sea.x)
 	var ok: bool = x <= CoastContext.AVENUE_X + 1.0 and worst_step < 0.5
+	# the streets must all be reachable, and every parked car must be one you could drive
+	var reach := 0
+	for cz: float in CoastContext.CROSS_Z:
+		var q: Vector3 = c.constrain(Vector3(-150.0, 0.0, cz))
+		if absf(q.z - cz) < 0.01:
+			reach += 1
+	print("COASTTEST inland streets reachable: %d/%d" % [reach, CoastContext.CROSS_Z.size()])
+	var mid: Vector3 = c.constrain(Vector3(CoastContext.MID_X, 0.0, -75.0))
+	print("COASTTEST the coast street holds at x=%.1f (want %.1f)" % [mid.x, CoastContext.MID_X])
+	var inside: Vector3 = c.constrain(Vector3(-120.0, 0.0, -75.0))   # middle of a block
+	print("COASTTEST inside a block -> pushed to (%.1f, %.1f)" % [inside.x, inside.z])
+	print("COASTTEST parked cars you can drive: %d" % ctx.parked_cars.size())
+	ok = ok and reach == CoastContext.CROSS_Z.size() and ctx.parked_cars.size() > 0
 	print("COASTTEST %s" % ("DONE" if ok else "FAILED"))
+	get_tree().quit(0 if ok else 1)
+
+
+# Does the traffic actually behave? Screenshots show cars in a street; they do not show whether
+# anyone turned, whether anyone drove through a building, or whether two cars ended up in the
+# same place. This steps the layer at a fixed rate so a minute of traffic takes a second, and
+# measures the three things that matter.
+func _traffic_selftest() -> void:
+	await get_tree().create_timer(1.0).timeout
+	var t: CoastTraffic = null
+	for l in layers:
+		if l is CoastTraffic:
+			t = l
+	if t == null:
+		print("TRAFFICTEST no traffic layer")
+		get_tree().quit(1)
+		return
+	var dt := 1.0 / 60.0
+	var turns := 0
+	var off_road := 0
+	var overlaps := 0
+	var still := 0
+	var was: Array = []
+	for car in t.cars:
+		was.append(str(car["axis"]) + str(car["sign"]))
+	var moved := {}
+	for step in 3600:                      # a minute of traffic
+		ctx.tick(dt)
+		t.tick(dt)
+		for i in t.cars.size():
+			var car: Dictionary = t.cars[i]
+			var key := str(car["axis"]) + str(car["sign"])
+			if key != was[i]:
+				turns += 1
+				was[i] = key
+			var pos: Vector3 = (car["node"] as Node3D).position
+			moved[i] = float(moved.get(i, 0.0)) + car["speed"] * dt
+			# 3 m of slack: a car mid-turn is briefly across the corner of its own lane
+			if not CoastContext.on_road(pos.x, pos.z, CoastContext.CROSS_HALF + 3.0,
+									   StreetContext.ROAD_HALF + 3.0):
+				off_road += 1
+		for i in t.cars.size():
+			for k in range(i + 1, t.cars.size()):
+				var a: Vector3 = (t.cars[i]["node"] as Node3D).position
+				var b: Vector3 = (t.cars[k]["node"] as Node3D).position
+				if a.distance_to(b) < 2.2:
+					overlaps += 1
+	for i in t.cars.size():
+		if float(moved.get(i, 0.0)) < 20.0:
+			still += 1
+	print("TRAFFICTEST %d cars, one minute" % t.cars.size())
+	print("TRAFFICTEST turns taken: %d" % turns)
+	print("TRAFFICTEST car-frames off the road: %d (of %d)" % [off_road, t.cars.size() * 3600])
+	print("TRAFFICTEST frames with two cars overlapping: %d" % overlaps)
+	print("TRAFFICTEST cars that barely moved: %d" % still)
+	var ok: bool = turns > 0 and off_road == 0 and still <= 1
+	print("TRAFFICTEST %s" % ("DONE" if ok else "FAILED"))
 	get_tree().quit(0 if ok else 1)

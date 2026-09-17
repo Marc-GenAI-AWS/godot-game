@@ -29,6 +29,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 				# two circles along the car's length so they don't spill into the lane
 				for dz in [-len * 0.28, len * 0.28]:
 					ctx.add_obstacle(car.global_position + Vector3(0, 0, dz), 1.0)
+				ctx.add_parked_car(car)   # any of them can be driven away
 				z += len + rng.randf_range(1.0, 5.0)
 			else:
 				z += rng.randf_range(6.0, 14.0)

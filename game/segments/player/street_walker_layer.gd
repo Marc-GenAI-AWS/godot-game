@@ -19,8 +19,11 @@ func _init() -> void:
 
 func build() -> void:
 	super()
+	# The base class already honours ctx.player_pos; only the street knows where its sidewalk is,
+	# and in a world that is not the street (the coast) there is none to stand on.
 	var sc: StreetContext = ctx as StreetContext
-	body.position = Vector3(sc.WALK_OUT - 1.4, sc.KERB_H, -3.0)
+	if sc != null and ctx.player_pos == Vector3.ZERO:
+		body.position = Vector3(sc.WALK_OUT - 1.4, sc.KERB_H, -3.0)
 	pace = 0
 	walking = false
 	anim.play("Idle")

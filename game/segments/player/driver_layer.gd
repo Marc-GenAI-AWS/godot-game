@@ -17,7 +17,8 @@ const DOOR_T := 0.45             # door swing time
 const SLIDE_T := 0.75            # seat <-> door slide time
 const NEAR := 2.6                # how close to the door "E" works
 
-var walker: StreetWalkerLayer
+var walker: SkinnedPlayerLayer
+var walker_class: GDScript = null   # which body walks; the street's man by default
 var vehicle: VehiclePlayerLayer
 var car: Node3D
 var body: Node3D
@@ -28,18 +29,26 @@ var from_pos := Vector3.ZERO
 var from_yaw := 0.0
 var door_open := 0.0
 var sit_root_y := 0.0            # body root height (car local) that seats the driver under the roof
+var start_pos := Vector3.ZERO    # where the player's own car is parked (the world decides)
+var start_yaw := 0.0
 
 
 func build() -> void:
 	var sc: StreetContext = ctx as StreetContext
 	vehicle = VehiclePlayerLayer.new()
 	vehicle.name = "Vehicle"
+	if start_pos != Vector3.ZERO:
+		vehicle.start_pos = start_pos
 	add_child(vehicle)
 	vehicle.setup(ctx)
 	car = vehicle.car
-	car.position = Vector3(sc.PARK_X, 0.0, -10.0)      # parked at the right kerb, nose down the street
+	if start_pos == Vector3.ZERO and sc != null:
+		car.position = Vector3(sc.PARK_X, 0.0, -10.0)  # parked at the right kerb, nose down the street
+	car.rotation.y = start_yaw
+	vehicle.yaw = start_yaw
+	ctx.add_parked_car(car)
 	ctx.player_vehicle = car
-	walker = StreetWalkerLayer.new()
+	walker = (walker_class.new() if walker_class != null else StreetWalkerLayer.new())
 	walker.name = "Walker"
 	add_child(walker)
 	walker.setup(ctx)
@@ -103,15 +112,53 @@ func _near_door() -> bool:
 	return body.position.distance_to(_door_world()) < NEAR
 
 
+# The nearest car standing still whose driver's door is within reach. Every car in the world is
+# built by Car.build() and carries the same door_point / seat / roof_y metadata, so any of them
+# can be driven - the only thing that makes one "yours" is that you are standing beside it.
+func _reachable_car() -> Node3D:
+	var best: Node3D = null
+	var best_d := NEAR
+	for n in ctx.parked_cars:
+		var node := n as Node3D
+		if node == null or not is_instance_valid(node) or node == car:
+			continue
+		var dp: Vector3 = node.global_transform * (node.get_meta("door_point") as Vector3)
+		var d := body.position.distance_to(dp)
+		if d < best_d:
+			best_d = d
+			best = node
+	return best
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode in ENTER_KEYS:
-		if mode == "foot" and _near_door():
-			_set_mode("entering")
-			walker.pace = 0
+		if mode == "foot":
+			var target: Node3D = car if _near_door() else _reachable_car()
+			if target != null:
+				_take(target)
+				_set_mode("entering")
+				walker.pace = 0
 		elif mode == "car" and absf(vehicle.speed) < 0.3:
 			vehicle.speed = 0.0
 			ctx.player = body
 			_set_mode("exiting")
+
+
+# Switch to another car: hand it to the vehicle layer, drop the parked footprint it left in the
+# road, and re-measure the seat, because a pickup seats the driver higher than a hatchback.
+func _take(node: Node3D) -> void:
+	if node == car:
+		return
+	var leaving := car
+	vehicle.adopt(node)
+	car = node
+	ctx.remove_obstacles_near(car.global_position, 3.0)
+	if leaving != null and is_instance_valid(leaving):
+		if not ctx.parked_cars.has(leaving):
+			ctx.add_parked_car(leaving)
+		for dz: float in [-1.1, 1.1]:
+			ctx.add_obstacle(leaving.global_position + leaving.global_transform.basis.z * dz, 1.0)
+	_measure_sitting()
 
 
 func _yaw_toward(dir: Vector3) -> float:
@@ -135,7 +182,7 @@ func tick(delta: float) -> void:
 			var f := car.global_transform.basis.z
 			for dz: float in [-1.1, 1.1]:
 				ctx.dynamic_obstacles.append([car.global_position + f * dz, 1.0])
-			ctx.hud_status = "E: get in" if _near_door() else ""
+			ctx.hud_status = "E: get in" if (_near_door() or _reachable_car() != null) else ""
 			yaw = walker.yaw
 			walking = walker.walking
 		"car":
