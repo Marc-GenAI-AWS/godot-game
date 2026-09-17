@@ -135,7 +135,7 @@ verifier decided what was good enough to keep. Open any of them and walk around.
 
 FOOT = """</div>
 <footer>Frames are the verifier\u2019s own captures of the assembled scene &middot;
-Built with Godot&nbsp;4 &middot; <a href="https://github.com/mlobree/godot-game">github.com/mlobree/godot-game</a></footer>
+Built with Godot&nbsp;4 &middot; <a href="https://github.com/Marc-GenAI-AWS/godot-game">github.com/Marc-GenAI-AWS/godot-game</a></footer>
 </main>
 </body>
 </html>
