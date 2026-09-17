@@ -110,7 +110,12 @@ func build() -> void:
 
 	if ctx.player_pos != Vector3.ZERO:
 		body.position = ctx.player_pos
+		# `yaw` is what movement uses; body.rotation.y is only what you see. Restoring one and not
+		# the other leaves the character facing where they were and walking where they used to -
+		# visible after a menu outfit swap, and it is why a debug spawn with a heading walked off
+		# sideways across the road.
 		body.rotation.y = ctx.player_heading
+		yaw = ctx.player_heading
 	else:
 		body.position = Vector3(-4.5, ctx.ground_height(-4.5, 0.0), 0.0)
 	add_child(body)

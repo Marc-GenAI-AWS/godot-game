@@ -51,7 +51,9 @@ func _ready() -> void:
 		if e.size() >= 2:
 			ctx.camera_profile["dist"] = float(e[0])
 			ctx.camera_profile["height"] = float(e[1])
-			ctx.camera_profile["look"] = float(e[1]) * 0.35
+			# a third number aims the camera: 0 looks straight down, which is the only way to see
+			# what is actually under the player rather than what is in front of them
+			ctx.camera_profile["look"] = float(e[2]) if e.size() >= 3 else float(e[1]) * 0.35
 	if flags.has("at"):
 		# --at=x,z (and optionally a heading in radians) drops the player anywhere in the world.
 		# A world you can walk across in two minutes did not need this; the coast world is 250 m
@@ -463,6 +465,11 @@ func _coast_selftest() -> void:
 		print("COASTTEST not a coast world")
 		get_tree().quit(1)
 		return
+	var pp: Vector3 = ctx.player.position if ctx.player != null else Vector3.ZERO
+	print("COASTTEST player stands at (%.1f, %.2f, %.1f); walk_height there %.2f, on a road: %s"
+		  % [pp.x, pp.y, pp.z, c.walk_height(pp.x, pp.z),
+			 str(CoastContext.on_road(pp.x, pp.z, CoastContext.CROSS_HALF))])
+	_what_is_here(Vector3(pp.x, pp.y, pp.z))
 	var z: float = CoastContext.CROSS_Z[1]      # the middle inland street
 	var x := 3.0
 	var worst_step := 0.0
@@ -651,3 +658,19 @@ func _crowd_selftest() -> void:
 	var ok: bool = waits > 0 and crossings > 0 and off == 0 and stuck == 0
 	print("CROWDTEST %s" % ("DONE" if ok else "FAILED"))
 	get_tree().quit(0 if ok else 1)
+
+
+# Which meshes actually cover a point. The scene has no collision bodies, so a raycast finds
+# nothing; this walks the tree and tests every mesh's world-space box instead. It is the only
+# way to answer "what am I standing on" when the geometry is all batched.
+func _what_is_here(at: Vector3) -> void:
+	var hits: Array = []
+	for mi in find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.mesh == null:
+			continue
+		var box: AABB = m.global_transform * m.mesh.get_aabb()
+		if at.x >= box.position.x and at.x <= box.end.x and at.z >= box.position.z and at.z <= box.end.z \
+				and at.y >= box.position.y - 0.3 and at.y <= box.end.y + 0.3:
+			hits.append("%s (top y %.2f)" % [str(m.get_path()).replace("/root/Main/", ""), box.end.y])
+	print("COASTTEST under the player: %s" % ("nothing" if hits.is_empty() else ", ".join(hits)))
