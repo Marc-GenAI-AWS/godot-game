@@ -11,9 +11,12 @@ examples/
 # pipeline virtualenv and run outputs
 pipeline/.venv/
 pipeline/runs/
-# verifier candidates (generated, never committed)
+# verifier candidates (generated, never committed): ~3,600 scripts the verifier wrote and threw away
 game/segments/*/candidates/
-# layers accepted by the director loop (run artifacts; promote by copying to variants/)
-game/segments/*/generated/
+# Layers the director loop accepted ARE committed (2026-09-16): the published game and its
+# right-click menu are made of them, so a fresh clone that cannot see them exports a different
+# game from the one on the site. Rejected attempts stay out.
+game/segments/*/generated/*-rejected.gd
+game/segments/*/generated/*-rejected.gd.uid
 __pycache__/
 pipeline/.venv-train/
