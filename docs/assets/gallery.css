@@ -97,6 +97,12 @@ h1 {
 .hero-body .eyebrow { margin-bottom: 0.6rem; }
 .hero-body h2 { margin: 0 0 0.8rem; font-size: 1.5rem; font-weight: 640; letter-spacing: -0.015em; }
 .hero-body p { margin: 0; color: var(--muted); font-size: 0.95rem; max-width: 68ch; }
+.hero-more { margin-top: 0.9rem !important; }
+.hero-more kbd {
+  font: inherit; font-size: 0.85em; font-weight: 600; color: var(--text);
+  border: 1px solid var(--line-strong); border-radius: 4px; padding: 0.05rem 0.35rem;
+  background: rgba(255, 255, 255, 0.05);
+}
 /* the scene cards push their single button to the right edge; here the two sit together */
 .hero-play { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.4rem; }
 .hero-play .play { margin-left: 0; }
