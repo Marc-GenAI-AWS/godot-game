@@ -129,6 +129,15 @@ func remove_obstacles_near(pos: Vector3, radius: float) -> int:
 var parked_cars: Array = []
 
 
+# A car the player could drive. `ai` is the layer currently driving it, or null if it is parked;
+# a moving car can only be taken once its driver has stopped, and the layer has to be told to let
+# go of it.
+func add_drivable_car(node: Node3D, ai: Node = null) -> void:
+	if ai != null:
+		node.set_meta("ai", ai)
+	add_parked_car(node)
+
+
 func add_parked_car(node: Node3D) -> void:
 	# The player's own car is registered here too, and rebuilding the player layer - which the
 	# menu does for every outfit and hair change - frees the old one. Prune as we go, or the list

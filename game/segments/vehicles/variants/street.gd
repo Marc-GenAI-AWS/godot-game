@@ -7,6 +7,7 @@ extends ChunkedLayer
 
 var traffic: Array = []   # [node, lane_x, dir, speed, wheels, wr]
 var parked: Array = []    # the cars that just stand there - about 21 meshes each
+const FLAG_DOWN := 5.5      # stand this close and the driver waits for you
 const LIVE_RADIUS := 130.0   # past this a car is hidden; there are dozens and they are the
                              # most expensive thing in this world
 
@@ -50,6 +51,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 			car.rotation.y = 0.0 if lane[1] < 0.0 else PI
 			chunk.add_child(car)
 			Car.add_driver(car, rng, self)
+			ctx.add_drivable_car(car, self)   # flag it down and it is yours
 			traffic.append({"node": car, "dir": lane[1], "cruise": rng.randf_range(11.0, 15.5), "speed": 0.0, "lane": lane[0], "wheels": car.get_meta("wheels"), "wr": car.get_meta("wheel_radius"), "spin": 0.0})
 
 
@@ -64,7 +66,13 @@ func _gap_ahead(t: Dictionary) -> float:
 		if o != t and absf(o["lane"] - t["lane"]) < 0.5:
 			candidates.append([(o["node"] as Node3D).global_position, "traffic"])
 	for who in [ctx.player, ctx.player_vehicle]:
-		if who and absf(who.global_position.x - t["lane"]) < 1.6:
+		if who == null or not is_instance_valid(who):
+			continue
+		# `lane` is this world's own x. Inside a district that is offset from the world's, so
+		# comparing the player's global x against it put them 240 m off-lane and the traffic
+		# drove straight through them - which is also why you could not flag a car down.
+		var lane_frame: Vector3 = car.get_parent().to_local(who.global_position)
+		if absf(lane_frame.x - t["lane"]) < 1.6:
 			candidates.append([who.global_position, "player"])
 	for c in candidates:
 		var d: float = (c[0].z - gp.z) * t["dir"]
@@ -92,6 +100,10 @@ func tick(delta: float) -> void:
 		var target: float = t["cruise"]
 		if gap < 7.0:
 			target = 0.0
+		# and the driver waits while somebody is right beside the car, so you can reach the door
+		if ctx.player != null and is_instance_valid(ctx.player) \
+				and car.global_position.distance_to(ctx.player.global_position) < FLAG_DOWN:
+			target = 0.0
 		elif gap < 16.0:
 			target = minf(target, (gap - 7.0) / 9.0 * t["cruise"])
 		t["speed"] = move_toward(t["speed"], target, (5.0 if target < t["speed"] else 3.0) * delta)
@@ -102,3 +114,19 @@ func tick(delta: float) -> void:
 		var f := car.global_transform.basis.z   # car length axis
 		for dz in [-1.1, 1.1]:
 			ctx.dynamic_obstacles.append([car.global_position + f * dz, 1.0])
+
+
+# --- handing a car over to the player ------------------------------------------------------
+
+func car_speed(node: Node3D) -> float:
+	for t in traffic:
+		if t["node"] == node:
+			return absf(float(t["speed"]))
+	return 0.0
+
+
+func release(node: Node3D) -> void:
+	for i in traffic.size():
+		if traffic[i]["node"] == node:
+			traffic.remove_at(i)
+			return

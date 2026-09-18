@@ -295,6 +295,7 @@ static func add_driver(car: Node3D, rng: RandomNumberGenerator, tree_parent: Nod
 	var root_y := minf(seat.y + 0.06 - 0.45, roof_y - 0.08 - aabb.end.y)
 	var xf := Transform3D(Basis.IDENTITY, Vector3(seat.x, root_y, seat.z))
 	# body in its outfit, eyes, and brows + hair on the hair texture: three draws
+	var driver_meshes: Array = []
 	var groups := [[[baked["body"]], skin, SkinnedPeople.outfit_material(outfit)],
 		[[baked["eyes"]], Color(1, 1, 1), SkinnedPeople.eye_material()],
 		[[baked["brows"], baked["hair"]], hair_tint, SkinnedPeople.hair_material(SkinnedPeople.hair_tex_for(hair))]]
@@ -309,3 +310,15 @@ static func add_driver(car: Node3D, rng: RandomNumberGenerator, tree_parent: Nod
 			var mi := MeshInstance3D.new()
 			mi.mesh = b.commit_with(g[2])
 			car.add_child(mi)
+			driver_meshes.append(mi)
+	car.set_meta("driver_meshes", driver_meshes)
+
+
+# Show or hide whoever was driving. Taking a car over leaves its driver sitting in your lap
+# otherwise; they are baked meshes, not an agent, so there is nobody to walk away.
+static func show_driver(car: Node3D, on: bool) -> void:
+	if not car.has_meta("driver_meshes"):
+		return
+	for m in car.get_meta("driver_meshes"):
+		if is_instance_valid(m):
+			(m as Node3D).visible = on

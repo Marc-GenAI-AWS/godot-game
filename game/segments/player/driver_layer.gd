@@ -115,7 +115,20 @@ func _near_door() -> bool:
 # The nearest car standing still whose driver's door is within reach. Every car in the world is
 # built by Car.build() and carries the same door_point / seat / roof_y metadata, so any of them
 # can be driven - the only thing that makes one "yours" is that you are standing beside it.
-func _reachable_car() -> Node3D:
+const STOPPED := 0.4              # m/s below which a car counts as standing still
+
+
+# Is this car still being driven by somebody? Returns its speed, 0 when nobody is driving.
+func _ai_speed(node: Node3D) -> float:
+	if not node.has_meta("ai"):
+		return 0.0
+	var ai = node.get_meta("ai")
+	if ai == null or not is_instance_valid(ai) or not ai.has_method("car_speed"):
+		return 0.0
+	return float(ai.car_speed(node))
+
+
+func _reachable_car(moving_too := false) -> Node3D:
 	var best: Node3D = null
 	var best_d := NEAR
 	for n in ctx.parked_cars:
@@ -127,6 +140,8 @@ func _reachable_car() -> Node3D:
 		var node := n as Node3D
 		if node == null or node == car:
 			continue
+		if not moving_too and _ai_speed(node) > STOPPED:
+			continue                       # somebody is driving it; stand in front of them first
 		var dp: Vector3 = node.global_transform * (node.get_meta("door_point") as Vector3)
 		var d := body.position.distance_to(dp)
 		if d < best_d:
@@ -154,6 +169,13 @@ func _unhandled_input(event: InputEvent) -> void:
 func _take(node: Node3D) -> void:
 	if node == car:
 		return
+	# whoever was driving stops driving, and stops being in the seat
+	if node.has_meta("ai"):
+		var ai = node.get_meta("ai")
+		if ai != null and is_instance_valid(ai) and ai.has_method("release"):
+			ai.release(node)
+		node.remove_meta("ai")
+	Car.show_driver(node, false)
 	var leaving := car
 	vehicle.adopt(node)
 	car = node
@@ -187,7 +209,12 @@ func tick(delta: float) -> void:
 			var f := car.global_transform.basis.z
 			for dz: float in [-1.1, 1.1]:
 				ctx.dynamic_obstacles.append([car.global_position + f * dz, 1.0])
-			ctx.hud_status = "E: get in" if (_near_door() or _reachable_car() != null) else ""
+			if _near_door() or _reachable_car() != null:
+				ctx.hud_status = "E: get in"
+			elif _reachable_car(true) != null:
+				ctx.hud_status = "step in front of it to stop the driver"
+			else:
+				ctx.hud_status = ""
 			yaw = walker.yaw
 			walking = walker.walking
 		"car":

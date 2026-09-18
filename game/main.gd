@@ -120,6 +120,8 @@ func _ready() -> void:
 		_menu_shot.call_deferred(str(flags["menushot"]))
 	if flags.has("perf"):
 		_perf = true
+	if flags.has("hijacktest"):
+		_hijack_selftest.call_deferred()
 	if flags.has("census"):
 		_census.call_deferred()
 	if flags.has("coasttest"):
@@ -778,3 +780,69 @@ func _wear(spec: String) -> void:
 	if p.size() >= 3:
 		await get_tree().create_timer(0.4).timeout
 		set_player_hair(p[2])
+
+
+# Can you flag down a moving car and take it? Three things have to hold: the driver stops for
+# somebody standing in the road, the car cannot be taken while it is still moving, and once taken
+# its old driver stops steering it and stops sitting in it.
+func _hijack_selftest() -> void:
+	await get_tree().create_timer(2.0).timeout
+	var driver: DriverLayer = null
+	var traffic: CoastTraffic = null
+	for l in layers:
+		if l is DriverLayer:
+			driver = l
+		if l is CoastTraffic:
+			traffic = l
+	if driver == null or traffic == null:
+		print("HIJACKTEST needs a driver and traffic layer")
+		get_tree().quit(1)
+		return
+	# stand in the road in front of the nearest car that is coming towards us
+	var target: Dictionary = {}
+	var best := 1e9
+	for c in traffic.cars:
+		var n: Node3D = c["node"]
+		var d: float = n.position.distance_to(driver.body.position)
+		if d < best:
+			best = d
+			target = c
+	var node: Node3D = target["node"]
+	var moving_speed: float = absf(float(target["speed"]))
+	# step into its lane, a short way ahead of it
+	var ahead: Vector3 = node.position + traffic._forward(target) * 7.0
+	driver.body.position = Vector3(ahead.x, driver.body.position.y, ahead.z)
+	driver.walker.pace = 0
+	print("HIJACKTEST stood in front of a car doing %.1f m/s" % moving_speed)
+	var stopped := false
+	var slowest := 99.0
+	for i in 300:                                   # up to five seconds of braking
+		await get_tree().process_frame
+		driver.body.position = Vector3(ahead.x, driver.body.position.y, ahead.z)
+		slowest = minf(slowest, absf(float(target["speed"])))
+		if absf(float(target["speed"])) < 0.4:
+			stopped = true
+			break
+	print("HIJACKTEST driver stopped: %s (slowest %.2f m/s)" % [str(stopped), slowest])
+	# now stand at its door and take it
+	var dp: Vector3 = node.global_transform * (node.get_meta("door_point") as Vector3)
+	driver.body.position = Vector3(dp.x, driver.body.position.y, dp.z)
+	await get_tree().process_frame
+	var reachable: Node3D = driver._reachable_car()
+	print("HIJACKTEST reachable once stopped: %s" % str(reachable == node))
+	var before := traffic.cars.size()
+	driver._take(node)
+	await get_tree().create_timer(0.5).timeout
+	var released: bool = traffic.cars.size() == before - 1
+	var has_ai: bool = node.has_meta("ai")
+	# and the driver they displaced is no longer sitting in the seat
+	var ghost := false
+	if node.has_meta("driver_meshes"):
+		for m in node.get_meta("driver_meshes"):
+			if is_instance_valid(m) and (m as Node3D).visible:
+				ghost = true
+	print("HIJACKTEST taken: driver_released=%s ai_meta_cleared=%s now_driving=%s old_driver_gone=%s" % [
+		  str(released), str(not has_ai), str(driver.vehicle.car == node), str(not ghost)])
+	var ok: bool = stopped and reachable == node and released and not has_ai and driver.vehicle.car == node and not ghost
+	print("HIJACKTEST %s" % ("DONE" if ok else "FAILED"))
+	get_tree().quit(0 if ok else 1)

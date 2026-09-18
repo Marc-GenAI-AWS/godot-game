@@ -23,6 +23,7 @@ const N_CARS := 26
 const JUNCTION := 9.0              # half width of the box a car must find empty before entering
 const TURN_RATE := 2.6             # radians per second while swinging through a junction
 const CRUISE := [8.0, 13.5]
+const FLAG_DOWN := 5.5        # stand this close and the driver waits for you
 const LIVE_RADIUS := 150.0         # a car reads at a greater distance than a person
 
 var cars: Array = []               # {node, axis, sign, street, speed, cruise, wait, wheels, wr, spin}
@@ -39,6 +40,7 @@ func build() -> void:
 		add_child(node)
 		var car := _spawn(node, y, i)
 		cars.append(car)
+		ctx.add_drivable_car(node, self)   # stop it and you can take it
 
 
 # Half the traffic runs inland on the cross streets, half along the coast street, spread out so
@@ -106,6 +108,12 @@ func _drive(car: Dictionary, index: int, delta: float, y: float) -> void:
 	var target: float = car["cruise"]
 	if free < 12.0:
 		target = clampf((free - 3.5) * 1.6, 0.0, car["cruise"])
+	# Somebody standing right by the car is somebody about to open the door: the driver waits
+	# rather than pulling away while you walk round to it. Without this you can brake a car by
+	# standing in front of it, but never reach the handle.
+	if ctx.player != null and is_instance_valid(ctx.player) \
+			and node.global_position.distance_to(ctx.player.global_position) < FLAG_DOWN:
+		target = 0.0
 	if car["wait"] > 0.0:
 		car["wait"] -= delta
 		target = 0.0
@@ -306,3 +314,21 @@ func _wrap(car: Dictionary, node: Node3D) -> void:
 func on_world_wrapped(dz: float) -> void:
 	for car in cars:
 		(car["node"] as Node3D).position.z += dz
+
+
+# --- handing a car over to the player ------------------------------------------------------
+
+# How fast this car is going, for whoever is deciding whether they can get in.
+func car_speed(node: Node3D) -> float:
+	for car in cars:
+		if car["node"] == node:
+			return absf(float(car["speed"]))
+	return 0.0
+
+
+# Stop driving this one: the player has it now.
+func release(node: Node3D) -> void:
+	for i in cars.size():
+		if cars[i]["node"] == node:
+			cars.remove_at(i)
+			return
