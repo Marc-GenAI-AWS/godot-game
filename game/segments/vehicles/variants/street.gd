@@ -6,6 +6,9 @@ extends ChunkedLayer
 # dynamic obstacles; parked ones are static obstacles.
 
 var traffic: Array = []   # [node, lane_x, dir, speed, wheels, wr]
+var parked: Array = []    # the cars that just stand there - about 21 meshes each
+const LIVE_RADIUS := 130.0   # past this a car is hidden; there are dozens and they are the
+                             # most expensive thing in this world
 
 
 func _init() -> void:
@@ -30,6 +33,7 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 				for dz in [-len * 0.28, len * 0.28]:
 					ctx.add_obstacle(car.global_position + Vector3(0, 0, dz), 1.0)
 				ctx.add_parked_car(car)   # any of them can be driven away
+				parked.append(car)
 				z += len + rng.randf_range(1.0, 5.0)
 			else:
 				z += rng.randf_range(6.0, 14.0)
@@ -72,6 +76,15 @@ func _gap_ahead(t: Dictionary) -> float:
 
 
 func tick(delta: float) -> void:
+	# Hiding distant cars is worth more than any other saving here: each is about 21 meshes, and
+	# a browser frame is spent on draw calls long before it is spent on anything else.
+	if ctx.player != null:
+		var eye: Vector3 = ctx.player.global_position
+		for car in parked:
+			if is_instance_valid(car):
+				WorldContext.pose_if_near(car, null, eye, LIVE_RADIUS)
+		for t in traffic:
+			WorldContext.pose_if_near(t["node"], null, eye, LIVE_RADIUS)
 	for t in traffic:
 		var car: Node3D = t["node"]
 		# car-following: keep a gap to whatever is ahead in the lane

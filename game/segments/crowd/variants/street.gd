@@ -76,9 +76,15 @@ func _batch_for(key: String) -> MeshBatch:
 	return _batches[key]
 
 
+const LIVE_RADIUS := 105.0   # past this a stroller keeps walking but is not posed or drawn
+
+
 func tick(delta: float) -> void:
 	for w in walkers:
 		var root: Node3D = w["root"]
 		root.position.z = wrap_local_z(root.position.z + w["dir"] * w["speed"] * delta)
 		ctx.dynamic_obstacles.append([root.global_position, 0.42])
+		var ap: AnimationPlayer = root.get_meta("anim") if root.has_meta("anim") else null
+		if ctx.player != null and not WorldContext.pose_if_near(root, ap, ctx.player.global_position, LIVE_RADIUS):
+			continue
 		SkinnedPeople.apply_bone_scales(w["skel"], w["body"])

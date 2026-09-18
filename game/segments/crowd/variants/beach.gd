@@ -198,10 +198,16 @@ func validate_contacts() -> Dictionary:
 	return worst
 
 
+const LIVE_RADIUS := 105.0   # past this a stroller keeps walking but is not posed or drawn
+
+
 func tick(delta: float) -> void:
 	for w in walkers:
 		var root: Node3D = w["root"]
 		ctx.dynamic_obstacles.append([root.global_position, 0.42])
+		var seen: bool = ctx.player == null or WorldContext.pose_if_near(
+				root, root.get_meta("anim") if root.has_meta("anim") else null,
+				ctx.player.global_position, LIVE_RADIUS)
 		var z: float = wrap_local_z(root.position.z + w["dir"] * w["speed"] * delta)
 		# gentle wander across the beach so paths aren't ruler-straight
 		var wx: float = w["x0"] + w["wander"] * sin(z * w["wfreq"] * TAU + w["phase"])
@@ -213,8 +219,10 @@ func tick(delta: float) -> void:
 		var heading := Vector3(dx, 0, w["dir"] * w["speed"] * delta)
 		if heading.length() > 0.0001:
 			root.rotation.y = atan2(-heading.x, -heading.z)
-		# keep the build's bone scales in place (clips carry no scale tracks, but be safe)
-		SkinnedPeople.apply_bone_scales(w["skel"], w["body"])
+		# keep the build's bone scales in place (clips carry no scale tracks, but be safe) - only
+		# worth doing for the ones being posed, and it walks the whole skeleton
+		if seen:
+			SkinnedPeople.apply_bone_scales(w["skel"], w["body"])
 	for s in swimmers:
 		var sw: Node3D = s[0]
 		sw.position.y = s[1] + ctx.sea_level() + 0.12 * sin(ctx.time * 1.3 + s[2])

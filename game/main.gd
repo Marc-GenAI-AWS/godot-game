@@ -24,6 +24,8 @@ var _drag_delta := Vector2.ZERO    # where the current injected drag ended
 var _fps_samples: Array[float] = []
 var _draw_calls := 0
 var _ready_time := 0.0
+var _perf := false
+var _perf_t := 0.0
 var _world                      # the world class, so a runtime swap can reassemble it
 var _segment_of := {}           # layer node -> segment name, for swapping one layer in place
 
@@ -112,6 +114,10 @@ func _ready() -> void:
 		_menu_selftest.call_deferred()
 	if flags.has("menushot"):
 		_menu_shot.call_deferred(str(flags["menushot"]))
+	if flags.has("perf"):
+		_perf = true
+	if flags.has("census"):
+		_census.call_deferred()
 	if flags.has("coasttest"):
 		_coast_selftest.call_deferred()
 	if flags.has("traffictest"):
@@ -141,6 +147,19 @@ func _flags() -> Dictionary:
 
 
 func _process(delta: float) -> void:
+	if _perf:
+		_perf_t += delta
+		if _perf_t > 2.0:
+			_perf_t = 0.0
+			# fps is useless in a browser - it is pinned to vsync - so report the time actually
+			# spent. If process time is near the 16.7 ms budget the cost is ours; if it is small
+			# and the frame rate is still low, the cost is the GPU's.
+			print("PERF cpu %.2f ms  physics %.2f ms  draw calls %d  objects %d  fps %d" % [
+				Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+				Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+				Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+				Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
+				Engine.get_frames_per_second()])
 	ctx.tick(delta)
 	for l in layers:
 		l.tick(delta)
@@ -674,3 +693,42 @@ func _what_is_here(at: Vector3) -> void:
 				and at.y >= box.position.y - 0.3 and at.y <= box.end.y + 0.3:
 			hits.append("%s (top y %.2f)" % [str(m.get_path()).replace("/root/Main/", ""), box.end.y])
 	print("COASTTEST under the player: %s" % ("nothing" if hits.is_empty() else ", ".join(hits)))
+
+
+# What the frame has to carry. In the web build everything runs on one thread, so the counts that
+# matter are skeletons (posed every frame) and draw calls, not triangles.
+func _census() -> void:
+	await get_tree().create_timer(2.0).timeout
+	var skel := find_children("*", "Skeleton3D", true, false).size()
+	var anim := find_children("*", "AnimationPlayer", true, false).size()
+	var mesh := find_children("*", "MeshInstance3D", true, false).size()
+	var nodes := 0
+	for n in find_children("*", "Node", true, false):
+		nodes += 1
+	var live := 0
+	var posed := 0
+	for n in find_children("*", "AnimationPlayer", true, false):
+		var a := n as AnimationPlayer
+		if a.active:
+			posed += 1
+	for n in find_children("*", "Skeleton3D", true, false):
+		if (n as Node3D).is_visible_in_tree():
+			live += 1
+	print("CENSUS world=%s skeletons=%d (%d drawn, %d animating) meshes=%d nodes=%d"
+		  % [world_name, skel, live, posed, mesh, nodes])
+	# where the meshes actually live, by layer - the only way to know what to batch
+	var by_layer := {}
+	for l in layers:
+		by_layer[l.name] = l.find_children("*", "MeshInstance3D", true, false).size()
+	var pairs: Array = []
+	for k in by_layer:
+		pairs.append([int(by_layer[k]), str(k)])
+	pairs.sort_custom(func(a, b): return a[0] > b[0])
+	for pr in pairs:
+		if pr[0] > 0:
+			print("CENSUS   %-26s %d meshes" % [pr[1], pr[0]])
+	for l in layers:                       # a district hides a whole world inside one layer
+		if l is DistrictLayer:
+			for sub in (l as DistrictLayer).subs:
+				print("CENSUS     %-24s %d meshes" % [sub.name, sub.find_children("*", "MeshInstance3D", true, false).size()])
+	get_tree().quit(0)

@@ -143,6 +143,26 @@ func road_here(_x: float, _z: float, _margin := 0.0) -> bool:
 	return false
 
 
+# Pose only what the player can see.
+#
+# A skinned character costs a skeleton update and a skinned draw every frame whether it is two
+# metres away or two hundred. That is affordable in a world with twenty of them; the coast world
+# has seventy-four, and the web build runs everything on one thread. This hides the node and stops
+# its AnimationPlayer past `radius`, which leaves the cheap part - the agent still walks or drives,
+# so the town is where you left it when you come back - and drops the expensive part.
+#
+# Returns whether the node is live, so callers can skip their own per-frame work too.
+# `to` must be a global position: chunked crowds are children of a chunk offset by +-200 m, so
+# comparing their local position against the player's would cull the wrong two thirds of them.
+static func pose_if_near(node: Node3D, anim: AnimationPlayer, to: Vector3, radius: float) -> bool:
+	var near: bool = node.global_position.distance_squared_to(to) < radius * radius
+	if node.visible != near:
+		node.visible = near
+		if anim != null:
+			anim.active = near        # an inactive AnimationPlayer is not processed at all
+	return near
+
+
 # Where a vehicle may go. The base world does not care; a street holds it to the asphalt.
 func constrain_vehicle(p: Vector3) -> Vector3:
 	return p

@@ -22,6 +22,7 @@ const CROSS_SPEED := 1.9           # people step out a little faster than they s
 const LOOK := 16.0                 # how far up the road they check before stepping off
 const WALK_OFFSET := 8.6           # sidewalk centre, measured from the street's centre line
 const PATIENCE := 9.0              # after this long at a kerb, give up and walk on instead
+const LIVE_RADIUS := 105.0         # past this they keep walking, they just stop being posed
 
 var people: Array = []             # {node, axis, sign, street, side, state, speed, wait, skel, body}
 var _rng := RandomNumberGenerator.new()
@@ -254,6 +255,10 @@ func _wrap(person: Dictionary, node: Node3D) -> void:
 # feet do not skate. Standing at a kerb is the idle clip, not a walk played very slowly.
 func _animate(person: Dictionary, speed: float) -> void:
 	var ap: AnimationPlayer = person["anim"]
+	# Nothing to pose if nobody can see them. apply_bone_scales() walks the skeleton every frame,
+	# which is the single most expensive thing this layer does.
+	if ctx.player != null and not WorldContext.pose_if_near(person["node"], ap, ctx.player.global_position, LIVE_RADIUS):
+		return
 	var want: String = "Walk" if speed > 0.05 else "Idle"
 	if person["clip"] != want:
 		person["clip"] = want

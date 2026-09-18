@@ -23,9 +23,11 @@ const N_CARS := 26
 const JUNCTION := 9.0              # half width of the box a car must find empty before entering
 const TURN_RATE := 2.6             # radians per second while swinging through a junction
 const CRUISE := [8.0, 13.5]
+const LIVE_RADIUS := 150.0         # a car reads at a greater distance than a person
 
 var cars: Array = []               # {node, axis, sign, street, speed, cruise, wait, wheels, wr, spin}
 var _rng := RandomNumberGenerator.new()
+var _frame := 0
 
 
 func build() -> void:
@@ -79,6 +81,7 @@ func _heading(car: Dictionary) -> float:
 
 
 func tick(delta: float) -> void:
+	_frame += 1
 	var y: float = CoastContext.plateau_y()
 	for i in cars.size():
 		_drive(cars[i], i, delta, y)
@@ -87,17 +90,26 @@ func tick(delta: float) -> void:
 func _drive(car: Dictionary, index: int, delta: float, y: float) -> void:
 	var node: Node3D = car["node"]
 	var f := _forward(car)
+	var seen: bool = ctx.player == null or WorldContext.pose_if_near(node, null, ctx.player.global_position, LIVE_RADIUS)
 	# How much room is there ahead. This asks the other cars directly rather than going through
 	# the obstacle field: every car registers itself there, so a car would find its own circle
 	# a metre in front of its nose and brake for itself.
-	var free := _gap_ahead(car, index)
+	#
+	# It is also O(cars) per car, and so is the junction check - the two of them are most of what
+	# this layer costs. Skipping them entirely out of sight was four times cheaper and wrong: cars
+	# drove through each other and were still interpenetrating when the player arrived (4,540
+	# overlapping frames a minute, against 28). So an unseen car re-checks every fourth frame and
+	# reuses the last answer between, which keeps the queueing and drops three quarters of the work.
+	var due: bool = seen or (_frame + index) % 4 == 0
+	var free: float = _gap_ahead(car, index) if due else float(car.get("free", 99.0))
+	car["free"] = free
 	var target: float = car["cruise"]
 	if free < 12.0:
 		target = clampf((free - 3.5) * 1.6, 0.0, car["cruise"])
 	if car["wait"] > 0.0:
 		car["wait"] -= delta
 		target = 0.0
-	elif _junction_ahead(car, node.position) and not _junction_clear(car, index, node.position):
+	elif due and _junction_ahead(car, node.position) and not _junction_clear(car, index, node.position):
 		target = 0.0
 		car["held"] = float(car.get("held", 0.0)) + delta
 		if float(car["held"]) > 4.0:                 # nobody went: somebody has to, or it is a jam
@@ -120,10 +132,12 @@ func _drive(car: Dictionary, index: int, delta: float, y: float) -> void:
 
 	# wheels, and the car as an obstacle for everyone else including the player
 	car["spin"] += car["speed"] * delta / float(car["wr"])
-	for w in car["wheels"]:
-		((w as Node3D).get_child(0) as Node3D).rotation.x = -car["spin"]
-	for dz: float in [-1.2, 1.2]:
-		ctx.dynamic_obstacles.append([node.position + f * dz, 1.0])
+	if seen:                                        # spinning wheels nobody can see is free to skip
+		for w in car["wheels"]:
+			((w as Node3D).get_child(0) as Node3D).rotation.x = -car["spin"]
+	if seen:
+		for dz: float in [-1.2, 1.2]:
+			ctx.dynamic_obstacles.append([node.position + f * dz, 1.0])
 
 
 # Junction geometry: a car on a cross street meets the coast street and the avenue; a car on the
