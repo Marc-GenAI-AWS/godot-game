@@ -21,6 +21,7 @@ static var _paint_mat: StandardMaterial3D
 static var _glass_mat: StandardMaterial3D
 static var _chrome_mat: StandardMaterial3D
 static var _trim_mat: StandardMaterial3D
+static var _wheel_mat: StandardMaterial3D
 static var _light_mat: StandardMaterial3D
 static var _shadow_mat: StandardMaterial3D
 
@@ -47,6 +48,13 @@ static func _mats() -> void:
 	_trim_mat = StandardMaterial3D.new()
 	_trim_mat.vertex_color_use_as_albedo = true
 	_trim_mat.roughness = 0.9
+	# One material for the whole wheel so a wheel is one mesh rather than a matte tyre plus a
+	# chrome rim. Halfway between the two: the rim keeps some sheen, the tyre is not shiny, and
+	# every car in the world costs four meshes less.
+	_wheel_mat = StandardMaterial3D.new()
+	_wheel_mat.vertex_color_use_as_albedo = true
+	_wheel_mat.roughness = 0.55
+	_wheel_mat.metallic = 0.45
 	_light_mat = StandardMaterial3D.new()
 	_light_mat.vertex_color_use_as_albedo = true
 	_light_mat.roughness = 0.2
@@ -248,17 +256,13 @@ static func build(kind: String, paint: Color, roof: Color = Color(-1, 0, 0), pla
 			hub.add_child(spin)
 			var wb := MeshBatch.new()
 			wb.add_cylinder(wr, wr, 0.24, Color(0.05, 0.05, 0.05), Transform3D(Basis.IDENTITY.rotated(Vector3.FORWARD, PI * 0.5), Vector3.ZERO), 16)
-			var rb := MeshBatch.new()
-			rb.add_cylinder(wr * 0.6, wr * 0.6, 0.25, Color(0.55, 0.56, 0.6), Transform3D(Basis.IDENTITY.rotated(Vector3.FORWARD, PI * 0.5), Vector3.ZERO), 12)
-			rb.add_cylinder(wr * 0.16, wr * 0.16, 0.27, Color(0.8, 0.8, 0.82), Transform3D(Basis.IDENTITY.rotated(Vector3.FORWARD, PI * 0.5), Vector3.ZERO), 8)
+			wb.add_cylinder(wr * 0.6, wr * 0.6, 0.25, Color(0.55, 0.56, 0.6), Transform3D(Basis.IDENTITY.rotated(Vector3.FORWARD, PI * 0.5), Vector3.ZERO), 12)
+			wb.add_cylinder(wr * 0.16, wr * 0.16, 0.27, Color(0.8, 0.8, 0.82), Transform3D(Basis.IDENTITY.rotated(Vector3.FORWARD, PI * 0.5), Vector3.ZERO), 8)
 			for i in 5:
-				rb.add_box(Vector3(0.27, wr * 0.5, 0.06), Color(0.82, 0.82, 0.85), Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, TAU * i / 5.0), Vector3(0, 0, 0)) * Transform3D(Basis.IDENTITY, Vector3(0, wr * 0.3, 0)))
-			var tyre := MeshInstance3D.new()
-			tyre.mesh = wb.commit_with(_trim_mat)
-			spin.add_child(tyre)
-			var rim := MeshInstance3D.new()
-			rim.mesh = rb.commit_with(_chrome_mat)
-			spin.add_child(rim)
+				wb.add_box(Vector3(0.27, wr * 0.5, 0.06), Color(0.82, 0.82, 0.85), Transform3D(Basis.IDENTITY.rotated(Vector3.RIGHT, TAU * i / 5.0), Vector3(0, 0, 0)) * Transform3D(Basis.IDENTITY, Vector3(0, wr * 0.3, 0)))
+			var wheel := MeshInstance3D.new()
+			wheel.mesh = wb.commit_with(_wheel_mat)
+			spin.add_child(wheel)
 			wheels.append(hub)
 	root.set_meta("wheels", wheels)
 	root.set_meta("wheel_radius", wr)

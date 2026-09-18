@@ -121,6 +121,8 @@ static func junctions() -> Array:
 func _init() -> void:
 	super._init()
 	world_title = "Coast"
+	# the town is the skyline here; the beach's backdrop tower would stand in the middle of it
+	wants_backdrop = false
 
 
 func ground_height(x: float, z: float) -> float:

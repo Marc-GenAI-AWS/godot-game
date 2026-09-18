@@ -15,7 +15,8 @@ func build_chunk(chunk: Node3D, rng: RandomNumberGenerator) -> void:
 	_boardwalk(chunk, rng)
 	_lifeguard_tower(chunk, Vector3(-14.0, 0.0, -70.0), Color(0.93, 0.93, 0.9), Color(0.3, 0.32, 0.35))
 	_lifeguard_tower(chunk, Vector3(-13.0, 0.0, -165.0), Color(0.8, 0.2, 0.2), Color(0.95, 0.95, 0.92))
-	_far_tower(chunk)
+	if ctx.wants_backdrop:
+		_far_tower(chunk)
 
 
 func _hotels(parent: Node3D, rng: RandomNumberGenerator) -> void:

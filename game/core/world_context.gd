@@ -143,6 +143,11 @@ func road_here(_x: float, _z: float, _margin := 0.0) -> bool:
 	return false
 
 
+# Does this world want the beach's painted-on skyline - the single far tower standing behind the
+# hotel row? A world with nothing inland does; one that has built a real town there does not, and
+# the tower ends up standing in the middle of it.
+var wants_backdrop := true
+
 # Pose only what the player can see.
 #
 # A skinned character costs a skeleton update and a skinned draw every frame whether it is two
