@@ -34,16 +34,13 @@ static func make_layers(ctx: WorldContext) -> Array[SceneLayer]:
 	# On foot by default, but with a car parked on the inland street by the promenade: the point
 	# of one world is that you can walk off the beach and drive away. &variant=walk keeps the
 	# plain beach walker for capture recipes that expect it.
+	# Always through ctx.layer(): that is what records the default the right-click menu needs to
+	# rebuild the player when you change an outfit or a hair style.
 	var player: PlayerLayer
 	if ctx.variant == "walk" or ctx.variant == "mpfb":
 		player = ctx.layer("player", MpfbPlayerLayer if ctx.variant == "mpfb" else SkinnedPlayerLayer)
 	else:
-		var d := DriverLayer.new()
-		d.walker_class = SkinnedPlayerLayer      # the beach body: you start on the sand, not the kerb
-		d.start_pos = Vector3(-96.0, CoastContext.plateau_y(), CoastContext.CROSS_Z[1] - 4.2)
-		d.start_yaw = PI * 0.5                      # nose inland, parked on the left kerb
-		player = d
-		ctx.built_of[d.get_instance_id()] = "player"
+		player = ctx.layer("player", CoastDriverLayer)
 	var camera: CameraLayer = ctx.layer("camera", CameraLayer)
 	var hud := ctx.layer("hud", HudLayer)
 	crowd.furniture = furniture

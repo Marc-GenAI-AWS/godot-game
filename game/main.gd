@@ -110,6 +110,10 @@ func _ready() -> void:
 					(c as CanvasLayer).visible = false
 	if DisplayServer.get_name() == "headless" or flags.has("validate"):
 		world.validators(layers)
+	if flags.has("wear"):
+		# --wear=<sex>,<outfit>[,<hair>] dresses the player at startup, the same way the menu does.
+		# Useful for a screenshot, and the only way to see that a rebuild reached the body.
+		_wear.call_deferred(str(flags["wear"]))
 	if flags.has("menutest"):
 		_menu_selftest.call_deferred()
 	if flags.has("menushot"):
@@ -427,12 +431,27 @@ func _menu_selftest() -> void:
 					if l.get_meta("segment", "") == "crowd" and l.has_method("validate_contacts"):
 						l.validate_contacts()
 	var before: Vector3 = ctx.player_pos
+	# The layer's identity, not just the context field: setting ctx.player_outfit proves nothing -
+	# it is set whether or not the player was rebuilt, which is exactly how dressing stayed broken
+	# in two worlds while this test passed.
+	var was_id := _player_layer_id()
 	dress_player("M", "trunks_blue")
 	await get_tree().create_timer(1.0).timeout
-	print("MENUTEST dressed sex=%s outfit=%s kept_position=%s" % [ctx.player_sex, ctx.player_outfit, str(ctx.player_pos != Vector3.ZERO and before != Vector3.ZERO)])
+	var now_id := _player_layer_id()
+	print("MENUTEST dressed sex=%s outfit=%s kept_position=%s rebuilt=%s" % [ctx.player_sex, ctx.player_outfit,
+		  str(ctx.player_pos != Vector3.ZERO and before != Vector3.ZERO), str(now_id != was_id and now_id != 0)])
+	if now_id == was_id:
+		print("MENUTEST FAILED: the player layer was not rebuilt, so the outfit never reached the body")
+		get_tree().quit(1)
+		return
 	set_player_hair("buzz")
 	await get_tree().create_timer(1.0).timeout
-	print("MENUTEST hair=%s" % ctx.player_hair)
+	var hair_id := _player_layer_id()
+	print("MENUTEST hair=%s rebuilt=%s" % [ctx.player_hair, str(hair_id != now_id and hair_id != 0)])
+	if hair_id == now_id:
+		print("MENUTEST FAILED: the hair change did not rebuild the player")
+		get_tree().quit(1)
+		return
 	reset_scene()
 	await get_tree().create_timer(1.0).timeout
 	print("MENUTEST reset overrides=%d outfit=%s" % [ctx.overrides.size(), "'" + ctx.player_outfit + "'"])
@@ -732,3 +751,22 @@ func _census() -> void:
 			for sub in (l as DistrictLayer).subs:
 				print("CENSUS     %-24s %d meshes" % [sub.name, sub.find_children("*", "MeshInstance3D", true, false).size()])
 	get_tree().quit(0)
+
+
+# Which instance is currently the player layer. A rebuild makes a new one, so a changed id is
+# proof the swap actually happened.
+func _player_layer_id() -> int:
+	for l in layers:
+		if l.get_meta("segment", "") == "player":
+			return l.get_instance_id()
+	return 0
+
+
+func _wear(spec: String) -> void:
+	await get_tree().create_timer(0.8).timeout
+	var p := spec.split(",")
+	if p.size() >= 2:
+		dress_player(p[0], p[1])
+	if p.size() >= 3:
+		await get_tree().create_timer(0.4).timeout
+		set_player_hair(p[2])
