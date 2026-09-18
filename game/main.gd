@@ -452,6 +452,14 @@ func _menu_selftest() -> void:
 		print("MENUTEST FAILED: the hair change did not rebuild the player")
 		get_tree().quit(1)
 		return
+	# Change again, twice: the first rebuild is the one that leaves a freed car behind, and the
+	# damage only shows on the frames after it. One change each was not enough to catch a storm
+	# of 180 errors a second.
+	dress_player("F", "onepiece_teal")
+	await get_tree().create_timer(0.6).timeout
+	set_player_hair("long")
+	await get_tree().create_timer(0.6).timeout
+	print("MENUTEST changed again outfit=%s hair=%s drivable_cars=%d" % [ctx.player_outfit, ctx.player_hair, ctx.parked_cars.size()])
 	reset_scene()
 	await get_tree().create_timer(1.0).timeout
 	print("MENUTEST reset overrides=%d outfit=%s" % [ctx.overrides.size(), "'" + ctx.player_outfit + "'"])

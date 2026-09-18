@@ -130,6 +130,14 @@ var parked_cars: Array = []
 
 
 func add_parked_car(node: Node3D) -> void:
+	# The player's own car is registered here too, and rebuilding the player layer - which the
+	# menu does for every outfit and hair change - frees the old one. Prune as we go, or the list
+	# grows a dead entry per change and every reader has to defend itself.
+	var live: Array = []
+	for n in parked_cars:
+		if is_instance_valid(n):
+			live.append(n)
+	parked_cars = live
 	parked_cars.append(node)
 	if host != null:
 		host.add_parked_car(node)

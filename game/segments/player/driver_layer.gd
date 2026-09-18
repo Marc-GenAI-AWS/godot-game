@@ -119,8 +119,13 @@ func _reachable_car() -> Node3D:
 	var best: Node3D = null
 	var best_d := NEAR
 	for n in ctx.parked_cars:
+		# validity first: casting a freed object is itself the error, and this runs every frame
+		# for the HUD hint. Rebuilding the player (any outfit or hair change) frees its old car
+		# and leaves it in this list, which turned a dropped reference into 180 errors a second.
+		if not is_instance_valid(n):
+			continue
 		var node := n as Node3D
-		if node == null or not is_instance_valid(node) or node == car:
+		if node == null or node == car:
 			continue
 		var dp: Vector3 = node.global_transform * (node.get_meta("door_point") as Vector3)
 		var d := body.position.distance_to(dp)
