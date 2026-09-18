@@ -46,6 +46,12 @@ python3 -c "import json;print(json.load(open('pipeline/runs/v4-beach-golden/plan
 less pipeline/contract/sky.md
 ```
 
+## Before you publish
+
+`tools/selftest.sh` - every check in one command, about a minute, and the only gate this
+project has. See
+[page 6](06-state-of-play.md#how-to-tell-you-have-not-broken-anything).
+
 ## The five things most likely to trip you up
 
 1. **Training truncation.** SFT runs at `--max-len 14336`. It was 6144 for

@@ -17,6 +17,9 @@ docs/
 
 ## Publish a change to the game
 
+Run `tools/selftest.sh` first. Everything on this page puts something in front of the public,
+and the suite takes about a minute.
+
 ```bash
 godot --headless --path game --export-release Web ../docs/play/index.html
 git add docs/play && git commit && git push

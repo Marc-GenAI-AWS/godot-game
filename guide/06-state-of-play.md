@@ -99,7 +99,27 @@ Pages site.
 
 ## How to tell you have not broken anything
 
-There is no CI. These are the checks that exist, and they are fast:
+There is no CI, so there is one command:
+
+```bash
+tools/selftest.sh            # everything, about a minute
+tools/selftest.sh --quick    # skips the two simulations; saves about ten seconds
+```
+
+It runs every check below, fails loudly, and exits non-zero. Two things about how it judges,
+both of which exist because of bugs that shipped:
+
+* **a single `SCRIPT ERROR` fails the run, whatever else the check printed.** A dropped
+  reference in a per-frame loop produced 180 errors a second and froze the browser tab, while
+  the test it ran under still reported DONE.
+* **the harness proves it can fail.** The last check is one that cannot pass, and the run fails
+  if that check passes. A green suite that is green because nothing is being asserted is worse
+  than no suite.
+
+Reintroducing the freeze bug makes it report `FAIL street menu - 1172 script errors` and exit 1,
+which is the only evidence worth having that a test works.
+
+The individual checks, if you want to run one:
 
 ```bash
 # the game boots, builds every layer, and its world assertions pass
